@@ -1,0 +1,22 @@
+{
+   "name": "jaguar",
+   "version": "0.1.0",
+   "main": "index.js",
+   "repository": "https://github.com/dailykit/jaguar.git",
+   "author": "Praveen Bisht <prvnbist@gmail.com>",
+   "license": "MIT",
+   "scripts": {
+      "dev": "nodemon -r esm index.js",
+      "prod": "node src/index.js"
+   },
+   "dependencies": {
+      "cors": "^2.8.5",
+      "dotenv": "^8.2.0",
+      "esm": "^3.2.25",
+      "express": "^4.17.1",
+      "morgan": "^1.10.0"
+   },
+   "devDependencies": {
+      "nodemon": "^2.0.3"
+   }
+}
