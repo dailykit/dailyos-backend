@@ -3,6 +3,7 @@ import { client } from '../../lib/graphql'
 import {
    CREATE_ORDER,
    CREATE_CUSTOMER,
+   CREATE_ORDER_SACHET,
    CREATE_ORDER_BILLING,
    FETCH_INVENTORY_PRODUCT,
    FETCH_SIMPLE_RECIPE_PRODUCT,
@@ -71,98 +72,23 @@ export const take = async (req, res) => {
                         id: product.id,
                      })
                      if (product.option.type === 'Meal Kit') {
-                        const {
-                           createOrderMealKitProduct,
-                        } = await client.request(CREATE_ORDER_MEALKIT_PRODUCT, {
-                           object: {
-                              ...rest,
-                              assemblyStatus: 'PENDING',
-                              orderId: order.createOrder.id,
-                              simpleRecipeId: simpleRecipe.id,
-                              simpleRecipeProductId: product.id,
-                              simpleRecipeProductOptionId: product.option.id,
-                              assemblyStationId: simpleRecipe.assemblyStationId,
-                           },
-                        })
-                        const variables = { id: product.option.id }
-                        const {
-                           simpleRecipeProductOption,
-                        } = await client.request(
-                           FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
-                           variables
+                        return processMealKit(
+                           rest,
+                           product,
+                           simpleRecipe,
+                           order.createOrder
                         )
-
-                        const {
-                           ingredientSachets,
-                        } = simpleRecipeProductOption.simpleRecipeYield
-
-                        await Promise.all(
-                           ingredientSachets.map(
-                              async ({ ingredientSachet }) => {
-                                 try {
-                                    const {
-                                       id,
-                                       unit,
-                                       quantity,
-                                       ingredient,
-                                       ingredientProcessing,
-                                    } = ingredientSachet
-
-                                    await client.request(CREATE_ORDER_SACHET, {
-                                       object: {
-                                          unit: unit,
-                                          status: 'PENDING',
-                                          quantity: quantity,
-                                          ingredientSachetId: id,
-                                          orderMealKitProductId:
-                                             createOrderMealKitProduct.id,
-                                          ingredientName: ingredient.name,
-                                          processingName:
-                                             ingredientProcessing.processing
-                                                .name,
-                                       },
-                                    })
-                                 } catch (error) {
-                                    throw Error(error)
-                                 }
-                              }
-                           )
-                        )
-                        return
                      } else if (product.option.type === 'Ready To Eat') {
-                        return client.request(
-                           CREATE_ORDER_READY_TO_EAT_PRODUCT,
-                           {
-                              object: {
-                                 ...rest,
-                                 orderId: order.createOrder.id,
-                                 simpleRecipeId: simpleRecipe.id,
-                                 simpleRecipeProductId: product.id,
-                                 simpleRecipeProductOptionId: product.option.id,
-                                 assemblyStationId:
-                                    simpleRecipe.assemblyStationId,
-                              },
-                           }
+                        return processReadyToEat(
+                           rest,
+                           product,
+                           simpleRecipe,
+                           order.createOrder
                         )
                      }
                   }
                   case 'Inventory': {
-                     const variables = { id: product.id }
-                     const { inventoryProduct } = await client.request(
-                        FETCH_INVENTORY_PRODUCT,
-                        variables
-                     )
-                     return client.request(CREATE_ORDER_INVENTORY_PRODUCT, {
-                        object: {
-                           ...rest,
-                           assemblyStatus: 'PENDING',
-                           orderId: order.createOrder.id,
-                           inventoryProductId: product.id,
-                           inventoryProductOptionId: product.option.id,
-                           assemblyStationId:
-                              inventoryProduct.assemblyStationId,
-                        },
-                     })
+                     return processInventory(rest, product, order.createOrder)
                   }
                   default:
                      throw Error('No such product type!')
@@ -179,5 +105,101 @@ export const take = async (req, res) => {
       })
    } catch (error) {
       return res.status(404).json({ success: false, error: error.message })
+   }
+}
+
+const processMealKit = async (rest, product, simpleRecipe, order) => {
+   try {
+      const { createOrderMealKitProduct } = await client.request(
+         CREATE_ORDER_MEALKIT_PRODUCT,
+         {
+            object: {
+               ...rest,
+               assemblyStatus: 'PENDING',
+               orderId: order.id,
+               simpleRecipeId: simpleRecipe.id,
+               simpleRecipeProductId: product.id,
+               simpleRecipeProductOptionId: product.option.id,
+               assemblyStationId: simpleRecipe.assemblyStationId,
+            },
+         }
+      )
+      const variables = { id: product.option.id }
+      const { simpleRecipeProductOption } = await client.request(
+         FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
+         variables
+      )
+
+      const { ingredientSachets } = simpleRecipeProductOption.simpleRecipeYield
+
+      await Promise.all(
+         ingredientSachets.map(async ({ ingredientSachet }) => {
+            try {
+               const {
+                  id,
+                  unit,
+                  quantity,
+                  ingredient,
+                  ingredientProcessing,
+               } = ingredientSachet
+
+               await client.request(CREATE_ORDER_SACHET, {
+                  object: {
+                     unit: unit,
+                     status: 'PENDING',
+                     quantity: quantity,
+                     ingredientSachetId: id,
+                     orderMealKitProductId: createOrderMealKitProduct.id,
+                     ingredientName: ingredient.name,
+                     processingName: ingredientProcessing.processing.name,
+                  },
+               })
+            } catch (error) {
+               throw Error(error)
+            }
+         })
+      )
+      return
+   } catch (error) {
+      throw Error(error)
+   }
+}
+
+const processReadyToEat = (rest, product, simpleRecipe, order) => {
+   try {
+      client.request(CREATE_ORDER_READY_TO_EAT_PRODUCT, {
+         object: {
+            ...rest,
+            orderId: order.id,
+            simpleRecipeId: simpleRecipe.id,
+            simpleRecipeProductId: product.id,
+            simpleRecipeProductOptionId: product.option.id,
+            assemblyStationId: simpleRecipe.assemblyStationId,
+         },
+      })
+   } catch (error) {
+      throw Error(error)
+   }
+}
+
+const processInventory = async (rest, product, order) => {
+   try {
+      const variables = { id: product.id }
+      const { inventoryProduct } = await client.request(
+         FETCH_INVENTORY_PRODUCT,
+         variables
+      )
+      return client.request(CREATE_ORDER_INVENTORY_PRODUCT, {
+         object: {
+            ...rest,
+            assemblyStatus: 'PENDING',
+            orderId: order.id,
+            inventoryProductId: product.id,
+            inventoryProductOptionId: product.option.id,
+            assemblyStationId: inventoryProduct.assemblyStationId,
+         },
+      })
+   } catch (error) {
+      throw Error(error)
    }
 }
