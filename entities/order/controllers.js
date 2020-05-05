@@ -1,10 +1,10 @@
-import { client } from '../lib/graphql'
+import { client } from '../../lib/graphql'
 
 import {
    FETCH_INVENTORY_PRODUCT,
    FETCH_SIMPLE_RECIPE_PRODUCT,
    FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
-} from '../graphql/queries'
+} from './graphql/queries'
 import {
    CREATE_ORDER,
    CREATE_CUSTOMER,
@@ -13,7 +13,7 @@ import {
    CREATE_ORDER_MEALKIT_PRODUCT,
    CREATE_ORDER_INVENTORY_PRODUCT,
    CREATE_ORDER_READY_TO_EAT_PRODUCT,
-} from '../graphql/mutations'
+} from './graphql/mutations'
 
 export const take = async (req, res) => {
    try {
