@@ -3,7 +3,7 @@ import express from 'express'
 import cors from 'cors'
 const morgan = require('morgan')
 
-import { OrderRouter } from './entities'
+import { OrderRouter } from './routes'
 
 const app = express()
 

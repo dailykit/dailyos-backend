@@ -1,5 +1,5 @@
 import express from 'express'
-import { take } from './controllers'
+import { take } from '../controllers/order'
 
 const router = express.Router()
 
