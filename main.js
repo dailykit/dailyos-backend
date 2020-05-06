@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 4000
 
 // Routes
 app.use('/api/orders', OrderRouter)
-app.use('/api/work-order', WorkOrderRouter)
+app.use('/api/inventory', WorkOrderRouter)
 
 app.listen(PORT, () => {
    console.log(`Server started on ${PORT}`)
