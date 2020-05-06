@@ -3,7 +3,7 @@ import express from 'express'
 import cors from 'cors'
 const morgan = require('morgan')
 
-import { OrderRouter } from './entities'
+import { OrderRouter, WorkOrderRouter } from './entities'
 
 const app = express()
 
@@ -17,6 +17,7 @@ const PORT = process.env.PORT || 4000
 
 // Routes
 app.use('/api/orders', OrderRouter)
+app.use('/api/work-order', WorkOrderRouter)
 
 app.listen(PORT, () => {
    console.log(`Server started on ${PORT}`)
