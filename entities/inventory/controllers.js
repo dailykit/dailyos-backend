@@ -42,6 +42,8 @@ export const handleOrderSachetCreation = async (req, res) => {
             orderSachetId: id
          }
       })
+
+      console.log('PENDING + for sachet', response)
    }
 
    if (bulkItemId && status === 'PENDING') {
@@ -55,6 +57,8 @@ export const handleOrderSachetCreation = async (req, res) => {
             orderSachetId: id
          }
       )
+
+      console.log('PENDING + for bulkItem', response)
    }
 }
 
@@ -73,6 +77,8 @@ export const handleBulkItemHistory = async (req, res) => {
          where: { id: { _eq: bulkItemId } },
          set: { committed: bulkItem.committed + Math.abs(quantity) }
       })
+
+      console.log('handleBulkItemHistory -> PENDING && quantity < 0', response)
    }
 
    if (status === 'COMPLETED' && quantity < 0) {
@@ -88,6 +94,11 @@ export const handleBulkItemHistory = async (req, res) => {
             consumed: bulkItem.consumed + Math.abs(quantity)
          }
       })
+
+      console.log(
+         'handleBulkItemHistory -> COMPLETED && quantity < 0',
+         response
+      )
    }
 
    if (status === 'PENDING' && quantity > 0) {
@@ -96,6 +107,8 @@ export const handleBulkItemHistory = async (req, res) => {
          where: { id: { _eq: bulkItemId } },
          set: { awaiting: bulkItem.awaiting + Math.abs(quantity) }
       })
+
+      console.log('handleBulkItemHistory -> PENDING && quantity > 0', response)
    }
 
    if (status === 'COMPLETED' && quantity > 0) {
@@ -109,6 +122,11 @@ export const handleBulkItemHistory = async (req, res) => {
             onHand: bulkItem.onHand + Math.abs(quantity)
          }
       })
+
+      console.log(
+         'handleBulkItemHistory -> COMPLETED && quantity > 0',
+         response
+      )
    }
 
    if (status === 'CANCELLED') {
@@ -118,6 +136,11 @@ export const handleBulkItemHistory = async (req, res) => {
             where: { id: { _eq: bulkItemId } },
             set: { committed: bulkItem.committed - Math.abs(quantity) }
          })
+
+         console.log(
+            'handleBulkItemHistory -> CANCELLED && quantity < 0',
+            response
+         )
       }
 
       if (quantity > 0) {
@@ -126,6 +149,10 @@ export const handleBulkItemHistory = async (req, res) => {
             where: { id: { _eq: bulkItemId } },
             set: { awaiting: bulkItem.awaiting - Math.abs(quantity) }
          })
+         console.log(
+            'handleBulkItemHistory -> CANCELLED && quantity > 0',
+            response
+         )
       }
    }
 }
@@ -145,6 +172,11 @@ export const handleSachetItemHistory = async (req, res) => {
          where: { id: { _eq: sachetItemId } },
          set: { committed: bulkItem.committed + Math.abs(quantity) }
       })
+
+      console.log(
+         'handleSachetItemHistory -> PENDING && quantity < 0',
+         response
+      )
    }
 
    if (status === 'COMPLETED' && quantity < 0) {
@@ -160,6 +192,11 @@ export const handleSachetItemHistory = async (req, res) => {
             consumed: bulkItem.consumed + Math.abs(quantity)
          }
       })
+
+      console.log(
+         'handleSachetItemHistory -> COMPLETED && quantity < 0',
+         response
+      )
    }
 
    if (status === 'PENDING' && quantity > 0) {
@@ -169,6 +206,11 @@ export const handleSachetItemHistory = async (req, res) => {
          where: { id: { _eq: sachetItemId } },
          set: { awaiting: bulkItem.awaiting + Math.abs(quantity) }
       })
+
+      console.log(
+         'handleSachetItemHistory -> PENDING && quantity > 0',
+         response
+      )
    }
 
    if (status === 'COMPLETED' && quantity > 0) {
@@ -182,6 +224,11 @@ export const handleSachetItemHistory = async (req, res) => {
             onHand: bulkItem.onHand + Math.abs(quantity)
          }
       })
+
+      console.log(
+         'handleSachetItemHistory -> COMPLETED && quantity > 0',
+         response
+      )
    }
 
    if (status === 'CANCELLED') {
@@ -191,6 +238,11 @@ export const handleSachetItemHistory = async (req, res) => {
             where: { id: { _eq: sachetItemId } },
             set: { committed: bulkItem.committed - Math.abs(quantity) }
          })
+
+         console.log(
+            'handleSachetItemHistory -> CANCELLED && quantity < 0',
+            response
+         )
       }
 
       if (quantity > 0) {
@@ -199,6 +251,11 @@ export const handleSachetItemHistory = async (req, res) => {
             where: { id: { _eq: sachetItemId } },
             set: { awaiting: bulkItem.awaiting - Math.abs(quantity) }
          })
+
+         console.log(
+            'handleSachetItemHistory -> CANCELLED && quantity > 0',
+            response
+         )
       }
    }
 }
@@ -218,6 +275,8 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
             orderSachetId: id
          }
       )
+
+      console.log('handlePurchaseOrderCreateUpdate -> PENDING', response)
    }
 
    // update the bulkItemHistory's status to COMPLETED
@@ -227,6 +286,8 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
          bulkItemId,
          set: { status }
       })
+
+      console.log('handlePurchaseOrderCreateUpdate -> COMPLETED', response)
    }
 
    // if status == CANCELLED, mark bulkItemHistory's status -> 'Cancelled'
@@ -236,6 +297,8 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
          bulkItemId,
          set: { status }
       })
+
+      console.log('handlePurchaseOrderCreateUpdate -> CANCELLED', response)
    }
 }
 
@@ -272,6 +335,8 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res) => {
             set: { status }
          }
       )
+
+      console.log('handleBulkWorkOrderCreateUpdate -> updating...', response)
    } else {
       // create 2 bulkItemHistory for input and for output
 
@@ -285,6 +350,11 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res) => {
          }
       )
 
+      console.log(
+         'handleBulkWorkOrderCreateUpdate -> creating output bulkItemHistory...',
+         outputBulkItemHistoryResponse
+      )
+
       const inputBulkItemHistoryResponse = await client.request(
          CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER,
          {
@@ -293,6 +363,11 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res) => {
             status: 'PENDING',
             bulkWorkOrderId: bulkWorkOrderId
          }
+      )
+
+      console.log(
+         'handleBulkWorkOrderCreateUpdate -> creating input bulkItemHistory...',
+         inputBulkItemHistoryResponse
       )
    }
 }
@@ -338,6 +413,11 @@ export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
          }
       )
 
+      console.log(
+         'handleSachetWorkOrderCreateUpdate -> updating updateSachetHistoryResponse',
+         updateSachetHistoryResponse
+      )
+
       // run mutation for updating bulkItemHistory
       const updateBulkHistoryResponse = await client.request(
          UPDATE_BULK_ITEM_HISTORY_WITH_SACHET_ORDER_ID,
@@ -345,6 +425,11 @@ export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
             sachetWorkOrderId,
             set: { status, quantity: inputQuantity }
          }
+      )
+
+      console.log(
+         'handleSachetWorkOrderCreateUpdate -> updating updateBulkHistoryResponse',
+         updateBulkHistoryResponse
       )
    } else {
       // create sachetItemHistory and bulkItemHistory if doesn't exists
@@ -360,6 +445,11 @@ export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
          }
       )
 
+      console.log(
+         'handleSachetWorkOrderCreateUpdate -> creating sachetItemHistoryResponse',
+         sachetItemHistoryResponse
+      )
+
       const bulkItemHistoryResponse = await client.request(
          CREATE_BULK_ITEM_HISTORY,
          {
@@ -369,6 +459,11 @@ export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
                bulkItemId: inputBulkItemId
             }
          }
+      )
+
+      console.log(
+         'handleSachetWorkOrderCreateUpdate -> creating bulkItemHistoryResponse',
+         bulkItemHistoryResponse
       )
    }
 }
