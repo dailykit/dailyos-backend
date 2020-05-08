@@ -6,7 +6,7 @@ import {
    handleSachetItemHistory,
    handlePurchaseOrderCreateUpdate,
    handleBulkWorkOrderCreateUpdate,
-   handleSachetWorkOrderCreateUpdate,
+   handleSachetWorkOrderCreateUpdate
 } from './controllers'
 
 const router = Router()
@@ -17,7 +17,7 @@ router.post('/sachet-item-history-created-updated', handleSachetItemHistory)
 router.post('/purchase-order-create-update', handlePurchaseOrderCreateUpdate)
 router.post('/bulk-work-order-created-updated', handleBulkWorkOrderCreateUpdate)
 router.post(
-   'sachet-work-order-created-updated',
+   '/sachet-work-order-created-updated',
    handleSachetWorkOrderCreateUpdate
 )
 
