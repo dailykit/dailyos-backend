@@ -67,9 +67,7 @@ export const handleBulkItemHistory = async (req, res) => {
    const { bulkItemId, quantity, status } = req.body.event.data.new
 
    // fetch the bulkItem (with id === bulkItemId)
-   const {
-      data: { bulkItem }
-   } = await client.request(GET_BULK_ITEM, { id: bulkItemId })
+   const { bulkItem } = await client.request(GET_BULK_ITEM, { id: bulkItemId })
 
    if (status === 'PENDING' && quantity < 0) {
       // update bulkItem's commited field -> +|quantity|
@@ -162,9 +160,9 @@ export const handleSachetItemHistory = async (req, res) => {
    const { id, quantity, status, sachetItemId } = req.body.event.data.new
 
    // fetch the bulkItem (with id === sachetItemId)
-   const {
-      data: { bulkItem }
-   } = await client.request(GET_BULK_ITEM, { id: sachetItemId })
+   const { bulkItem } = await client.request(GET_BULK_ITEM, {
+      id: sachetItemId
+   })
 
    if (status === 'PENDING' && quantity < 0) {
       // update bulkItem's commited field -> +|quantity|
@@ -324,8 +322,8 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res) => {
 
    if (
       bulkItemHistories &&
-      bulkItemHistories.data &&
-      bulkItemHistories.data.bulkItemHistories.length
+      bulkItemHistories.bulkItemHistories &&
+      bulkItemHistories.bulkItemHistories.length
    ) {
       // mark the [bulkItemHistory].length = 2 -> COMPLETE or CANCELLED
       const response = await client.request(
@@ -399,8 +397,8 @@ export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
    if (
       sachetHistoryResponse &&
       bulkHistoryResponse &&
-      bulkHistoryResponse.data &&
-      sachetHistoryResponse.data
+      bulkHistoryResponse.bulkItemHistories &&
+      sachetHistoryResponse.sachetItemHistories
    ) {
       // mark both (bulk and sachet) to status
       // run mutation for updating sachetItemHistory
