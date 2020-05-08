@@ -2,7 +2,6 @@ import { client } from '../../lib/graphql'
 import {
    CREATE_SACHET_ITEM_HISTORY,
    CREATE_BULK_ITEM_HISTORY,
-   CREATE_BULK_ITEM_HISTORY_FOR_ORDER_SACHET_ID,
    CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER,
    UPDATE_BULK_ITEM,
    UPDATE_BULK_ITEM_HISTORY,
@@ -18,6 +17,7 @@ import {
 } from './graphql/queries'
 
 // Done
+// test -> passes
 export const handleOrderSachetCreation = async (req, res) => {
    // req.body contains the whole event
    // req.body.table -> table related details -> schema and table name
@@ -32,15 +32,19 @@ export const handleOrderSachetCreation = async (req, res) => {
       id
    } = req.body.event.data.new
 
+   console.log(sachetItemId, bulkItemId, quantity, status, id)
+
    if (sachetItemId && status === 'PENDING') {
       // create sachetItemHistory
       const response = await client.request(CREATE_SACHET_ITEM_HISTORY, {
-         object: {
-            sachetItemId,
-            quantity: -1,
-            status: 'PENDING',
-            orderSachetId: id
-         }
+         objects: [
+            {
+               sachetItemId,
+               quantity: -1,
+               status: 'PENDING',
+               orderSachetId: id
+            }
+         ]
       })
 
       console.log('PENDING + for sachet', response)
@@ -48,32 +52,36 @@ export const handleOrderSachetCreation = async (req, res) => {
 
    if (bulkItemId && status === 'PENDING') {
       // create bulkItemHistory
-      const response = await client.request(
-         CREATE_BULK_ITEM_HISTORY_FOR_ORDER_SACHET_ID,
-         {
-            bulkItemId,
-            quantity,
-            status: 'PENDING',
-            orderSachetId: id
-         }
-      )
+      const response = await client.request(CREATE_BULK_ITEM_HISTORY, {
+         objects: [
+            {
+               bulkItemId,
+               quantity,
+               status: 'PENDING',
+               orderSachetId: id
+            }
+         ]
+      })
 
       console.log('PENDING + for bulkItem', response)
    }
 }
 
 // Done
+// test -> passes
 export const handleBulkItemHistory = async (req, res) => {
    const { bulkItemId, quantity, status } = req.body.event.data.new
 
    // fetch the bulkItem (with id === bulkItemId)
-   const { bulkItem } = await client.request(GET_BULK_ITEM, { id: bulkItemId })
+   const bulkItemData = await client.request(GET_BULK_ITEM, { id: bulkItemId })
 
    if (status === 'PENDING' && quantity < 0) {
       // update bulkItem's commited field -> +|quantity|
       const response = await client.request(UPDATE_BULK_ITEM, {
          where: { id: { _eq: bulkItemId } },
-         set: { committed: bulkItem.committed + Math.abs(quantity) }
+         set: {
+            committed: bulkItemData.bulkItem.committed + Math.abs(quantity)
+         }
       })
 
       console.log('handleBulkItemHistory -> PENDING && quantity < 0', response)
@@ -87,9 +95,9 @@ export const handleBulkItemHistory = async (req, res) => {
       const response = await client.request(UPDATE_BULK_ITEM, {
          where: { id: { _eq: bulkItemId } },
          set: {
-            committed: bulkItem.committed - Math.abs(quantity),
-            onHand: bulkItem.onHand - Math.abs(quantity),
-            consumed: bulkItem.consumed + Math.abs(quantity)
+            committed: bulkItemData.bulkItem.committed - Math.abs(quantity),
+            onHand: bulkItemData.bulkItem.onHand - Math.abs(quantity),
+            consumed: bulkItemData.bulkItem.consumed + Math.abs(quantity)
          }
       })
 
@@ -103,7 +111,7 @@ export const handleBulkItemHistory = async (req, res) => {
       // set bulkItem's awaiting -> + |quantity|
       const response = await client.request(UPDATE_BULK_ITEM, {
          where: { id: { _eq: bulkItemId } },
-         set: { awaiting: bulkItem.awaiting + Math.abs(quantity) }
+         set: { awaiting: bulkItemData.bulkItem.awaiting + Math.abs(quantity) }
       })
 
       console.log('handleBulkItemHistory -> PENDING && quantity > 0', response)
@@ -116,8 +124,8 @@ export const handleBulkItemHistory = async (req, res) => {
       const response = await client.request(UPDATE_BULK_ITEM, {
          where: { id: { _eq: bulkItemId } },
          set: {
-            awaiting: bulkItem.awaiting - Math.abs(quantity),
-            onHand: bulkItem.onHand + Math.abs(quantity)
+            awaiting: bulkItemData.bulkItem.awaiting - Math.abs(quantity),
+            onHand: bulkItemData.bulkItem.onHand + Math.abs(quantity)
          }
       })
 
@@ -132,7 +140,9 @@ export const handleBulkItemHistory = async (req, res) => {
          // set bulkItem's committed -> - |quantity|
          const response = await client.request(UPDATE_BULK_ITEM, {
             where: { id: { _eq: bulkItemId } },
-            set: { committed: bulkItem.committed - Math.abs(quantity) }
+            set: {
+               committed: bulkItemData.bulkItem.committed - Math.abs(quantity)
+            }
          })
 
          console.log(
@@ -145,7 +155,9 @@ export const handleBulkItemHistory = async (req, res) => {
          // set bulkItem's awaiting -> - |quantity|
          const response = await client.request(UPDATE_BULK_ITEM, {
             where: { id: { _eq: bulkItemId } },
-            set: { awaiting: bulkItem.awaiting - Math.abs(quantity) }
+            set: {
+               awaiting: bulkItemData.bulkItem.awaiting - Math.abs(quantity)
+            }
          })
          console.log(
             'handleBulkItemHistory -> CANCELLED && quantity > 0',
@@ -156,6 +168,7 @@ export const handleBulkItemHistory = async (req, res) => {
 }
 
 // Done
+// test -> passes
 export const handleSachetItemHistory = async (req, res) => {
    const { id, quantity, status, sachetItemId } = req.body.event.data.new
 
@@ -259,20 +272,24 @@ export const handleSachetItemHistory = async (req, res) => {
 }
 
 // Done
+// test -> fails
 export const handlePurchaseOrderCreateUpdate = async (req, res) => {
    const { id, bulkItemId, orderQuantity, status } = req.body.event.data.new
    // create bulkItemHistory if status is pending
 
+   console.log(id, bulkItemId, orderQuantity, status)
+
    if (status === 'PENDING') {
-      const response = await client.request(
-         CREATE_BULK_ITEM_HISTORY_FOR_ORDER_SACHET_ID,
-         {
-            bulkItemId,
-            quantity,
-            status: 'PENDING',
-            orderSachetId: id
-         }
-      )
+      const response = await client.request(CREATE_BULK_ITEM_HISTORY, {
+         objects: [
+            {
+               bulkItemId,
+               quantity: orderQuantity,
+               status: 'PENDING',
+               orderSachetId: id
+            }
+         ]
+      })
 
       console.log('handlePurchaseOrderCreateUpdate -> PENDING', response)
    }
@@ -301,6 +318,7 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
 }
 
 // Done
+// test -> passes
 export const handleBulkWorkOrderCreateUpdate = async (req, res) => {
    const {
       id: bulkWorkOrderId,
@@ -370,6 +388,8 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res) => {
    }
 }
 
+// Done
+// test -> passes
 export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
    const {
       id: sachetWorkOrderId,
@@ -398,7 +418,9 @@ export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
       sachetHistoryResponse &&
       bulkHistoryResponse &&
       bulkHistoryResponse.bulkItemHistories &&
-      sachetHistoryResponse.sachetItemHistories
+      sachetHistoryResponse.sachetItemHistories &&
+      bulkHistoryResponse.bulkItemHistories.length &&
+      sachetHistoryResponse.sachetItemHistories.length
    ) {
       // mark both (bulk and sachet) to status
       // run mutation for updating sachetItemHistory
@@ -434,12 +456,14 @@ export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
       const sachetItemHistoryResponse = await client.request(
          CREATE_SACHET_ITEM_HISTORY,
          {
-            object: {
-               quantity: outputQuantity,
-               status: 'PENDING',
-               sachetItemId: outputSachetItemId,
-               sachetWorkOrderId
-            }
+            objects: [
+               {
+                  quantity: outputQuantity,
+                  status: 'PENDING',
+                  sachetItemId: outputSachetItemId,
+                  sachetWorkOrderId
+               }
+            ]
          }
       )
 
@@ -451,11 +475,14 @@ export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
       const bulkItemHistoryResponse = await client.request(
          CREATE_BULK_ITEM_HISTORY,
          {
-            object: {
-               quantity,
-               status: 'PENDING',
-               bulkItemId: inputBulkItemId
-            }
+            objects: [
+               {
+                  quantity: inputQuantity,
+                  status: 'PENDING',
+                  bulkItemId: inputBulkItemId,
+                  sachetWorkOrderId
+               }
+            ]
          }
       )
 

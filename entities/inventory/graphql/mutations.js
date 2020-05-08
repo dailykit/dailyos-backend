@@ -1,6 +1,6 @@
 export const CREATE_SACHET_ITEM_HISTORY = `
-   mutation CreatSachetItemHistory ($object: inventory_sachetItemHistory_insert_input!) {
-      createSachetItemHistory (objects: $object) {
+   mutation CreatSachetItemHistory ($objects: [inventory_sachetItemHistory_insert_input!]!) {
+      createSachetItemHistory (objects: $objects) {
          returning {
             id
          }
@@ -9,9 +9,12 @@ export const CREATE_SACHET_ITEM_HISTORY = `
 `
 
 export const UPDATE_SACHET_ITEM_HISTORY_WITH_SACHET_WORK_ORDER_ID = `
-   mutation UpdateSachetItemHistory ($sachetWorkOrderId: Int!, $set: inventory_sachetItemHistory_set_input!) {
+   mutation UpdateSachetItemHistory(
+      $sachetWorkOrderId: Int!
+      $set: inventory_sachetItemHistory_set_input!
+   ) {
       updateSachetItemHistory(
-         where: { sachetWorkOrderId: $sachetWorkOrderId }
+         where: { sachetWorkOrderId: { _eq: $sachetWorkOrderId } }
          _set: $set
       ) {
          affected_rows
@@ -21,10 +24,10 @@ export const UPDATE_SACHET_ITEM_HISTORY_WITH_SACHET_WORK_ORDER_ID = `
 
 export const CREATE_BULK_ITEM_HISTORY = `
    mutation CreateBulkItemHistory(
-      $object: inventory_sachetItemHistory_insert_input!
+      $objects: [inventory_bulkItemHistory_insert_input!]!
    ) {
-      createSachetItemHistory(
-         objects: $object
+      createBulkItemHistory(
+         objects: $objects
       ) {
          returning {
             id
@@ -33,32 +36,10 @@ export const CREATE_BULK_ITEM_HISTORY = `
    }                 
 `
 
-export const CREATE_BULK_ITEM_HISTORY_FOR_ORDER_SACHET_ID = `
-   mutation CreateBulkItemHistory(
-      $bulkItemId: Int!
-      $quantity: Int!
-      $status: String!
-      $orderSachetId: Int!
-   ) {
-      createSachetItemHistory(
-         objects: {
-            bulkItemId: $bulkItemId
-            quantity: $quantity
-            status: $status
-            orderSachetId: $orderSachetId
-         }
-      ) {
-         returning {
-            id
-         }
-      }
-   }
-`
-
 export const CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER = `
    mutation CreateBulkItemHistory(
       $bulkItemId: Int!
-      $quantity: Int!
+      $quantity: numeric!
       $status: String!
       $bulkWorkOrderId: Int!
    ) {
