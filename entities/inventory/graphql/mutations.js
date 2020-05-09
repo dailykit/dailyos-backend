@@ -100,3 +100,17 @@ export const UPDATE_BULK_ITEM_HISTORY_WITH_SACHET_ORDER_ID = `
       }
    }
 `
+
+export const UPDATE_SACHET_ITEM = `
+   mutation UpdateSachetItem(
+      $where: inventory_sachetItem_bool_exp!
+      $set: inventory_sachetItem_set_input
+   ) {
+      updateSachetItem(where: $where, _set: $set) {
+         affected_rows
+         returning {
+            id
+         }
+      }
+   }
+`

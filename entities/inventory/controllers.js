@@ -4,6 +4,7 @@ import {
    CREATE_BULK_ITEM_HISTORY,
    CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER,
    UPDATE_BULK_ITEM,
+   UPDATE_SACHET_ITEM,
    UPDATE_BULK_ITEM_HISTORY,
    UPDATE_BULK_ITEM_HISTORIES_WITH_BULK_WORK_ORDER_ID,
    UPDATE_BULK_ITEM_HISTORY_WITH_SACHET_ORDER_ID,
@@ -13,7 +14,8 @@ import {
    GET_BULK_ITEM,
    GET_BULK_ITEM_HISTORIES_WITH_BULK_WORK_ORDER_ID,
    GET_BULK_ITEM_HISTORIES_WITH_SACHET_WORK_ORDER_ID,
-   GET_SACHET_ITEM_HISTORIES
+   GET_SACHET_ITEM_HISTORIES,
+   GET_SACHET_ITEM
 } from './graphql/queries'
 
 // Done
@@ -71,9 +73,12 @@ export const handleOrderSachetCreation = async (req, res) => {
 // test -> passes
 export const handleBulkItemHistory = async (req, res) => {
    const { bulkItemId, quantity, status } = req.body.event.data.new
+   const oldBulkItem = req.body.event.data.old
 
    // fetch the bulkItem (with id === bulkItemId)
    const bulkItemData = await client.request(GET_BULK_ITEM, { id: bulkItemId })
+
+   console.log(bulkItemData)
 
    if (status === 'PENDING' && quantity < 0) {
       // update bulkItem's commited field -> +|quantity|
@@ -91,6 +96,8 @@ export const handleBulkItemHistory = async (req, res) => {
       // set bulkItem' commited -> - |quantity|
       //               on-hand -> - |quantity|
       //               consumed -> + |quantity|
+
+      console.log('reach here')
 
       const response = await client.request(UPDATE_BULK_ITEM, {
          where: { id: { _eq: bulkItemId } },
@@ -135,7 +142,11 @@ export const handleBulkItemHistory = async (req, res) => {
       )
    }
 
-   if (status === 'CANCELLED') {
+   if (
+      status === 'CANCELLED' &&
+      oldBulkItem &&
+      oldBulkItem.status === 'PENDING'
+   ) {
       if (quantity < 0) {
          // set bulkItem's committed -> - |quantity|
          const response = await client.request(UPDATE_BULK_ITEM, {
@@ -165,23 +176,102 @@ export const handleBulkItemHistory = async (req, res) => {
          )
       }
    }
+
+   if (
+      status === 'CANCELLED' &&
+      oldBulkItem &&
+      oldBulkItem.status === 'COMPLETED'
+   ) {
+      if (quantity < 0) {
+         // set bulkItem's committed -> - |quantity|
+         const response = await client.request(UPDATE_BULK_ITEM, {
+            where: { id: { _eq: bulkItemId } },
+            set: {
+               onHand: bulkItemData.bulkItem.onHand + Math.abs(quantity),
+               consumed: bulkItemData.bulkItem.consumed - Math.abs(quantity)
+            }
+         })
+
+         console.log(
+            'handleBulkItemHistory -> old COMPLETED && CANCELLED && quantity < 0',
+            response
+         )
+      }
+
+      if (quantity > 0) {
+         const response = await client.request(UPDATE_BULK_ITEM, {
+            where: { id: { _eq: bulkItemId } },
+            set: {
+               onHand: bulkItemData.bulkItem.onHand - Math.abs(quantity)
+            }
+         })
+
+         console.log(
+            'handleBulkItemHistory -> old COMPLETED && CANCELLED && quantity > 0',
+            response
+         )
+      }
+   }
+
+   if (
+      status === 'PENDING' &&
+      oldBulkItem &&
+      oldBulkItem.status === 'COMPLETED'
+   ) {
+      if (quantity > 0) {
+         const response = await client.request(UPDATE_BULK_ITEM, {
+            where: { id: { _eq: bulkItemId } },
+            set: {
+               onHand: bulkItemData.bulkItem.onHand - Math.abs(quantity),
+               awaiting: bulkItemData.bulkItem.awaiting + Math.abs(quantity)
+            }
+         })
+
+         console.log(
+            'handleBulkItemHistory -> old COMPLETED && PENDING && quantity > 0',
+            response
+         )
+      }
+
+      if (quantity < 0) {
+         const response = await client.request(UPDATE_BULK_ITEM, {
+            where: { id: { _eq: bulkItemId } },
+            set: {
+               onHand: bulkItemData.bulkItem.onHand + Math.abs(quantity),
+               consumed: bulkItemData.bulkItem.consumed - Math.abs(quantity),
+               committed: bulkItemData.bulkItem.committed + Math.abs(quantity)
+            }
+         })
+
+         console.log(
+            'handleBulkItemHistory -> old COMPLETED && PENDING && quantity < 0',
+            response
+         )
+      }
+   }
 }
 
 // Done
 // test -> passes
 export const handleSachetItemHistory = async (req, res) => {
+   console.log('called')
    const { id, quantity, status, sachetItemId } = req.body.event.data.new
+   const oldSachetItem = req.body.event.data.old
 
    // fetch the bulkItem (with id === sachetItemId)
-   const { bulkItem } = await client.request(GET_BULK_ITEM, {
+   const sachetItemData = await client.request(GET_SACHET_ITEM, {
       id: sachetItemId
    })
 
+   console.log(sachetItemData)
+
    if (status === 'PENDING' && quantity < 0) {
       // update bulkItem's commited field -> +|quantity|
-      const response = await client.request(UPDATE_BULK_ITEM, {
+      const response = await client.request(UPDATE_SACHET_ITEM, {
          where: { id: { _eq: sachetItemId } },
-         set: { committed: bulkItem.committed + Math.abs(quantity) }
+         set: {
+            committed: sachetItemData.sachetItem.committed + Math.abs(quantity)
+         }
       })
 
       console.log(
@@ -195,12 +285,12 @@ export const handleSachetItemHistory = async (req, res) => {
       //               on-hand -> - |quantity|
       //               consumed -> + |quantity|
 
-      const response = await client.request(UPDATE_BULK_ITEM, {
+      const response = await client.request(UPDATE_SACHET_ITEM, {
          where: { id: { _eq: sachetItemId } },
          set: {
-            committed: bulkItem.committed - Math.abs(quantity),
-            onHand: bulkItem.onHand - Math.abs(quantity),
-            consumed: bulkItem.consumed + Math.abs(quantity)
+            committed: sachetItemData.sachetItem.committed - Math.abs(quantity),
+            onHand: sachetItemData.sachetItem.onHand - Math.abs(quantity),
+            consumed: sachetItemData.sachetItem.consumed + Math.abs(quantity)
          }
       })
 
@@ -213,9 +303,11 @@ export const handleSachetItemHistory = async (req, res) => {
    if (status === 'PENDING' && quantity > 0) {
       // set bulkItem's awaiting -> + |quantity|
 
-      const response = await client.request(UPDATE_BULK_ITEM, {
+      const response = await client.request(UPDATE_SACHET_ITEM, {
          where: { id: { _eq: sachetItemId } },
-         set: { awaiting: bulkItem.awaiting + Math.abs(quantity) }
+         set: {
+            awaiting: sachetItemData.sachetItem.awaiting + Math.abs(quantity)
+         }
       })
 
       console.log(
@@ -228,11 +320,11 @@ export const handleSachetItemHistory = async (req, res) => {
       // set bulkItem's onHand -> + |quantity|
       // set bulkItem's awaiting -> - |awaiting|
 
-      const response = await client.request(UPDATE_BULK_ITEM, {
+      const response = await client.request(UPDATE_SACHET_ITEM, {
          where: { id: { _eq: sachetItemId } },
          set: {
-            awaiting: bulkItem.awaiting - Math.abs(quantity),
-            onHand: bulkItem.onHand + Math.abs(quantity)
+            awaiting: sachetItemData.sachetItem.awaiting - Math.abs(quantity),
+            onHand: sachetItemData.sachetItem.onHand + Math.abs(quantity)
          }
       })
 
@@ -242,12 +334,19 @@ export const handleSachetItemHistory = async (req, res) => {
       )
    }
 
-   if (status === 'CANCELLED') {
+   if (
+      status === 'CANCELLED' &&
+      oldSachetItem &&
+      oldSachetItem.status === 'PENDING'
+   ) {
       if (quantity < 0) {
          // set bulkItem's committed -> - |quantity|
-         const response = await client.request(UPDATE_BULK_ITEM, {
+         const response = await client.request(UPDATE_SACHET_ITEM, {
             where: { id: { _eq: sachetItemId } },
-            set: { committed: bulkItem.committed - Math.abs(quantity) }
+            set: {
+               committed:
+                  sachetItemData.sachetItem.committed - Math.abs(quantity)
+            }
          })
 
          console.log(
@@ -258,13 +357,90 @@ export const handleSachetItemHistory = async (req, res) => {
 
       if (quantity > 0) {
          // set bulkItem's awaiting -> - |quantity|
-         const response = await client.request(UPDATE_BULK_ITEM, {
+         const response = await client.request(UPDATE_SACHET_ITEM, {
             where: { id: { _eq: sachetItemId } },
-            set: { awaiting: bulkItem.awaiting - Math.abs(quantity) }
+            set: {
+               awaiting: sachetItemData.sachetItem.awaiting - Math.abs(quantity)
+            }
          })
 
          console.log(
             'handleSachetItemHistory -> CANCELLED && quantity > 0',
+            response
+         )
+      }
+   }
+
+   if (
+      status === 'CANCELLED' &&
+      oldSachetItem &&
+      oldSachetItem.status === 'COMPLETED'
+   ) {
+      if (quantity < 0) {
+         // set bulkItem's committed -> - |quantity|
+         const response = await client.request(UPDATE_SACHET_ITEM, {
+            where: { id: { _eq: sachetItemId } },
+            set: {
+               onHand: sachetItemData.sachetItem.onHand + Math.abs(quantity),
+               consumed: sachetItemData.sachetItem.consumed - Math.abs(quantity)
+            }
+         })
+
+         console.log(
+            'handleSachetItemHistory -> old COMPLETED && CANCELLED && quantity < 0',
+            response
+         )
+      }
+
+      if (quantity > 0) {
+         const response = await client.request(UPDATE_SACHET_ITEM, {
+            where: { id: { _eq: sachetItemId } },
+            set: {
+               onHand: sachetItemData.sachetItem.onHand - Math.abs(quantity)
+            }
+         })
+
+         console.log(
+            'handleSachetItemHistory -> old COMPLETED && CANCELLED && quantity > 0',
+            response
+         )
+      }
+   }
+
+   if (
+      status === 'PENDING' &&
+      oldSachetItem &&
+      oldSachetItem.status === 'COMPLETED'
+   ) {
+      if (quantity > 0) {
+         const response = await client.request(UPDATE_SACHET_ITEM, {
+            where: { id: { _eq: sachetItemId } },
+            set: {
+               onHand: sachetItemData.sachetItem.onHand - Math.abs(quantity),
+               awaiting: sachetItemData.sachetItem.awaiting + Math.abs(quantity)
+            }
+         })
+
+         console.log(
+            'handleSachetItemHistory -> old COMPLETED && PENDING && quantity > 0',
+            response
+         )
+      }
+
+      if (quantity < 0) {
+         const response = await client.request(UPDATE_SACHET_ITEM, {
+            where: { id: { _eq: sachetItemId } },
+            set: {
+               onHand: sachetItemData.sachetItem.onHand + Math.abs(quantity),
+               consumed:
+                  sachetItemData.sachetItem.consumed - Math.abs(quantity),
+               committed:
+                  sachetItemData.sachetItem.committed + Math.abs(quantity)
+            }
+         })
+
+         console.log(
+            'handleSachetItemHistory -> old COMPLETED && PENDING && quantity < 0',
             response
          )
       }
@@ -318,7 +494,7 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
 }
 
 // Done
-// test -> passes
+// test -> passes -> finally
 export const handleBulkWorkOrderCreateUpdate = async (req, res) => {
    const {
       id: bulkWorkOrderId,
@@ -375,7 +551,7 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res) => {
          CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER,
          {
             bulkItemId: inputBulkItemId,
-            quantity: inputQuantity,
+            quantity: -inputQuantity,
             status: 'PENDING',
             bulkWorkOrderId: bulkWorkOrderId
          }
@@ -443,7 +619,7 @@ export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
          UPDATE_BULK_ITEM_HISTORY_WITH_SACHET_ORDER_ID,
          {
             sachetWorkOrderId,
-            set: { status, quantity: inputQuantity }
+            set: { status, quantity: -inputQuantity }
          }
       )
 
@@ -477,7 +653,7 @@ export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
          {
             objects: [
                {
-                  quantity: inputQuantity,
+                  quantity: -inputQuantity,
                   status: 'PENDING',
                   bulkItemId: inputBulkItemId,
                   sachetWorkOrderId

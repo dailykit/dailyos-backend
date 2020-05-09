@@ -4,9 +4,22 @@ export const GET_BULK_ITEM = `
          onHand
          awaiting
          committed
+         consumed
       }
    }
 `
+
+export const GET_SACHET_ITEM = `
+   query SachetItem($id: Int!) {
+      sachetItem(id: $id) {
+         awaiting
+         consumed
+         onHand
+         committed
+      }
+   }
+`
+
 export const GET_BULK_ITEM_HISTORIES_WITH_BULK_WORK_ORDER_ID = `
    query BulkItemHistories ($bulkWorkOrderId: Int!){
       bulkItemHistories(where: {bulkWorkOrderId: {_eq: $bulkWorkOrderId}}) {
