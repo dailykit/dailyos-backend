@@ -22,6 +22,20 @@ export const UPDATE_SACHET_ITEM_HISTORY_WITH_SACHET_WORK_ORDER_ID = `
    }
 `
 
+export const UPDATE_SACHET_ITEM_HISTORY = `
+   mutation UpdateSachetItemHistory(
+      $where: inventory_sachetItemHistory_bool_exp!
+      $set: inventory_sachetItemHistory_set_input!
+   ) {
+      updateSachetItemHistory(
+         where: $where
+         _set: $set
+      ) {
+         affected_rows
+      }
+   }
+`
+
 export const CREATE_BULK_ITEM_HISTORY = `
    mutation CreateBulkItemHistory(
       $objects: [inventory_bulkItemHistory_insert_input!]!
