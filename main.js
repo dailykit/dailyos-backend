@@ -2,8 +2,16 @@ require('dotenv').config()
 import express from 'express'
 import cors from 'cors'
 const morgan = require('morgan')
+const AWS = require('aws-sdk')
+const bluebird = require('bluebird')
 
-import { OrderRouter, WorkOrderRouter, MOFRouter, MenuRouter } from './entities'
+import {
+   OrderRouter,
+   WorkOrderRouter,
+   MOFRouter,
+   MenuRouter,
+   UploadRouter
+} from './entities'
 
 const app = express()
 
@@ -13,6 +21,13 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(morgan('dev'))
 
+AWS.config.update({
+   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+})
+
+AWS.config.setPromisesDependency(bluebird)
+
 const PORT = process.env.PORT || 4000
 
 // Routes
@@ -20,6 +35,7 @@ app.use('/api/orders', OrderRouter)
 app.use('/api/inventory', WorkOrderRouter)
 app.use('/api/menu/', MenuRouter)
 app.use('/api/mof/', MOFRouter)
+app.use('/api/assets', UploadRouter)
 
 app.listen(PORT, () => {
    console.log(`Server started on ${PORT}`)

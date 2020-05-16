@@ -1,8 +1,8 @@
 {
-   "name": "jaguar",
+   "name": "dailyos-backend",
    "version": "0.1.0",
    "main": "index.js",
-   "repository": "https://github.com/dailykit/jaguar.git",
+   "repository": "https://github.com/dailykit/dailyos-backend.git",
    "author": "Praveen Bisht <prvnbist@gmail.com>",
    "license": "MIT",
    "scripts": {
@@ -10,12 +10,17 @@
       "prod": "node src/index.js"
    },
    "dependencies": {
+      "aws-sdk": "^2.678.0",
+      "bluebird": "^3.7.2",
       "cors": "^2.8.5",
       "dotenv": "^8.2.0",
       "esm": "^3.2.25",
       "express": "^4.17.1",
+      "file-type": "^14.4.0",
       "graphql-request": "^1.8.2",
+      "logger": "^0.0.1",
       "morgan": "^1.10.0",
+      "multiparty": "^4.2.1",
       "rrule": "^2.6.4"
    },
    "devDependencies": {
