@@ -132,8 +132,8 @@ export const liveMOF = async (req, res) => {
          // else sort array => liveMOF = array[0]
          else {
             passingModes.sort((a, b) => {
-               if (a.priority < b.priority) return -1
-               else if (a.priority > b.priority) return 1
+               if (a.priority < b.priority) return 1
+               else if (a.priority > b.priority) return -1
                else return 0
             })
             newLiveMOF = passingModes[0]
