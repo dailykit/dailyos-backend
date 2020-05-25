@@ -13,7 +13,7 @@ export const getMenu = async (req, res) => {
       next.setDate(next.getDate() + 1)
 
       // run some business logic
-      const response = await fetch(process.env.DATAHUB, {
+      const response = await fetch(process.env.DATA_HUB, {
          method: 'POST',
          headers: {
             'Content-Type': 'application/json'
