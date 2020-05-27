@@ -3,56 +3,68 @@ import { client } from '../../lib/graphql'
 import {
    FETCH_INVENTORY_PRODUCT,
    FETCH_SIMPLE_RECIPE_PRODUCT,
-   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
+   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION
 } from './graphql/queries'
 import {
+   UPDATE_CART,
    CREATE_ORDER,
-   CREATE_CUSTOMER,
+   // CREATE_CUSTOMER,
    CREATE_ORDER_SACHET,
-   CREATE_ORDER_BILLING,
    CREATE_ORDER_MEALKIT_PRODUCT,
    CREATE_ORDER_INVENTORY_PRODUCT,
-   CREATE_ORDER_READY_TO_EAT_PRODUCT,
+   CREATE_ORDER_READY_TO_EAT_PRODUCT
 } from './graphql/mutations'
 
 export const take = async (req, res) => {
    try {
       const {
-         email,
-         source,
-         billing,
-         currency,
-         products,
+         // email,
+         // source,
+         // billing,
+         // currency,
+         // products,
+         id,
+         cartInfo,
          customerId,
-         fulfillment,
-         dailyKeyUserId,
-      } = req.body
+         // fulfillment,
+         paymentStatus
+         // dailyKeyUserId
+      } = req.body.event.data.new
 
-      let order = null
+      let order = await client.request(CREATE_ORDER, {
+         object: {
+            customerId,
+            paymentStatus,
+            orderStatus: 'PENDING'
+         }
+      })
+
+      /*
       if (customerId) {
          order = await client.request(CREATE_ORDER, {
             object: {
                customerId,
                orderStatus: 'PENDING',
-               paymentStatus: billing.paymentStatus,
-            },
+               paymentStatus: billing.paymentStatus
+            }
          })
       } else {
          const customer = await client.request(CREATE_CUSTOMER, {
             object: {
                email,
                source,
-               dailyKeyUserId,
-            },
+               // dailyKeyUserId
+            }
          })
          order = await client.request(CREATE_ORDER, {
             object: {
                customerId: customer.id,
                orderStatus: 'PENDING',
-               paymentStatus: billing.paymentStatus,
-            },
+               paymentStatus: billing.paymentStatus
+            }
          })
       }
+      */
 
       /*
       const { tax, ...billingRest } = billing
@@ -64,14 +76,14 @@ export const take = async (req, res) => {
       */
 
       await Promise.all(
-         products.map(async ({ product, ...rest }) => {
+         cartInfo.products.map(async ({ product, ...rest }) => {
             try {
                switch (product.type) {
                   case 'Simple Recipe': {
                      const {
-                        simpleRecipeProduct: { simpleRecipe },
+                        simpleRecipeProduct: { simpleRecipe }
                      } = await client.request(FETCH_SIMPLE_RECIPE_PRODUCT, {
-                        id: product.id,
+                        id: product.id
                      })
                      if (product.option.type === 'Meal Kit') {
                         return processMealKit(
@@ -90,7 +102,11 @@ export const take = async (req, res) => {
                      }
                   }
                   case 'Inventory': {
-                     return processInventory(rest, product, order.createOrder)
+                     return processInventory({
+                        rest,
+                        product,
+                        order: order.createOrder
+                     })
                   }
                   default:
                      throw Error('No such product type!')
@@ -101,11 +117,20 @@ export const take = async (req, res) => {
          })
       )
 
+      await client.request(UPDATE_CART, {
+         id: { _eq: id },
+         _set: {
+            orderId: order.createOrder.id,
+            status: 'ORDER_PLACED'
+         }
+      })
+
       return res.status(200).json({
          data: order,
-         success: true,
+         success: true
       })
    } catch (error) {
+      console.log('take -> error', error)
       return res.status(404).json({ success: false, error: error.message })
    }
 }
@@ -122,8 +147,8 @@ const processMealKit = async (rest, product, simpleRecipe, order) => {
                simpleRecipeId: simpleRecipe.id,
                simpleRecipeProductId: product.id,
                simpleRecipeProductOptionId: product.option.id,
-               assemblyStationId: simpleRecipe.assemblyStationId,
-            },
+               assemblyStationId: simpleRecipe.assemblyStationId
+            }
          }
       )
       const variables = { id: product.option.id }
@@ -142,7 +167,7 @@ const processMealKit = async (rest, product, simpleRecipe, order) => {
                   unit,
                   quantity,
                   ingredient,
-                  ingredientProcessing,
+                  ingredientProcessing
                } = ingredientSachet
 
                await client.request(CREATE_ORDER_SACHET, {
@@ -153,8 +178,8 @@ const processMealKit = async (rest, product, simpleRecipe, order) => {
                      ingredientSachetId: id,
                      orderMealKitProductId: createOrderMealKitProduct.id,
                      ingredientName: ingredient.name,
-                     processingName: ingredientProcessing.processing.name,
-                  },
+                     processingName: ingredientProcessing.processing.name
+                  }
                })
             } catch (error) {
                throw Error(error)
@@ -176,31 +201,35 @@ const processReadyToEat = (rest, product, simpleRecipe, order) => {
             simpleRecipeId: simpleRecipe.id,
             simpleRecipeProductId: product.id,
             simpleRecipeProductOptionId: product.option.id,
-            assemblyStationId: simpleRecipe.assemblyStationId,
-         },
+            assemblyStationId: simpleRecipe.assemblyStationId
+         }
       })
    } catch (error) {
       throw Error(error)
    }
 }
 
-const processInventory = async (rest, product, order) => {
+const processInventory = async ({ product, order, rest }) => {
    try {
       const variables = { id: product.id }
       const { inventoryProduct } = await client.request(
          FETCH_INVENTORY_PRODUCT,
          variables
       )
-      return client.request(CREATE_ORDER_INVENTORY_PRODUCT, {
-         object: {
-            ...rest,
-            assemblyStatus: 'PENDING',
-            orderId: order.id,
-            inventoryProductId: product.id,
-            inventoryProductOptionId: product.option.id,
-            assemblyStationId: inventoryProduct.assemblyStationId,
-         },
-      })
+      const updateInventoryroduct = await client.request(
+         CREATE_ORDER_INVENTORY_PRODUCT,
+         {
+            object: {
+               // ...rest,
+               orderId: order.id,
+               assemblyStatus: 'PENDING',
+               inventoryProductId: product.id,
+               inventoryProductOptionId: product.option.id,
+               assemblyStationId: inventoryProduct.assemblyStationId
+            }
+         }
+      )
+      return
    } catch (error) {
       throw Error(error)
    }

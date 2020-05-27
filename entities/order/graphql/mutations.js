@@ -14,14 +14,6 @@ export const CREATE_ORDER = `
    }
 `
 
-export const CREATE_ORDER_BILLING = `
-   mutation createOrderBilling($object: order_orderBilling_insert_input!) {
-      createOrderBilling(object: $object) {
-         id
-      }
-   }
-`
-
 export const CREATE_ORDER_INVENTORY_PRODUCT = `
    mutation createOrderInventoryProduct($object: order_orderInventoryProduct_insert_input!){
       createOrderInventoryProduct(object: $object) {
@@ -50,6 +42,16 @@ export const CREATE_ORDER_SACHET = `
    mutation createOrderSachet($object: order_orderSachet_insert_input!){
       createOrderSachet(object: $object){
          id
+      }
+   }
+`
+
+export const UPDATE_CART = `
+   mutation updateCart($id: Int_comparison_exp!, $orderId: Int!, $status: String!) {
+      updateCart(where: {id: $id}, _set: {orderId: $orderId, status: $status}) {
+      returning {
+            id
+         }
       }
    }
 `

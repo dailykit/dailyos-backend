@@ -32,7 +32,7 @@ AWS.config.setPromisesDependency(bluebird)
 const PORT = process.env.PORT || 4000
 
 // Routes
-app.use('/api/orders', OrderRouter)
+app.use('/api/order', OrderRouter)
 app.use('/api/inventory', WorkOrderRouter)
 app.use('/api/menu/', MenuRouter)
 app.use('/api/mof/', MOFRouter)
