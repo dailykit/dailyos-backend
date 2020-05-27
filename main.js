@@ -10,7 +10,8 @@ import {
    WorkOrderRouter,
    MOFRouter,
    MenuRouter,
-   UploadRouter
+   UploadRouter,
+   initiatePayment
 } from './entities'
 
 const app = express()
@@ -36,6 +37,7 @@ app.use('/api/inventory', WorkOrderRouter)
 app.use('/api/menu/', MenuRouter)
 app.use('/api/mof/', MOFRouter)
 app.use('/api/assets', UploadRouter)
+app.post('/api/initiate-payment', initiatePayment)
 
 app.listen(PORT, () => {
    console.log(`Server started on ${PORT}`)
