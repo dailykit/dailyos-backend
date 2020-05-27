@@ -118,11 +118,9 @@ export const take = async (req, res) => {
       )
 
       await client.request(UPDATE_CART, {
-         id: { _eq: id },
-         _set: {
-            orderId: order.createOrder.id,
-            status: 'ORDER_PLACED'
-         }
+         id,
+         orderId: Number(order.createOrder.id),
+         status: 'ORDER_PLACED'
       })
 
       return res.status(200).json({

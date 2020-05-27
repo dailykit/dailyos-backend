@@ -47,8 +47,8 @@ export const CREATE_ORDER_SACHET = `
 `
 
 export const UPDATE_CART = `
-   mutation updateCart($id: Int_comparison_exp!, $orderId: Int!, $status: String!) {
-      updateCart(where: {id: $id}, _set: {orderId: $orderId, status: $status}) {
+   mutation updateCart($id: Int!, $orderId: Int!, $status: String!) {
+      updateCart(where: {id: {_eq: $id}}, _set: {orderId: $orderId, status: $status}) {
       returning {
             id
          }
