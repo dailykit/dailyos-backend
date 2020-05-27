@@ -1,27 +1,12 @@
-import { request } from 'graphql-request'
-import { ORGANIZATION } from './graphql'
 const fetch = require('node-fetch')
 
 export const initiatePayment = async (req, res) => {
    try {
       const data = req.body.event.data.new
 
-      const { hostname } = new URL(process.env.DATA_HUB)
-
-      const result = await request(process.env.DAILYCLOAK, ORGANIZATION, {
-         organizationUrl: { _eq: hostname }
-      })
-
-      let orgId
-      if (result.organizations.length) {
-         orgId = result.organizations[0].id
-      } else {
-         throw Error('Organization not found!')
-      }
-
       if (data.status === 'PROCESS') {
          const body = {
-            organizationId: orgId,
+            organizationId: process.env.ORGANIZATION_ID,
             cart: {
                id: data.id,
                amount: data.amount
