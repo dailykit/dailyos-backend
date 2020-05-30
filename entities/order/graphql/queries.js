@@ -43,3 +43,32 @@ export const FETCH_SIMPLE_RECIPE_PRODUCT_OPTION = `
       }
    }
 `
+
+export const FETCH_CART = `
+   query cartByPK($id: Int!) {
+      cartByPK(id: $id) {
+         id
+         tip
+         tax
+         amount
+         status
+         address
+         cartInfo
+         orderId
+         isValid
+         taxPercent
+         totalPrice
+         itemTotal
+         created_at
+         customerId
+         customerInfo
+         transactionId
+         deliveryPrice
+         paymentStatus
+         fulfillmentInfo
+         paymentMethodId
+         stripeCustomerId
+         transactionRemark
+      }
+   }
+`

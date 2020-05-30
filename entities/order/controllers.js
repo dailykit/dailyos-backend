@@ -3,7 +3,8 @@ import { client } from '../../lib/graphql'
 import {
    FETCH_INVENTORY_PRODUCT,
    FETCH_SIMPLE_RECIPE_PRODUCT,
-   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION
+   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
+   FETCH_CART
 } from './graphql/queries'
 import {
    UPDATE_CART,
@@ -24,18 +25,43 @@ export const take = async (req, res) => {
          // currency,
          // products,
          id,
-         cartInfo,
          customerId,
          // fulfillment,
          paymentStatus
          // dailyKeyUserId
       } = req.body.event.data.new
+      const { cartByPK: cart } = await client.request(FETCH_CART, {
+         id
+      })
 
       let order = await client.request(CREATE_ORDER, {
          object: {
             customerId,
             paymentStatus,
-            orderStatus: 'PENDING'
+            tax: cart.tax,
+            orderStatus: 'PENDING',
+            itemTotal: cart.amount,
+            deliveryPrice: cart.deliveryPrice,
+            transactionId: cart.transactionId,
+            deliveryInfo: {
+               dropoff: {
+                  dropoffInfo: {
+                     customerEmail: cart.customerInfo.customerEmail,
+                     customerPhone: cart.customerInfo.customerPhone,
+                     customerLastName: cart.customerInfo.customerLastName,
+                     customerFirstName: cart.customerInfo.customerFirstName,
+                     customerAddress: {
+                        line1: cart.address.line1,
+                        line2: cart.address.line2,
+                        city: cart.address.city,
+                        state: cart.address.state,
+                        zipcode: cart.address.zipcode,
+                        country: cart.address.country,
+                        notes: cart.address.notes
+                     }
+                  }
+               }
+            }
          }
       })
 
@@ -64,9 +90,7 @@ export const take = async (req, res) => {
             }
          })
       }
-      */
 
-      /*
       const { tax, ...billingRest } = billing
       await client.request(CREATE_ORDER_BILLING, {
          ...tax,
@@ -76,7 +100,7 @@ export const take = async (req, res) => {
       */
 
       await Promise.all(
-         cartInfo.products.map(async ({ product, ...rest }) => {
+         cart.cartInfo.products.map(async ({ product, ...rest }) => {
             try {
                switch (product.type) {
                   case 'Simple Recipe': {
@@ -85,20 +109,20 @@ export const take = async (req, res) => {
                      } = await client.request(FETCH_SIMPLE_RECIPE_PRODUCT, {
                         id: product.id
                      })
-                     if (product.option.type === 'Meal Kit') {
-                        return processMealKit(
+                     if (product.option.type === 'mealKit') {
+                        return processMealKit({
                            rest,
                            product,
                            simpleRecipe,
-                           order.createOrder
-                        )
-                     } else if (product.option.type === 'Ready To Eat') {
-                        return processReadyToEat(
+                           order: order.createOrder
+                        })
+                     } else if (product.option.type === 'readyToEat') {
+                        return processReadyToEat({
                            rest,
                            product,
                            simpleRecipe,
-                           order.createOrder
-                        )
+                           order: order.createOrder
+                        })
                      }
                   }
                   case 'Inventory': {
@@ -133,15 +157,15 @@ export const take = async (req, res) => {
    }
 }
 
-const processMealKit = async (rest, product, simpleRecipe, order) => {
+const processMealKit = async ({ rest, product, simpleRecipe, order }) => {
    try {
       const { createOrderMealKitProduct } = await client.request(
          CREATE_ORDER_MEALKIT_PRODUCT,
          {
             object: {
-               ...rest,
-               assemblyStatus: 'PENDING',
+               // ...rest,
                orderId: order.id,
+               assemblyStatus: 'PENDING',
                simpleRecipeId: simpleRecipe.id,
                simpleRecipeProductId: product.id,
                simpleRecipeProductOptionId: product.option.id,
@@ -174,8 +198,8 @@ const processMealKit = async (rest, product, simpleRecipe, order) => {
                      status: 'PENDING',
                      quantity: quantity,
                      ingredientSachetId: id,
-                     orderMealKitProductId: createOrderMealKitProduct.id,
                      ingredientName: ingredient.name,
+                     orderMealKitProductId: createOrderMealKitProduct.id,
                      processingName: ingredientProcessing.processing.name
                   }
                })
@@ -190,11 +214,11 @@ const processMealKit = async (rest, product, simpleRecipe, order) => {
    }
 }
 
-const processReadyToEat = (rest, product, simpleRecipe, order) => {
+const processReadyToEat = ({ rest, product, simpleRecipe, order }) => {
    try {
       client.request(CREATE_ORDER_READY_TO_EAT_PRODUCT, {
          object: {
-            ...rest,
+            // ...rest,
             orderId: order.id,
             simpleRecipeId: simpleRecipe.id,
             simpleRecipeProductId: product.id,
@@ -214,7 +238,7 @@ const processInventory = async ({ product, order, rest }) => {
          FETCH_INVENTORY_PRODUCT,
          variables
       )
-      const updateInventoryroduct = await client.request(
+      const updateInventoryProduct = await client.request(
          CREATE_ORDER_INVENTORY_PRODUCT,
          {
             object: {
