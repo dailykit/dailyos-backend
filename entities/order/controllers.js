@@ -95,18 +95,18 @@ export const take = async (req, res) => {
       await Promise.all(
          cart.cartInfo.products.map(async ({ product, products }) => {
             try {
+               if (product && Object.keys(product).length > 0) {
+                  await processOrder(product, order)
+               }
                if (Array.isArray(products) && products.length > 0) {
                   await Promise.all(
-                     products.map(async product => {
-                        return processOrder(product)
+                     products.map(async ({ product }) => {
+                        await processOrder(product, order)
                      })
                   )
                }
-               return processOrder(product)
             } catch (error) {
-               return res
-                  .status(404)
-                  .json({ success: false, error: error.message })
+               throw Error(error.message)
             }
          })
       )
@@ -126,7 +126,7 @@ export const take = async (req, res) => {
    }
 }
 
-const processOrder = async product => {
+const processOrder = async (product, order) => {
    try {
       switch (product.type) {
          case 'Simple Recipe': {
