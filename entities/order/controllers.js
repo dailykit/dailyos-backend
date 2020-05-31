@@ -90,53 +90,23 @@ export const take = async (req, res) => {
             }
          })
       }
-
-      const { tax, ...billingRest } = billing
-      await client.request(CREATE_ORDER_BILLING, {
-         ...tax,
-         ...billingRest,
-         orderId: order.id,
-      })
       */
 
       await Promise.all(
-         cart.cartInfo.products.map(async ({ product, ...rest }) => {
+         cart.cartInfo.products.map(async ({ product, products }) => {
             try {
-               switch (product.type) {
-                  case 'Simple Recipe': {
-                     const {
-                        simpleRecipeProduct: { simpleRecipe }
-                     } = await client.request(FETCH_SIMPLE_RECIPE_PRODUCT, {
-                        id: product.id
+               if (Array.isArray(products) && products.length > 0) {
+                  await Promise.all(
+                     products.map(async product => {
+                        return processOrder(product)
                      })
-                     if (product.option.type === 'mealKit') {
-                        return processMealKit({
-                           rest,
-                           product,
-                           simpleRecipe,
-                           order: order.createOrder
-                        })
-                     } else if (product.option.type === 'readyToEat') {
-                        return processReadyToEat({
-                           rest,
-                           product,
-                           simpleRecipe,
-                           order: order.createOrder
-                        })
-                     }
-                  }
-                  case 'Inventory': {
-                     return processInventory({
-                        rest,
-                        product,
-                        order: order.createOrder
-                     })
-                  }
-                  default:
-                     throw Error('No such product type!')
+                  )
                }
+               return processOrder(product)
             } catch (error) {
-               throw Error(error)
+               return res
+                  .status(404)
+                  .json({ success: false, error: error.message })
             }
          })
       )
@@ -152,18 +122,53 @@ export const take = async (req, res) => {
          success: true
       })
    } catch (error) {
-      console.log('take -> error', error)
       return res.status(404).json({ success: false, error: error.message })
    }
 }
 
-const processMealKit = async ({ rest, product, simpleRecipe, order }) => {
+const processOrder = async product => {
+   try {
+      switch (product.type) {
+         case 'Simple Recipe': {
+            const {
+               simpleRecipeProduct: { simpleRecipe }
+            } = await client.request(FETCH_SIMPLE_RECIPE_PRODUCT, {
+               id: product.id
+            })
+            if (product.option.type === 'mealKit') {
+               return processMealKit({
+                  product,
+                  simpleRecipe,
+                  order: order.createOrder
+               })
+            } else if (product.option.type === 'readyToEat') {
+               return processReadyToEat({
+                  product,
+                  simpleRecipe,
+                  order: order.createOrder
+               })
+            }
+         }
+         case 'Inventory': {
+            return processInventory({
+               product,
+               order: order.createOrder
+            })
+         }
+         default:
+            throw Error('No such product type!')
+      }
+   } catch (error) {
+      throw Error(error)
+   }
+}
+
+const processMealKit = async ({ product, simpleRecipe, order }) => {
    try {
       const { createOrderMealKitProduct } = await client.request(
          CREATE_ORDER_MEALKIT_PRODUCT,
          {
             object: {
-               // ...rest,
                orderId: order.id,
                assemblyStatus: 'PENDING',
                simpleRecipeId: simpleRecipe.id,
@@ -214,11 +219,10 @@ const processMealKit = async ({ rest, product, simpleRecipe, order }) => {
    }
 }
 
-const processReadyToEat = ({ rest, product, simpleRecipe, order }) => {
+const processReadyToEat = async ({ product, simpleRecipe, order }) => {
    try {
-      client.request(CREATE_ORDER_READY_TO_EAT_PRODUCT, {
+      await client.request(CREATE_ORDER_READY_TO_EAT_PRODUCT, {
          object: {
-            // ...rest,
             orderId: order.id,
             simpleRecipeId: simpleRecipe.id,
             simpleRecipeProductId: product.id,
@@ -231,26 +235,22 @@ const processReadyToEat = ({ rest, product, simpleRecipe, order }) => {
    }
 }
 
-const processInventory = async ({ product, order, rest }) => {
+const processInventory = async ({ product, order }) => {
    try {
       const variables = { id: product.id }
       const { inventoryProduct } = await client.request(
          FETCH_INVENTORY_PRODUCT,
          variables
       )
-      const updateInventoryProduct = await client.request(
-         CREATE_ORDER_INVENTORY_PRODUCT,
-         {
-            object: {
-               // ...rest,
-               orderId: order.id,
-               assemblyStatus: 'PENDING',
-               inventoryProductId: product.id,
-               inventoryProductOptionId: product.option.id,
-               assemblyStationId: inventoryProduct.assemblyStationId
-            }
+      await client.request(CREATE_ORDER_INVENTORY_PRODUCT, {
+         object: {
+            orderId: order.id,
+            assemblyStatus: 'PENDING',
+            inventoryProductId: product.id,
+            inventoryProductOptionId: product.option.id,
+            assemblyStationId: inventoryProduct.assemblyStationId
          }
-      )
+      })
       return
    } catch (error) {
       throw Error(error)
