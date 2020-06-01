@@ -11,6 +11,7 @@ import {
    MOFRouter,
    MenuRouter,
    UploadRouter,
+   DeviceRouter,
    initiatePayment
 } from './entities'
 
@@ -38,6 +39,8 @@ app.use('/api/menu/', MenuRouter)
 app.use('/api/mof/', MOFRouter)
 app.use('/api/assets', UploadRouter)
 app.post('/api/initiate-payment', initiatePayment)
+
+app.use('/webhook/devices', DeviceRouter)
 
 app.listen(PORT, () => {
    console.log(`Server started on ${PORT}`)
