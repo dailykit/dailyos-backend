@@ -1,10 +1,13 @@
 export const FETCH_INVENTORY_PRODUCT = `
-   query inventoryProduct($id: Int!){
+   query inventoryProduct($id: Int!, $optionId: Int_comparison_exp!) {
       inventoryProduct(id: $id) {
          id
          assemblyStationId
+         inventoryProductOptions(where: {id: $optionId}) {
+            quantity
+         }
       }
-   }      
+   }    
 `
 
 export const FETCH_SIMPLE_RECIPE_PRODUCT = `

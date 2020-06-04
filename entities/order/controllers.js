@@ -237,14 +237,22 @@ const processReadyToEat = async ({ product, simpleRecipe, order }) => {
 
 const processInventory = async ({ product, order }) => {
    try {
-      const variables = { id: product.id }
+      const variables = { id: product.id, optionId: { _eq: product.option.id } }
       const { inventoryProduct } = await client.request(
          FETCH_INVENTORY_PRODUCT,
          variables
       )
+
+      const optionQuantity =
+         inventoryProduct.inventoryProductOptions[0].quantity
+      const totalQuantity = product.quantity
+         ? product.quantity * optionQuantity
+         : optionQuantity
+
       await client.request(CREATE_ORDER_INVENTORY_PRODUCT, {
          object: {
             orderId: order.id,
+            quantity: totalQuantity,
             assemblyStatus: 'PENDING',
             inventoryProductId: product.id,
             inventoryProductOptionId: product.option.id,
