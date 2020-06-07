@@ -12,7 +12,8 @@ import {
    MenuRouter,
    UploadRouter,
    DeviceRouter,
-   initiatePayment
+   initiatePayment,
+   NotificationRouter
 } from './entities'
 
 const app = express()
@@ -41,6 +42,7 @@ app.use('/api/assets', UploadRouter)
 app.post('/api/initiate-payment', initiatePayment)
 
 app.use('/webhook/devices', DeviceRouter)
+app.use('/webhook/notification', NotificationRouter)
 
 app.listen(PORT, () => {
    console.log(`Server started on ${PORT}`)
