@@ -9,6 +9,7 @@ import {
    OrderRouter,
    WorkOrderRouter,
    MOFRouter,
+   UserRouter,
    MenuRouter,
    UploadRouter,
    DeviceRouter,
@@ -41,6 +42,7 @@ app.use('/api/mof/', MOFRouter)
 app.use('/api/assets', UploadRouter)
 app.post('/api/initiate-payment', initiatePayment)
 
+app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)
 app.use('/webhook/notification', NotificationRouter)
 
