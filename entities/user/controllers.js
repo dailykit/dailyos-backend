@@ -63,7 +63,25 @@ const user = {
                ]
             }
          })
+
+         const { data } = await axios.get(
+            `${process.env.KEYCLOAK_URL}/admin/realms/${process.env.KEYCLOAK_REALM}/users?email=${user.email}`,
+            {
+               headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${access_token}`
+               }
+            }
+         )
+
+         if (data.length > 0) {
+            await client.request(UPDATE_USER, {
+               id: user.id,
+               keycloakId: data[0].id
+            })
+         }
       } catch (error) {
+         console.log('error', error)
          throw Error(error.message)
       }
    },
