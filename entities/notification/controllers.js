@@ -92,8 +92,9 @@ export const trigger = async (req, res) => {
 }
 
 const hasuraTrigger = async payloadData => {
+   const url = new URL(process.env.DATA_HUB).origin + '/datahub/v1/query'
    await axios({
-      url: `${process.env.DATA_HUB}/v1/query`,
+      url,
       method: 'POST',
       headers: {
          'Content-Type': 'application/json',
