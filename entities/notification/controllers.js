@@ -15,18 +15,15 @@ export const manage = async (req, res) => {
 
       const { id, template } = notificationTypes[0]
 
-      switch (trigger.name) {
-         case 'Order_Created': {
-            await order.create({
-               data: req.body.event.data,
-               template,
-               type: id
-            })
-            break
+      const parsed = JSON.parse(
+         template_compiler(JSON.stringify(template), req.body.event.data)
+      )
+      await client.request(CREATE_NOTIFICATION, {
+         object: {
+            typeId: id,
+            content: parsed
          }
-         default:
-            throw Error('Unknown Trigger!')
-      }
+      })
 
       return res
          .status(200)
@@ -91,27 +88,6 @@ export const trigger = async (req, res) => {
       }
    } catch (error) {
       return res.status(400).json({ success: false, error: error.message })
-   }
-}
-
-const order = {
-   create: async ({ template, data, type }) => {
-      try {
-         const parsed = JSON.parse(
-            template_compiler(JSON.stringify(template), data)
-         )
-         await client.request(CREATE_NOTIFICATION, {
-            object: {
-               typeId: type,
-               content: parsed,
-               action: {
-                  url: `/order/orders/${data.new.id}`
-               }
-            }
-         })
-      } catch (error) {
-         throw Error(error.message)
-      }
    }
 }
 
