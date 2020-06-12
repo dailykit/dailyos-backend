@@ -40,7 +40,8 @@ export const take = async (req, res) => {
             paymentStatus,
             tax: cart.tax,
             orderStatus: 'PENDING',
-            itemTotal: cart.amount,
+            amountPaid: cart.amount,
+            itemTotal: cart.cartInfo.total,
             deliveryPrice: cart.deliveryPrice,
             transactionId: cart.transactionId,
             deliveryInfo: {
@@ -170,6 +171,7 @@ const processMealKit = async ({ product, simpleRecipe, order }) => {
          {
             object: {
                orderId: order.id,
+               price: product.price,
                assemblyStatus: 'PENDING',
                simpleRecipeId: simpleRecipe.id,
                simpleRecipeProductId: product.id,
@@ -224,6 +226,7 @@ const processReadyToEat = async ({ product, simpleRecipe, order }) => {
       await client.request(CREATE_ORDER_READY_TO_EAT_PRODUCT, {
          object: {
             orderId: order.id,
+            price: product.price,
             simpleRecipeId: simpleRecipe.id,
             simpleRecipeProductId: product.id,
             simpleRecipeProductOptionId: product.option.id,
@@ -252,6 +255,7 @@ const processInventory = async ({ product, order }) => {
       await client.request(CREATE_ORDER_INVENTORY_PRODUCT, {
          object: {
             orderId: order.id,
+            price: product.price,
             quantity: totalQuantity,
             assemblyStatus: 'PENDING',
             inventoryProductId: product.id,
