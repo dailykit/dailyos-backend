@@ -7,12 +7,13 @@ const bluebird = require('bluebird')
 
 import {
    OrderRouter,
-   WorkOrderRouter,
    MOFRouter,
    UserRouter,
    MenuRouter,
    UploadRouter,
    DeviceRouter,
+   RMKMenuRouter,
+   WorkOrderRouter,
    initiatePayment,
    NotificationRouter
 } from './entities'
@@ -37,8 +38,9 @@ const PORT = process.env.PORT || 4000
 // Routes
 app.use('/api/order', OrderRouter)
 app.use('/api/inventory', WorkOrderRouter)
-app.use('/api/menu/', MenuRouter)
-app.use('/api/mof/', MOFRouter)
+app.use('/api/menu', MenuRouter)
+app.use('/api/rmk-menu', RMKMenuRouter)
+app.use('/api/mof', MOFRouter)
 app.use('/api/assets', UploadRouter)
 app.post('/api/initiate-payment', initiatePayment)
 
