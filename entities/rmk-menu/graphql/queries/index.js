@@ -1,9 +1,9 @@
-export const MENU_COLLECTIONS = `
-   query rmkCollections {
-      rmkCollections {
+export const COLLECTIONS = `
+   query collections {
+      collections: onlineStore_rmkCollection {
          name
-         availability
          categories
+         availability
       }
    }
 `

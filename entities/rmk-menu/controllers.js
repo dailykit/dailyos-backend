@@ -1,11 +1,11 @@
 const fetch = require('node-fetch')
 const R = require('rrule')
-const { MENU_COLLECTIONS } = require('./graphql')
+const { COLLECTIONS } = require('./graphql')
 
 export const getMenu = async (req, res) => {
    try {
       // get request input
-      const { year, month, day } = req.body.input
+      const { year, month, day } = req.body
 
       // calc next day
       const now = new Date(year, month, day)
@@ -19,21 +19,22 @@ export const getMenu = async (req, res) => {
             'Content-Type': 'application/json'
          },
          body: JSON.stringify({
-            query: MENU_COLLECTIONS
+            query: COLLECTIONS
          })
       })
-      const { data = {} } = await response.json()
-      const collections = data.rmkCollections
+      const { data: { collections = [] } = {} } = await response.json()
 
       const matches = []
-      collections.forEach(col => {
-         const occurrences = R.rrulestr(col.availability.rule).between(
+      collections.forEach(collection => {
+         const occurrences = R.rrulestr(
+            JSON.parse(collection.availability).rule
+         ).between(
             new Date(Date.UTC(year, month, day)),
             new Date(
                Date.UTC(next.getFullYear(), next.getMonth(), next.getDate())
             )
          )
-         if (occurrences.length) matches.push(col)
+         if (occurrences.length) matches.push(collection)
       })
 
       const result = []
