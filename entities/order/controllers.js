@@ -130,7 +130,7 @@ export const take = async (req, res) => {
 const processOrder = async (product, order) => {
    try {
       switch (product.type) {
-         case 'Simple Recipe': {
+         case 'simpleRecipeProduct': {
             const {
                simpleRecipeProduct: { simpleRecipe }
             } = await client.request(FETCH_SIMPLE_RECIPE_PRODUCT, {
@@ -150,7 +150,7 @@ const processOrder = async (product, order) => {
                })
             }
          }
-         case 'Inventory': {
+         case 'inventoryProduct': {
             return processInventory({
                product,
                order: order.createOrder
