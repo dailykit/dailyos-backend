@@ -1,4 +1,4 @@
-const fetch = require('node-fetch')
+import { client } from '../../lib/graphql'
 const {
    UPDATE_MODE,
    INGREDIENT_SACHET,
@@ -7,8 +7,8 @@ const {
 
 export const updateMOF = async (req, res) => {
    try {
-      const query = `
-        query MyQuery {
+      const FULLFILLMENTS = `
+        query modeOfFulfillments {
             ${req.body.table.name}(id: ${req.body.event.data.new.id}) {
                modeOfFulfillments {
                   id
@@ -22,18 +22,8 @@ export const updateMOF = async (req, res) => {
             }
         }
       `
+      const data = await client.request(FULLFILLMENTS)
 
-      const response = await fetch(process.env.DATAHUB, {
-         method: 'POST',
-         headers: {
-            'Content-Type': 'application/json'
-         },
-         body: JSON.stringify({
-            query
-         })
-      })
-
-      const { data } = await response.json()
       const modes = data[req.body.table.name].modeOfFulfillments
       let updatedModes = modes
 
@@ -66,17 +56,10 @@ export const updateMOF = async (req, res) => {
       // })
 
       updatedModes.forEach(async mode => {
-         const response = await fetch(process.env.DATAHUB, {
-            method: 'POST',
-            headers: {
-               'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-               query: UPDATE_MODE,
-               variables: { id: mode.id, set: { isLive: mode.isLive } }
-            })
+         await client.request(UPDATE_MODE, {
+            id: mode.id,
+            set: { isLive: mode.isLive }
          })
-         console.log('RES:', await response.json())
       })
 
       return res.send('OK')

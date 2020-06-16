@@ -1,4 +1,4 @@
-const fetch = require('node-fetch')
+import { client } from '../../lib/graphql'
 const R = require('rrule')
 const { COLLECTIONS } = require('./graphql')
 
@@ -13,16 +13,7 @@ export const getMenu = async (req, res) => {
       next.setDate(next.getDate() + 1)
 
       // run some business logic
-      const response = await fetch(process.env.DATA_HUB, {
-         method: 'POST',
-         headers: {
-            'Content-Type': 'application/json'
-         },
-         body: JSON.stringify({
-            query: COLLECTIONS
-         })
-      })
-      const { data: { collections = [] } = {} } = await response.json()
+      const { collections = [] } = await client.request(COLLECTIONS)
 
       const matches = []
       collections.forEach(collection => {
