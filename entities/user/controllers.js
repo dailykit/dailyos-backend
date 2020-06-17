@@ -55,6 +55,7 @@ const user = {
                enabled: true,
                username: user.email,
                email: user.email,
+               requiredActions: ['UPDATE_PASSWORD'],
                credentials: [
                   {
                      type: 'password',
