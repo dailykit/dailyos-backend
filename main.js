@@ -24,7 +24,11 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-app.use(morgan('dev'))
+app.use(
+   morgan(
+      '[:status :method :url] :remote-user [:date[clf]] - [:user-agent] - :response-time ms'
+   )
+)
 
 AWS.config.update({
    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
