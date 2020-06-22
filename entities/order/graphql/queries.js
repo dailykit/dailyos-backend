@@ -75,3 +75,26 @@ export const FETCH_CART = `
       }
    }
 `
+
+export const ORGANIZATION = `
+   query organization {
+      brand: storeSettings(where: {identifier: {_eq: "Brand Name"}}) {
+         id
+         type
+         value
+         identifier
+      }
+      address: storeSettings(where: {identifier: {_eq: "Location"}}) {
+         id
+         type
+         value
+         identifier
+      }
+      contact: storeSettings(where: {identifier: {_eq: "Contact"}}) {
+         id
+         type
+         value
+         identifier
+      }
+   }
+`

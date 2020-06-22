@@ -1,15 +1,8 @@
-export const CREATE_CUSTOMER = `
-   mutation createCustomer($object: crm_customer_insert_input!) {
-      createCustomer(object: $object) {
-         id
-      }
-   }
-`
-
 export const CREATE_ORDER = `
    mutation createOrder($object: order_order_insert_input!) {
       createOrder(object: $object) {
          id
+         deliveryInfo
       }
    }
 `
@@ -54,4 +47,12 @@ export const UPDATE_CART = `
          }
       }
    }
+`
+
+export const UPDATE_ORDER = `
+   mutation updateOrder($id: oid!, $_set: order_order_set_input!) {
+      updateOrder(pk_columns: {id: $id}, _set: $_set) {
+         id
+      }
+   } 
 `

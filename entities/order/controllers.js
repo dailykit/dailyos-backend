@@ -4,35 +4,40 @@ import {
    FETCH_INVENTORY_PRODUCT,
    FETCH_SIMPLE_RECIPE_PRODUCT,
    FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
-   FETCH_CART
+   FETCH_CART,
+   ORGANIZATION
 } from './graphql/queries'
 import {
    UPDATE_CART,
    CREATE_ORDER,
-   // CREATE_CUSTOMER,
    CREATE_ORDER_SACHET,
    CREATE_ORDER_MEALKIT_PRODUCT,
    CREATE_ORDER_INVENTORY_PRODUCT,
-   CREATE_ORDER_READY_TO_EAT_PRODUCT
+   CREATE_ORDER_READY_TO_EAT_PRODUCT,
+   UPDATE_ORDER
 } from './graphql/mutations'
 
 export const take = async (req, res) => {
    try {
-      const {
-         // email,
-         // source,
-         // billing,
-         // currency,
-         // products,
-         id,
-         customerId,
-         // fulfillment,
-         paymentStatus
-         // dailyKeyUserId
-      } = req.body.event.data.new
+      const { id, customerId, paymentStatus } = req.body.event.data.new
       const { cartByPK: cart } = await client.request(FETCH_CART, {
          id
       })
+
+      const orderProducts = await Promise.all(
+         cart.cartInfo.products.map(({ product, products }) => {
+            if (Array.isArray(products)) {
+               return products.map(({ product }) => {
+                  const { id, name, type, price, quantity } = product
+                  return { id, name, type, price, quantity }
+               })
+            }
+            const { id, name, type, price, quantity } = product
+            return { id, name, type, price, quantity }
+         })
+      )
+
+      const { brand, address, contact } = await client.request(ORGANIZATION)
 
       let order = await client.request(CREATE_ORDER, {
          object: {
@@ -44,8 +49,102 @@ export const take = async (req, res) => {
             itemTotal: cart.cartInfo.total,
             deliveryPrice: cart.deliveryPrice,
             transactionId: cart.transactionId,
+            fulfillmentType: cart.fulfillmentInfo.type,
             deliveryInfo: {
+               deliveryId: '',
+               webhookUrl: '',
+               deliveryFee: {
+                  value: '',
+                  unit: ''
+               },
+               tracking: {
+                  location: {
+                     isAvailable: false,
+                     longitude: '',
+                     latitude: ''
+                  },
+                  code: {
+                     isAvailable: false,
+                     value: '',
+                     url: ''
+                  },
+                  sms: {
+                     isAvailable: false
+                  },
+                  eta: ''
+               },
+               orderInfo: {
+                  products: orderProducts
+               },
+               deliveryRequest: {
+                  status: {
+                     value: 'WAITING',
+                     timeStamp: '',
+                     description: '',
+                     data: {}
+                  },
+                  distance: {
+                     value: 0,
+                     unit: 'mile'
+                  }
+               },
+               assigned: {
+                  status: {
+                     value: 'WAITING',
+                     timeStamp: '',
+                     description: '',
+                     data: {}
+                  },
+                  driverInfo: {
+                     driverFirstName: '',
+                     driverLastName: '',
+                     driverPhone: '',
+                     driverPicture: ''
+                  },
+                  vehicleInfo: {
+                     vehicleType: '',
+                     vehicleMake: '',
+                     vehicleModel: '',
+                     vehicleColor: '',
+                     vehicleLicensePlateNumber: '',
+                     vehicleLicensePlateState: ''
+                  }
+               },
+               pickup: {
+                  status: {
+                     value: 'WAITING'
+                  },
+                  pickupInfo: {
+                     organizationId: process.env.ORGANIZATION_ID,
+                     organizationName: brand[0].value.name,
+                     organizationPhone: contact[0].value.phoneNo,
+                     organizationEmail: contact[0].value.email,
+                     organizationAddress: {
+                        line1: address[0].value.address.line1,
+                        line2: address[0].value.address.line2,
+                        city: address[0].value.address.city,
+                        state: address[0].value.address.state,
+                        country: address[0].value.address.country,
+                        zipcode: address[0].value.address.zip,
+                        latitude: address[0].value.address.lat,
+                        longitude: address[0].value.address.lng
+                     }
+                  }
+               },
                dropoff: {
+                  status: {
+                     value: 'WAITING'
+                  },
+                  window: {
+                     requested: {
+                        startsAt: new Date(
+                           `${cart.fulfillmentInfo.date} ${cart.fulfillmentInfo.slot.from}`
+                        ),
+                        endsAt: new Date(
+                           `${cart.fulfillmentInfo.date} ${cart.fulfillmentInfo.slot.to}`
+                        )
+                     }
+                  },
                   dropoffInfo: {
                      customerEmail: cart.customerInfo.customerEmail,
                      customerPhone: cart.customerInfo.customerPhone,
@@ -61,37 +160,74 @@ export const take = async (req, res) => {
                         notes: cart.address.notes
                      }
                   }
+               },
+               return: {
+                  status: {
+                     value: 'WAITING',
+                     timeStamp: '',
+                     description: '',
+                     data: {}
+                  },
+                  window: {
+                     requested: {
+                        id: '',
+                        buffer: '',
+                        startsAt: '',
+                        endsAt: ''
+                     },
+                     approved: {
+                        id: '',
+                        startsAt: '',
+                        endsAt: ''
+                     }
+                  },
+                  confirmation: {
+                     photo: {
+                        isRequired: false,
+                        data: {}
+                     },
+                     signature: {
+                        isRequired: false,
+                        data: {}
+                     },
+                     idProof: {
+                        isRequired: false,
+                        data: {}
+                     }
+                  },
+                  returnInfo: {
+                     organizationId: process.env.ORGANIZATION_ID,
+                     organizationName: brand[0].value.name,
+                     organizationPhone: contact[0].value.phoneNo,
+                     organizationEmail: contact[0].value.email,
+                     organizationAddress: {
+                        line1: address[0].value.address.line1,
+                        line2: address[0].value.address.line2,
+                        city: address[0].value.address.city,
+                        state: address[0].value.address.state,
+                        country: address[0].value.address.country,
+                        zipcode: address[0].value.address.zip,
+                        latitude: address[0].value.address.lat,
+                        longitude: address[0].value.address.lng
+                     }
+                  }
                }
             }
          }
       })
 
-      /*
-      if (customerId) {
-         order = await client.request(CREATE_ORDER, {
-            object: {
-               customerId,
-               orderStatus: 'PENDING',
-               paymentStatus: billing.paymentStatus
+      await client.request(UPDATE_ORDER, {
+         id: order.createOrder.id,
+         _set: {
+            deliveryInfo: {
+               ...order.createOrder.deliveryInfo,
+               orderInfo: {
+                  ...order.createOrder.deliveryInfo.orderInfo,
+                  id: order.createOrder.id
+               }
             }
-         })
-      } else {
-         const customer = await client.request(CREATE_CUSTOMER, {
-            object: {
-               email,
-               source,
-               // dailyKeyUserId
-            }
-         })
-         order = await client.request(CREATE_ORDER, {
-            object: {
-               customerId: customer.id,
-               orderStatus: 'PENDING',
-               paymentStatus: billing.paymentStatus
-            }
-         })
-      }
-      */
+         }
+      })
 
       await Promise.all(
          cart.cartInfo.products.map(async ({ product, products }) => {
