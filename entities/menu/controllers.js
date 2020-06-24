@@ -8,7 +8,7 @@ export const getMenu = async (req, res) => {
       const { year, month, day } = req.body.input
 
       // calc next day
-      const now = new Date(year, month, day)
+      const now = new Date(year, month, day + 1)
       const next = now
       next.setDate(next.getDate() + 1)
 
