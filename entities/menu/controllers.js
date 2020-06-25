@@ -1,31 +1,35 @@
+import moment from 'moment-timezone'
 import { client } from '../../lib/graphql'
-const R = require('rrule')
+import { RRule } from 'rrule'
 const { MENU_COLLECTIONS } = require('./graphql')
+
+const toTimezone = time => moment(time).tz(process.env.TIMEZONE)
 
 export const getMenu = async (req, res) => {
    try {
-      // get request input
-      const { year, month, day } = req.body.input
+      const { date } = req.body
 
-      // calc next day
-      const now = new Date(year, month, day + 1)
-      const next = now
-      next.setDate(next.getDate() + 1)
+      const current = moment(date)
 
-      // run some business logic
       const { menuCollections: collections = [] } = await client.request(
          MENU_COLLECTIONS
       )
 
       const matches = []
       collections.forEach(col => {
-         const occurrences = R.rrulestr(col.availability.rule).between(
-            new Date(Date.UTC(year, month, day)),
-            new Date(
-               Date.UTC(next.getFullYear(), next.getMonth(), next.getDate())
-            )
+         let times = new RRule({
+            count: 10,
+            interval: 1,
+            freq: RRule.DAILY,
+            tzid: process.env.TIMEZONE
+         }).all()
+         let index = times.findIndex(
+            time =>
+               moment(time).tz(process.env.TIMEZONE).date() === current.date()
          )
-         if (occurrences.length) matches.push(col)
+         if (index >= 0) {
+            matches.push(col)
+         }
       })
 
       const result = []
@@ -51,9 +55,8 @@ export const getMenu = async (req, res) => {
       // success
       return res.send(result)
    } catch (error) {
-      console.log(error)
       return res.status(400).json({
-         message: 'error happened'
+         message: error.message
       })
    }
 }
