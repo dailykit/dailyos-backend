@@ -117,6 +117,20 @@ export const take = async (req, res) => {
                   status: {
                      value: 'WAITING'
                   },
+                  confirmation: {
+                     photo: {
+                        data: {},
+                        isRequired: false
+                     },
+                     idProof: {
+                        data: {},
+                        isRequired: false
+                     },
+                     signature: {
+                        data: {},
+                        isRequired: false
+                     }
+                  },
                   pickupInfo: {
                      organizationId: process.env.ORGANIZATION_ID,
                      organizationName: brand[0].value.name,
@@ -147,6 +161,20 @@ export const take = async (req, res) => {
                         endsAt: new Date(
                            `${cart.fulfillmentInfo.date} ${cart.fulfillmentInfo.slot.to}`
                         )
+                     }
+                  },
+                  confirmation: {
+                     photo: {
+                        data: {},
+                        isRequired: false
+                     },
+                     idProof: {
+                        data: {},
+                        isRequired: false
+                     },
+                     signature: {
+                        data: {},
+                        isRequired: false
                      }
                   },
                   dropoffInfo: {
