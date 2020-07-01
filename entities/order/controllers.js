@@ -111,6 +111,9 @@ export const take = async (req, res) => {
                   }
                },
                pickup: {
+                  window: {
+                     approved: {}
+                  },
                   status: {
                      value: 'WAITING'
                   },
@@ -136,6 +139,7 @@ export const take = async (req, res) => {
                      value: 'WAITING'
                   },
                   window: {
+                     approved: {},
                      requested: {
                         startsAt: new Date(
                            `${cart.fulfillmentInfo.date} ${cart.fulfillmentInfo.slot.from}`
