@@ -1,3 +1,4 @@
+import moment from 'moment-timezone'
 import { client } from '../../lib/graphql'
 
 import {
@@ -16,6 +17,11 @@ import {
    CREATE_ORDER_READY_TO_EAT_PRODUCT,
    UPDATE_ORDER
 } from './graphql/mutations'
+
+const formatTime = time =>
+   moment(time).tz(process.env.TIMEZONE).format('YYYY-MM-DD hh:mm')
+
+const isPickup = value => ['ONDEMAND_PICKUP', 'PREORDER_PICKUP'].includes(value)
 
 export const take = async (req, res) => {
    try {
@@ -112,7 +118,16 @@ export const take = async (req, res) => {
                },
                pickup: {
                   window: {
-                     approved: {}
+                     ...(isPickup(cart.fulfillmentInfo.type)
+                        ? {
+                             approved: {
+                                startsAt: formatTime(
+                                   cart.fulfillmentInfo.slot.from
+                                ),
+                                endsAt: formatTime(cart.fulfillmentInfo.slot.to)
+                             }
+                          }
+                        : { approved: {} })
                   },
                   status: {
                      value: 'WAITING'
@@ -148,51 +163,57 @@ export const take = async (req, res) => {
                      }
                   }
                },
-               dropoff: {
-                  status: {
-                     value: 'WAITING'
-                  },
-                  window: {
-                     approved: {},
-                     requested: {
-                        startsAt: new Date(
-                           `${cart.fulfillmentInfo.date} ${cart.fulfillmentInfo.slot.from}`
-                        ),
-                        endsAt: new Date(
-                           `${cart.fulfillmentInfo.date} ${cart.fulfillmentInfo.slot.to}`
-                        )
-                     }
-                  },
-                  confirmation: {
-                     photo: {
-                        data: {},
-                        isRequired: false
-                     },
-                     idProof: {
-                        data: {},
-                        isRequired: false
-                     },
-                     signature: {
-                        data: {},
-                        isRequired: false
-                     }
-                  },
-                  dropoffInfo: {
-                     customerEmail: cart.customerInfo.customerEmail,
-                     customerPhone: cart.customerInfo.customerPhone,
-                     customerLastName: cart.customerInfo.customerLastName,
-                     customerFirstName: cart.customerInfo.customerFirstName,
-                     customerAddress: {
-                        line1: cart.address.line1,
-                        line2: cart.address.line2,
-                        city: cart.address.city,
-                        state: cart.address.state,
-                        zipcode: cart.address.zipcode,
-                        country: cart.address.country,
-                        notes: cart.address.notes
-                     }
-                  }
-               },
+               ...(isPickup(cart.fulfillmentInfo.type)
+                  ? { dropoff: {} }
+                  : {
+                       dropoff: {
+                          status: {
+                             value: 'WAITING'
+                          },
+                          window: {
+                             approved: {},
+                             requested: {
+                                startsAt: new Date(
+                                   `${cart.fulfillmentInfo.date} ${cart.fulfillmentInfo.slot.from}`
+                                ),
+                                endsAt: new Date(
+                                   `${cart.fulfillmentInfo.date} ${cart.fulfillmentInfo.slot.to}`
+                                )
+                             }
+                          },
+                          confirmation: {
+                             photo: {
+                                data: {},
+                                isRequired: false
+                             },
+                             idProof: {
+                                data: {},
+                                isRequired: false
+                             },
+                             signature: {
+                                data: {},
+                                isRequired: false
+                             }
+                          },
+                          dropoffInfo: {
+                             customerEmail: cart.customerInfo.customerEmail,
+                             customerPhone: cart.customerInfo.customerPhone,
+                             customerLastName:
+                                cart.customerInfo.customerLastName,
+                             customerFirstName:
+                                cart.customerInfo.customerFirstName,
+                             customerAddress: {
+                                line1: cart.address.line1,
+                                line2: cart.address.line2,
+                                city: cart.address.city,
+                                state: cart.address.state,
+                                zipcode: cart.address.zipcode,
+                                country: cart.address.country,
+                                notes: cart.address.notes
+                             }
+                          }
+                       }
+                    }),
                return: {
                   status: {
                      value: 'WAITING',
