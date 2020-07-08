@@ -31,15 +31,25 @@ export const take = async (req, res) => {
       })
 
       const orderProducts = await Promise.all(
-         cart.cartInfo.products.map(({ product, products }) => {
-            if (Array.isArray(products)) {
-               return products.map(({ product }) => {
-                  const { id, name, type, price, quantity } = product
-                  return { id, name, type, price, quantity }
-               })
+         cart.cartInfo.products.map(async product => {
+            if (product.type === 'comboProduct') {
+               const result = await Promise.all(
+                  product.components.map(product => {
+                     const {
+                        id,
+                        name,
+                        type,
+                        quantity,
+                        totalPrice: price
+                     } = product
+                     return { id, name, type, price: price * 100, quantity }
+                  })
+               )
+               return result
+            } else {
+               const { id, name, type, totalPrice: price, quantity } = product
+               return { id, name, type, price: price * 100, quantity }
             }
-            const { id, name, type, price, quantity } = product
-            return { id, name, type, price, quantity }
          })
       )
 
@@ -80,7 +90,7 @@ export const take = async (req, res) => {
                   eta: ''
                },
                orderInfo: {
-                  products: orderProducts
+                  products: [].concat(...orderProducts)
                },
                deliveryRequest: {
                   status: {
@@ -283,89 +293,168 @@ export const take = async (req, res) => {
       })
 
       await Promise.all(
-         cart.cartInfo.products.map(async ({ product, products }) => {
-            try {
-               if (product && Object.keys(product).length > 0) {
-                  await processOrder(product, order)
-               }
-               if (Array.isArray(products) && products.length > 0) {
-                  await Promise.all(
-                     products.map(async ({ product }) => {
-                        await processOrder(product, order)
-                     })
-                  )
-               }
-            } catch (error) {
-               throw Error(error.message)
+         cart.cartInfo.products.map(product => {
+            switch (product.type) {
+               case 'comboProduct':
+                  return processCombo({
+                     product,
+                     orderId: order.createOrder.id
+                  })
+               case 'simpleRecipeProduct':
+                  return processSimpleRecipe({
+                     product,
+                     orderId: order.createOrder.id
+                  })
+               case 'inventoryProduct':
+                  return processInventory({
+                     product,
+                     orderId: order.createOrder.id
+                  })
+               default:
+                  throw Error('No such product type exists!')
             }
          })
       )
 
       await client.request(UPDATE_CART, {
          id,
-         orderId: Number(order.createOrder.id),
-         status: 'ORDER_PLACED'
+         status: 'ORDER_PLACED',
+         orderId: Number(order.createOrder.id)
       })
 
       return res.status(200).json({
-         data: order,
+         data: cart,
          success: true
       })
    } catch (error) {
+      console.log('error', error)
       return res.status(404).json({ success: false, error: error.message })
    }
 }
 
-const processOrder = async (product, order) => {
+const processCombo = async ({ product: combo, orderId }) => {
    try {
-      switch (product.type) {
-         case 'simpleRecipeProduct': {
-            const {
-               simpleRecipeProduct: { simpleRecipe }
-            } = await client.request(FETCH_SIMPLE_RECIPE_PRODUCT, {
-               id: product.id
-            })
-            if (product.option.type === 'mealKit') {
-               return processMealKit({
-                  product,
-                  simpleRecipe,
-                  order: order.createOrder
+      const repetitions = Array.from({ length: combo.quantity }, (_, v) => v)
+
+      await Promise.all(
+         repetitions.map(async () => {
+            const result = await Promise.all(
+               combo.components.map(product => {
+                  const args = { product, orderId, comboProductId: combo.id }
+                  switch (product.type) {
+                     case 'simpleRecipeProduct':
+                        return processSimpleRecipe(args)
+                     case 'inventoryProduct':
+                        return processInventory(args)
+                     default:
+                        throw Error('No such product type exists!')
+                  }
                })
-            } else if (product.option.type === 'readyToEat') {
-               return processReadyToEat({
-                  product,
-                  simpleRecipe,
-                  order: order.createOrder
-               })
-            }
-         }
-         case 'inventoryProduct': {
-            return processInventory({
-               product,
-               order: order.createOrder
+            )
+            return result
+         })
+      )
+
+      return
+   } catch (error) {
+      throw Error(error)
+   }
+}
+
+const processInventory = async ({ product, orderId, comboProductId }) => {
+   try {
+      console.log(`--- Product Type: INVENTORY: ${product.name}  ---`)
+      const variables = { id: product.id, optionId: { _eq: product.option.id } }
+      const { inventoryProduct } = await client.request(
+         FETCH_INVENTORY_PRODUCT,
+         variables
+      )
+
+      const optionQuantity =
+         inventoryProduct.inventoryProductOptions[0].quantity
+      const totalQuantity = product.quantity
+         ? product.quantity * optionQuantity
+         : optionQuantity
+
+      await client.request(CREATE_ORDER_INVENTORY_PRODUCT, {
+         object: {
+            orderId,
+            quantity: totalQuantity,
+            price: product.totalPrice,
+            assemblyStatus: 'PENDING',
+            inventoryProductId: product.id,
+            ...(comboProductId && { comboProductId }),
+            inventoryProductOptionId: product.option.id,
+            assemblyStationId: inventoryProduct.assemblyStationId,
+            ...(product.customizableProductId && {
+               customizableProductId: product.customizableProductId
+            }),
+            ...(product.comboProductComponentId && {
+               comboProductComponentId: product.comboProductComponentId
+            }),
+            ...(product.customizableProductOptionId && {
+               customizableProductOptionId: product.customizableProductOptionId
             })
          }
+      })
+      return
+   } catch (error) {
+      throw Error(error)
+   }
+}
+
+const processSimpleRecipe = async ({ product, orderId, comboProductId }) => {
+   try {
+      const {
+         simpleRecipeProduct: { simpleRecipe }
+      } = await client.request(FETCH_SIMPLE_RECIPE_PRODUCT, {
+         id: product.id
+      })
+
+      const args = { product, simpleRecipe, orderId, comboProductId }
+      switch (product.option.type) {
+         case 'mealKit':
+            return processMealKit(args)
+         case 'readyToEat':
+            return processReadyToEat(args)
          default:
-            throw Error('No such product type!')
+            throw Error('No such product type exists!')
       }
    } catch (error) {
       throw Error(error)
    }
 }
 
-const processMealKit = async ({ product, simpleRecipe, order }) => {
+const processMealKit = async ({
+   orderId,
+   product,
+   simpleRecipe,
+   comboProductId
+}) => {
    try {
+      console.log(`--- Product Type: MEAL KIT: ${product.name}  ---`)
       const { createOrderMealKitProduct } = await client.request(
          CREATE_ORDER_MEALKIT_PRODUCT,
          {
             object: {
-               orderId: order.id,
-               price: product.price,
+               orderId,
                assemblyStatus: 'PENDING',
+               price: product.totalPrice,
                simpleRecipeId: simpleRecipe.id,
                simpleRecipeProductId: product.id,
+               ...(comboProductId && { comboProductId }),
                simpleRecipeProductOptionId: product.option.id,
-               assemblyStationId: simpleRecipe.assemblyStationId
+               assemblyStationId: simpleRecipe.assemblyStationId,
+               ...(product.customizableProductId && {
+                  customizableProductId: product.customizableProductId
+               }),
+               ...(product.comboProductComponentId && {
+                  comboProductComponentId: product.comboProductComponentId
+               }),
+               ...(product.customizableProductOptionId && {
+                  customizableProductOptionId:
+                     product.customizableProductOptionId
+               })
             }
          }
       )
@@ -410,48 +499,74 @@ const processMealKit = async ({ product, simpleRecipe, order }) => {
    }
 }
 
-const processReadyToEat = async ({ product, simpleRecipe, order }) => {
+const processReadyToEat = async ({
+   orderId,
+   product,
+   simpleRecipe,
+   comboProductId
+}) => {
    try {
-      await client.request(CREATE_ORDER_READY_TO_EAT_PRODUCT, {
-         object: {
-            orderId: order.id,
-            price: product.price,
-            simpleRecipeId: simpleRecipe.id,
-            simpleRecipeProductId: product.id,
-            simpleRecipeProductOptionId: product.option.id,
-            assemblyStationId: simpleRecipe.assemblyStationId
+      console.log(`--- Product Type: READY_TO_EAT: ${product.name}  ---`)
+      const { createOrderReadyToEatProduct } = await client.request(
+         CREATE_ORDER_READY_TO_EAT_PRODUCT,
+         {
+            object: {
+               orderId,
+               price: product.totalPrice,
+               simpleRecipeId: simpleRecipe.id,
+               simpleRecipeProductId: product.id,
+               ...(comboProductId && { comboProductId }),
+               simpleRecipeProductOptionId: product.option.id,
+               assemblyStationId: simpleRecipe.assemblyStationId,
+               ...(product.customizableProductId && {
+                  customizableProductId: product.customizableProductId
+               }),
+               ...(product.comboProductComponentId && {
+                  comboProductComponentId: product.comboProductComponentId
+               }),
+               ...(product.customizableProductOptionId && {
+                  customizableProductOptionId:
+                     product.customizableProductOptionId
+               })
+            }
          }
-      })
-   } catch (error) {
-      throw Error(error)
-   }
-}
+      )
 
-const processInventory = async ({ product, order }) => {
-   try {
-      const variables = { id: product.id, optionId: { _eq: product.option.id } }
-      const { inventoryProduct } = await client.request(
-         FETCH_INVENTORY_PRODUCT,
+      const variables = { id: product.option.id }
+      const { simpleRecipeProductOption } = await client.request(
+         FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
          variables
       )
 
-      const optionQuantity =
-         inventoryProduct.inventoryProductOptions[0].quantity
-      const totalQuantity = product.quantity
-         ? product.quantity * optionQuantity
-         : optionQuantity
+      const { ingredientSachets } = simpleRecipeProductOption.simpleRecipeYield
 
-      await client.request(CREATE_ORDER_INVENTORY_PRODUCT, {
-         object: {
-            orderId: order.id,
-            price: product.price,
-            quantity: totalQuantity,
-            assemblyStatus: 'PENDING',
-            inventoryProductId: product.id,
-            inventoryProductOptionId: product.option.id,
-            assemblyStationId: inventoryProduct.assemblyStationId
-         }
-      })
+      await Promise.all(
+         ingredientSachets.map(async ({ ingredientSachet }) => {
+            try {
+               const {
+                  id,
+                  unit,
+                  quantity,
+                  ingredient,
+                  ingredientProcessing
+               } = ingredientSachet
+
+               await client.request(CREATE_ORDER_SACHET, {
+                  object: {
+                     unit: unit,
+                     status: 'PENDING',
+                     quantity: quantity,
+                     ingredientSachetId: id,
+                     ingredientName: ingredient.name,
+                     processingName: ingredientProcessing.processing.name,
+                     orderReadyToEatProductId: createOrderReadyToEatProduct.id
+                  }
+               })
+            } catch (error) {
+               throw Error(error)
+            }
+         })
+      )
       return
    } catch (error) {
       throw Error(error)
