@@ -174,7 +174,18 @@ export const take = async (req, res) => {
                   }
                },
                ...(isPickup(cart.fulfillmentInfo.type)
-                  ? { dropoff: {} }
+                  ? {
+                       dropoff: {
+                          dropoffInfo: {
+                             customerEmail: cart.customerInfo.customerEmail,
+                             customerPhone: cart.customerInfo.customerPhone,
+                             customerLastName:
+                                cart.customerInfo.customerLastName,
+                             customerFirstName:
+                                cart.customerInfo.customerFirstName
+                          }
+                       }
+                    }
                   : {
                        dropoff: {
                           status: {
