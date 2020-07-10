@@ -20,6 +20,7 @@
       "file-type": "^14.4.0",
       "graphql-request": "^1.8.2",
       "logger": "^0.0.1",
+      "moment": "^2.27.0",
       "moment-timezone": "^0.5.31",
       "morgan": "^1.10.0",
       "multiparty": "^4.2.1",
