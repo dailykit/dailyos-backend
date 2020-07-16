@@ -30,6 +30,10 @@ export const take = async (req, res) => {
          id
       })
 
+      if (cart.paymentStatus !== 'SUCCEEDED') {
+         throw Error(`Status[${cart.paymentStatus}]: Payment hasn't succeeded!`)
+      }
+
       const orderProducts = await Promise.all(
          cart.cartInfo.products.map(async product => {
             if (product.type === 'comboProduct') {
