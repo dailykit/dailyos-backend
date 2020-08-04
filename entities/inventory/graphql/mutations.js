@@ -128,3 +128,13 @@ export const UPDATE_SACHET_ITEM = `
       }
    }
 `
+
+export const CREATE_PACKAGING_HISTORY = `
+   mutation CreatePackagingHistory(
+      $object: inventory_packagingHistory_insert_input!
+   ) {
+      insert_inventory_packagingHistory_one(object: $object) {
+         id
+      }
+   }
+`
