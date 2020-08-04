@@ -9,7 +9,9 @@ import {
    UPDATE_BULK_ITEM_HISTORIES_WITH_BULK_WORK_ORDER_ID,
    UPDATE_BULK_ITEM_HISTORY_WITH_SACHET_ORDER_ID,
    UPDATE_SACHET_ITEM_HISTORY_WITH_SACHET_WORK_ORDER_ID,
-   UPDATE_SACHET_ITEM_HISTORY
+   UPDATE_SACHET_ITEM_HISTORY,
+   CREATE_PACKAGING_HISTORY,
+   UPDATE_PACKAGING_HISTORY
 } from './graphql/mutations'
 import {
    GET_BULK_ITEM,
@@ -404,11 +406,41 @@ export const handleSachetItemHistory = async (req, res) => {
 // Done
 // test -> passes
 export const handlePurchaseOrderCreateUpdate = async (req, res) => {
-   const { id, bulkItemId, orderQuantity, status } = req.body.event.data.new
+   const {
+      id,
+      bulkItemId,
+      orderQuantity,
+      status,
+      packagingId
+   } = req.body.event.data.new
    const mode = req.body.event.op
    // create bulkItemHistory if status is pending
 
    try {
+      // cases if packagingId is available.
+      if (packagingId) {
+         console.log(status)
+         if (status === 'PENDING' && (mode === 'INSERT' || mode === 'MANUAL')) {
+            // create packagingHistory with PENDING status
+            client.request(CREATE_PACKAGING_HISTORY, {
+               object: {
+                  packagingId,
+                  purchaseOrderItemId: id,
+                  quantity: orderQuantity
+               }
+            })
+         }
+
+         // update the packagingHistory's status to COMPLETED
+         if (status === 'COMPLETED') updatePackagingHistory(packagingId, status)
+
+         // if status == CANCELLED, mark bulkItemHistory's status -> 'Cancelled'
+         if (status === 'CANCELLED') updatePackagingHistory(packagingId, status)
+
+         // return to not run any other operation below
+         return
+      }
+
       if (status === 'PENDING' && mode === 'INSERT') {
          const response = await client.request(CREATE_BULK_ITEM_HISTORY, {
             objects: [
@@ -424,21 +456,10 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
 
       // update the bulkItemHistory's status to COMPLETED
 
-      if (status === 'COMPLETED') {
-         const response = await client.request(UPDATE_BULK_ITEM_HISTORY, {
-            bulkItemId,
-            set: { status }
-         })
-      }
+      if (status === 'COMPLETED') updateBulktItemHistory(bulkItemId, status)
 
       // if status == CANCELLED, mark bulkItemHistory's status -> 'Cancelled'
-
-      if (status === 'CANCELLED') {
-         const response = await client.request(UPDATE_BULK_ITEM_HISTORY, {
-            bulkItemId,
-            set: { status }
-         })
-      }
+      if (status === 'CANCELLED') updateBulktItemHistory(bulkItemId, status)
    } catch (error) {
       throw error
    }
@@ -594,4 +615,24 @@ export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
    } catch (error) {
       throw error
    }
+}
+
+export const handlePackagingHistory = (req, _) => {
+   console.log('reached here...')
+}
+
+// utility functions
+
+function updateBulktItemHistory(bulkItemId, status) {
+   return client.request(UPDATE_BULK_ITEM_HISTORY, {
+      bulkItemId,
+      set: { status }
+   })
+}
+
+function updatePackagingHistory(packagingId, status) {
+   return client.request(UPDATE_PACKAGING_HISTORY, {
+      packagingId,
+      set: { status }
+   })
 }
