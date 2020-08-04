@@ -152,3 +152,11 @@ export const UPDATE_PACKAGING_HISTORY = `
       }
    }
 `
+
+export const UPDATE_PACKAGING = `
+   mutation UpdatePackaging($packagingId: Int!, $set: packaging_packaging_set_input) {
+      updatePackaging(where: { id: { _eq: $packagingId } }, _set: $set) {
+         affected_rows
+      }
+   }
+`
