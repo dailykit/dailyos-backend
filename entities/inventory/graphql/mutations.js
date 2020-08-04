@@ -138,3 +138,17 @@ export const CREATE_PACKAGING_HISTORY = `
       }
    }
 `
+
+export const UPDATE_PACKAGING_HISTORY = `
+   mutation UpdatePackagingHistory(
+      $packagingId: Int!
+      $set: inventory_packagingHistory_set_input
+   ) {
+      update_inventory_packagingHistory(
+         where: { packagingId: { _eq: $packagingId } }
+         _set: $set
+      ) {
+         affected_rows
+      }
+   }
+`
