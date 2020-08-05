@@ -3,7 +3,12 @@ import moment from 'moment'
 import { RRule } from 'rrule'
 
 import { client } from '../../lib/graphql'
-import { INSERT_SUBS_OCCURENCES, UPDATE_SUBSCRIPTION } from './graphql'
+import {
+   UPDATE_CART,
+   UPDATE_SUBSCRIPTION,
+   INSERT_SUBS_OCCURENCES,
+   UPDATE_OCCURENCE_CUSTOMER
+} from './graphql'
 
 export const create = async (req, res) => {
    try {
@@ -64,6 +69,33 @@ export const create = async (req, res) => {
    }
 }
 
+export const manageOccurence = async (req, res) => {
+   try {
+      const { id, cutoffTimeStamp } = JSON.parse(req.body.payload)
+
+      await client.request(UPDATE_OCCURENCE_CUSTOMER, {
+         subscriptionOccurenceId: { _eq: id },
+         cutoffTimeStamp: { _eq: cutoffTimeStamp },
+         _set: {
+            isSkipped: true
+         }
+      })
+
+      await client.request(UPDATE_CART, {
+         _set: { status: 'PROCESS' },
+         subscriptionOccurenceId: { _eq: id },
+         cutoffTimeStamp: { _eq: cutoffTimeStamp }
+      })
+
+      return res.status(200).json({
+         success: true,
+         message: 'Successfully updated occurence!'
+      })
+   } catch (error) {
+      return res.status(400).json({ success: false, error: error.message })
+   }
+}
+
 export const createScheduledEvent = async (req, res) => {
    try {
       const { id, cutoffTimeStamp } = req.body.event.data.new
@@ -81,7 +113,7 @@ export const createScheduledEvent = async (req, res) => {
             args: {
                webhook:
                   new URL(process.env.DATA_HUB).origin +
-                  '/webhook/occurence/schedule/process',
+                  '/webhook/occurence/manage',
                schedule_at: cutoffTimeStamp + 'Z',
                payload: {
                   cutoffTimeStamp,
