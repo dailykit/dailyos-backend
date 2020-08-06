@@ -33,6 +33,8 @@ export const upload = (request, response) => {
                mime = 'text/csv'
             } else if (ext === 'svg') {
                mime = 'image/svg+xml'
+            } else if (ext === 'xls') {
+               mime = 'application/vnd.ms-excel'
             }
 
             type = { ext, mime }
