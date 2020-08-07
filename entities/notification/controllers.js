@@ -1,7 +1,8 @@
-import { client } from '../../lib/graphql'
-import { FETCH_TYPE, CREATE_NOTIFICATION } from './graphql'
-import { template_compiler } from '../../utils'
 const axios = require('axios')
+
+import { client } from '../../lib/graphql'
+import { template_compiler } from '../../utils'
+import { FETCH_TYPE, CREATE_NOTIFICATION, PRINT_JOB } from './graphql'
 
 export const manage = async (req, res) => {
    try {
@@ -13,17 +14,54 @@ export const manage = async (req, res) => {
          }
       })
 
-      const { id, template } = notificationTypes[0]
+      const {
+         id,
+         template,
+         isLocal,
+         isGlobal,
+         printConfigs
+      } = notificationTypes[0]
 
-      const parsed = JSON.parse(
-         template_compiler(JSON.stringify(template), req.body.event.data)
+      if (isLocal || isGlobal) {
+         const parsed = JSON.parse(
+            template_compiler(JSON.stringify(template), req.body.event.data)
+         )
+
+         await client.request(CREATE_NOTIFICATION, {
+            object: {
+               typeId: id,
+               content: parsed
+            }
+         })
+      }
+
+      await Promise.all(
+         printConfigs.map(async config => {
+            if (!isActive) return
+
+            const parsed = JSON.parse(
+               template_compiler(
+                  JSON.stringify(config.template),
+                  req.body.event.data
+               )
+            )
+
+            const { origin } = new URL(process.env.DATA_HUB)
+            const data = encodeURI(JSON.stringify(parsed.data))
+            const template = encodeURI(JSON.stringify(parsed.template))
+
+            const url = `${origin}/template?template=${template}&data=${data}`
+
+            const { printJob } = await client.request(PRINT_JOB, {
+               url,
+               title: trigger.name,
+               source: 'DailyOS',
+               contentType: 'pdf_uri',
+               printerId: config.printerPrintNodeId
+            })
+            return printJob
+         })
       )
-      await client.request(CREATE_NOTIFICATION, {
-         object: {
-            typeId: id,
-            content: parsed
-         }
-      })
 
       return res
          .status(200)
