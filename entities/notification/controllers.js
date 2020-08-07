@@ -2,6 +2,7 @@ const axios = require('axios')
 
 import { client } from '../../lib/graphql'
 import { template_compiler } from '../../utils'
+import { transport } from '../../lib/nodemailer'
 import { FETCH_TYPE, CREATE_NOTIFICATION, PRINT_JOB } from './graphql'
 
 export const manage = async (req, res) => {
@@ -19,6 +20,7 @@ export const manage = async (req, res) => {
          template,
          isLocal,
          isGlobal,
+         emailConfigs,
          printConfigs
       } = notificationTypes[0]
 
@@ -37,8 +39,6 @@ export const manage = async (req, res) => {
 
       await Promise.all(
          printConfigs.map(async config => {
-            if (!isActive) return
-
             const parsed = JSON.parse(
                template_compiler(
                   JSON.stringify(config.template),
@@ -60,6 +60,44 @@ export const manage = async (req, res) => {
                printerId: config.printerPrintNodeId
             })
             return printJob
+         })
+      )
+
+      await Promise.all(
+         emailConfigs.map(async config => {
+            try {
+               const parsed = JSON.parse(
+                  template_compiler(
+                     JSON.stringify(config.template),
+                     req.body.event.data
+                  )
+               )
+
+               const { origin } = new URL(process.env.DATA_HUB)
+               const data = encodeURI(JSON.stringify(parsed.data))
+               const template = encodeURI(JSON.stringify(parsed.template))
+
+               const url = `${origin}/template?template=${template}&data=${data}`
+
+               const { data: html } = await axios.get(url)
+
+               let mailOptions = {
+                  from: `"DailyKit" ${process.env.EMAIL_USERNAME}`,
+                  to: config.email,
+                  subject: trigger.name,
+                  text: '',
+                  html
+               }
+
+               transport.sendMail(mailOptions, (error, info) => {
+                  if (error) {
+                     throw Error(error.message)
+                  }
+                  return
+               })
+            } catch (error) {
+               throw Error(error.message)
+            }
          })
       )
 

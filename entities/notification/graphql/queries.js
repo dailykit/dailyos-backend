@@ -8,9 +8,13 @@ export const FETCH_TYPE = `
          isActive
          printConfigs(where: { isActive: { _eq: true } }) {
             id
-            isActive
             template
             printerPrintNodeId
+         }
+         emailConfigs(where: { isActive: { _eq: true } }) {
+            id
+            email
+            template
          }
       }
    }
