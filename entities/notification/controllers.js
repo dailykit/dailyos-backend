@@ -76,7 +76,7 @@ export const manage = async (req, res) => {
                   html
                }
 
-               transport.sendMail({mailOptions}, (error, info) => {
+               transport.sendMail({ mailOptions }, (error, info) => {
                   if (error) {
                      throw Error(error.message)
                   }
@@ -92,13 +92,15 @@ export const manage = async (req, res) => {
 
       let mailOptions = {
          from: `"DailyKit" ${process.env.EMAIL_USERNAME}`,
-         to: req.body.event.data.new.deliveryInfo.dropoff.dropoffInfo.customerEmail,
+         to:
+            req.body.event.data.new.deliveryInfo.dropoff.dropoffInfo
+               .customerEmail,
          subject: trigger.name,
          text: '',
          html
       }
 
-      transport.sendMail({mailOptions}, (error, info) => {
+      transport.sendMail({ mailOptions }, (error, info) => {
          if (error) {
             throw Error(error.message)
          }
@@ -184,17 +186,18 @@ const hasuraTrigger = async payloadData => {
    })
 }
 
-
-const getHtml = (template, data) => {
+const getHtml = async (template, data) => {
    try {
-      const parsed = JSON.parse( template_compiler( JSON.stringify(template), data ) )
-   
+      const parsed = JSON.parse(
+         template_compiler(JSON.stringify(template), data)
+      )
+
       const { origin } = new URL(process.env.DATA_HUB)
       const template_data = encodeURI(JSON.stringify(parsed.data))
       const template_options = encodeURI(JSON.stringify(parsed.template))
-   
+
       const url = `${origin}/template?template=${template_options}&data=${template_data}`
-   
+
       const { data: html } = await axios.get(url)
       return html
    } catch (error) {
