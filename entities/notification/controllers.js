@@ -67,6 +67,9 @@ export const manage = async (req, res) => {
          emailConfigs.map(async config => {
             try {
                let html = await getHtml(config.template, req.body.event.data)
+               console.log('config.template', config.template)
+
+               if (!config.email) return
 
                let mailOptions = {
                   from: `"DailyKit" ${process.env.EMAIL_USERNAME}`,
@@ -78,7 +81,7 @@ export const manage = async (req, res) => {
 
                transport.sendMail({ mailOptions }, (error, info) => {
                   if (error) {
-                     throw Error(error.message)
+                     throw Error(error)
                   }
                   return
                })
