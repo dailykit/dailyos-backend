@@ -79,9 +79,9 @@ export const manage = async (req, res) => {
                   html
                }
 
-               transport.sendMail({ mailOptions }, (error, info) => {
+               transport.sendMail(mailOptions, (error, info) => {
                   if (error) {
-                     throw Error(error)
+                     throw Error(error.message)
                   }
                   return
                })
@@ -103,7 +103,7 @@ export const manage = async (req, res) => {
          html
       }
 
-      transport.sendMail({ mailOptions }, (error, info) => {
+      transport.sendMail(mailOptions, (error, info) => {
          if (error) {
             throw Error(error.message)
          }
