@@ -1,10 +1,16 @@
+import axios from 'axios'
 import moment from 'moment'
 import { RRule } from 'rrule'
 
 import { client } from '../../lib/graphql'
-import { INSERT_SUBS_OCCURENCES, UPDATE_SUBSCRIPTION } from './graphql'
+import {
+   UPDATE_CART,
+   UPDATE_SUBSCRIPTION,
+   INSERT_SUBS_OCCURENCES,
+   UPDATE_OCCURENCE_CUSTOMER
+} from './graphql'
 
-export const handle = async (req, res) => {
+export const create = async (req, res) => {
    try {
       const {
          id,
@@ -57,6 +63,69 @@ export const handle = async (req, res) => {
       return res.status(200).json({
          success: true,
          message: 'Successfully created occurences!'
+      })
+   } catch (error) {
+      return res.status(400).json({ success: false, error: error.message })
+   }
+}
+
+export const manageOccurence = async (req, res) => {
+   try {
+      const { id, cutoffTimeStamp } = JSON.parse(req.body.payload)
+
+      await client.request(UPDATE_OCCURENCE_CUSTOMER, {
+         subscriptionOccurenceId: { _eq: id },
+         cutoffTimeStamp: { _eq: cutoffTimeStamp },
+         _set: {
+            isSkipped: true
+         }
+      })
+
+      await client.request(UPDATE_CART, {
+         _set: { status: 'PROCESS' },
+         subscriptionOccurenceId: { _eq: id },
+         cutoffTimeStamp: { _eq: cutoffTimeStamp }
+      })
+
+      return res.status(200).json({
+         success: true,
+         message: 'Successfully updated occurence!'
+      })
+   } catch (error) {
+      return res.status(400).json({ success: false, error: error.message })
+   }
+}
+
+export const createScheduledEvent = async (req, res) => {
+   try {
+      const { id, cutoffTimeStamp } = req.body.event.data.new
+
+      const url = new URL(process.env.DATA_HUB).origin + '/datahub/v1/query'
+      await axios({
+         url,
+         method: 'POST',
+         headers: {
+            'Content-Type': 'application/json',
+            'x-hasura-role': 'admin'
+         },
+         data: {
+            type: 'create_scheduled_event',
+            args: {
+               webhook:
+                  new URL(process.env.DATA_HUB).origin +
+                  '/webhook/occurence/manage',
+               schedule_at: cutoffTimeStamp + 'Z',
+               payload: {
+                  cutoffTimeStamp,
+                  occurenceId: id
+               },
+               headers: []
+            }
+         }
+      })
+      return res.status(200).json({
+         success: true,
+         message: 'Successfully created scheduled events!'
       })
    } catch (error) {
       return res.status(400).json({ success: false, error: error.message })
