@@ -15,6 +15,7 @@ import {
    RMKMenuRouter,
    WorkOrderRouter,
    initiatePayment,
+   sendMail,
    NotificationRouter
 } from './entities'
 
@@ -47,6 +48,7 @@ app.use('/api/rmk-menu', RMKMenuRouter)
 app.use('/api/mof', MOFRouter)
 app.use('/api/assets', UploadRouter)
 app.post('/api/initiate-payment', initiatePayment)
+app.post('/api/sendmail', sendMail)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)
