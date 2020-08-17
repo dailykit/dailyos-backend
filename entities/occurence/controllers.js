@@ -28,8 +28,9 @@ export const create = async (req, res) => {
 
       const options = RRule.parseString(rrule)
 
-      options.dtstart = new Date(Date.UTC(startYear, startMonth, startDay))
-      options.until = new Date(Date.UTC(endYear, endMonth, endDay))
+      options.dtstart = new Date(Date.UTC(startYear, startMonth - 1, startDay))
+      options.until = new Date(Date.UTC(endYear, endMonth - 1, endDay))
+      console.log('create -> options', options)
 
       const occurences = new RRule(options).all()
 
