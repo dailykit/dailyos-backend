@@ -113,7 +113,7 @@ export const createScheduledEvent = async (req, res) => {
             args: {
                webhook:
                   new URL(process.env.DATA_HUB).origin +
-                  '/webhook/occurence/manage',
+                  '/server/webhook/occurence/manage',
                schedule_at: cutoffTimeStamp + 'Z',
                payload: {
                   cutoffTimeStamp,
