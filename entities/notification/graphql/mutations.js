@@ -5,3 +5,24 @@ export const CREATE_NOTIFICATION = `
       }
    }
 `
+
+export const PRINT_JOB = `
+   mutation createPrintJob(
+      $url: String!
+      $title: String!
+      $printerId: Int!
+      $source: String!
+      $contentType: String!
+   ) {
+      createPrintJob(
+         url: $url
+         title: $title
+         source: $source
+         printerId: $printerId
+         contentType: $contentType
+      ) {
+         message
+         success
+      }
+   }
+`

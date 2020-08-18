@@ -6,7 +6,8 @@ import {
    handleSachetItemHistory,
    handlePurchaseOrderCreateUpdate,
    handleBulkWorkOrderCreateUpdate,
-   handleSachetWorkOrderCreateUpdate
+   handleSachetWorkOrderCreateUpdate,
+   handlePackagingHistory
 } from './controllers'
 
 const router = Router()
@@ -31,5 +32,7 @@ router.post(
    '/sachet-work-order-created-updated',
    handleSachetWorkOrderCreateUpdate
 )
+
+router.post('/packaging-history', handlePackagingHistory)
 
 export default router

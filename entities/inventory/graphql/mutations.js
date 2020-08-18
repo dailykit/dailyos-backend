@@ -128,3 +128,35 @@ export const UPDATE_SACHET_ITEM = `
       }
    }
 `
+
+export const CREATE_PACKAGING_HISTORY = `
+   mutation CreatePackagingHistory(
+      $object: inventory_packagingHistory_insert_input!
+   ) {
+      insert_inventory_packagingHistory_one(object: $object) {
+         id
+      }
+   }
+`
+
+export const UPDATE_PACKAGING_HISTORY = `
+   mutation UpdatePackagingHistory(
+      $packagingId: Int!
+      $set: inventory_packagingHistory_set_input
+   ) {
+      update_inventory_packagingHistory(
+         where: { packagingId: { _eq: $packagingId } }
+         _set: $set
+      ) {
+         affected_rows
+      }
+   }
+`
+
+export const UPDATE_PACKAGING = `
+   mutation UpdatePackaging($packagingId: Int!, $set: packaging_packaging_set_input) {
+      updatePackaging(where: { id: { _eq: $packagingId } }, _set: $set) {
+         affected_rows
+      }
+   }
+`

@@ -49,3 +49,13 @@ export const GET_SACHET_ITEM_HISTORIES = `
    }
 }
 `
+export const GET_PACKAGING = `
+   query Packaging($id: Int!) {
+      packaging(id: $id) {
+         onHand
+         awaiting
+         committed
+         consumed
+      }
+   }
+`

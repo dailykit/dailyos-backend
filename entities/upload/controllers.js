@@ -11,23 +11,47 @@ export const upload = (request, response) => {
    form.parse(request, async (error, fields, files) => {
       if (error) throw new Error(error)
       try {
-         const path = files.file[0].path
-         const buffer = fs.readFileSync(path)
-         const type = await fileType.fromBuffer(buffer)
-         const timestamp = Date.now().toString()
-         let fileName
-         if (type.mime.includes('image')) {
-            fileName = `images/${timestamp}`
-         } else if (type.mime.includes('video')) {
-            fileName = `videos/${timestamp}`
+         const [file] = files.file
+         const buffer = fs.readFileSync(file.path)
+         let type = await fileType.fromBuffer(buffer)
+         const timestamp = Date.now().toString().slice(-5)
+         let originalFilename = `${timestamp}-${file.originalFilename
+            .split('.')
+            .slice(0, -1)
+            .join('.')}`
+
+         let name
+         if (type && type.mime.includes('image')) {
+            name = `images/${originalFilename}`
+         } else if (type && type.mime.includes('video')) {
+            name = `videos/${originalFilename}`
+         } else {
+            name = `misc/${originalFilename}`
+            let ext = file.originalFilename.split('.').slice(-1).join('')
+            let mime
+            if (ext === 'csv') {
+               mime = 'text/csv'
+            } else if (ext === 'svg') {
+               mime = 'image/svg+xml'
+            } else if (ext === 'xls') {
+               mime = 'application/vnd.ms-excel'
+            }
+
+            type = { ext, mime }
          }
-         const data = await uploadFile(buffer, fileName, type, fields.metadata)
+         const data = await uploadFile(buffer, name, type, fields.metadata)
          return response.status(200).send(data)
       } catch (error) {
          return response.status(400).send(error)
       }
    })
 }
+
+const extractName = key =>
+   key
+      .split(/misc\/|videos\/|images\//)
+      .filter(Boolean)
+      .join()
 
 export const list = async (req, res) => {
    try {
@@ -46,16 +70,18 @@ export const list = async (req, res) => {
                   key: item.Key,
                   size: item.Size,
                   url: createUrl(item.Key),
-                  metadata: result.Metadata
+                  metadata: result.Metadata,
+                  name: extractName(item.Key)
                }
             } catch (error) {
                console.log(error)
             }
          })
       )
+
       return res.status(200).json({
          success: true,
-         data: formatAssets
+         data: formatAssets.filter(node => node.size)
       })
    } catch (error) {
       console.log('list -> error', error)

@@ -1,7 +1,9 @@
-import { client } from '../../lib/graphql'
-import { FETCH_TYPE, CREATE_NOTIFICATION } from './graphql'
-import { template_compiler } from '../../utils'
 const axios = require('axios')
+
+import { client } from '../../lib/graphql'
+import { template_compiler } from '../../utils'
+import { transport } from '../../lib/nodemailer'
+import { FETCH_TYPE, CREATE_NOTIFICATION, PRINT_JOB } from './graphql'
 
 export const manage = async (req, res) => {
    try {
@@ -13,17 +15,81 @@ export const manage = async (req, res) => {
          }
       })
 
-      const { id, template } = notificationTypes[0]
+      const {
+         id,
+         template,
+         isLocal,
+         isGlobal,
+         emailConfigs,
+         printConfigs
+      } = notificationTypes[0]
 
-      const parsed = JSON.parse(
-         template_compiler(JSON.stringify(template), req.body.event.data)
+      if (isLocal || isGlobal) {
+         const parsed = JSON.parse(
+            template_compiler(JSON.stringify(template), req.body.event.data)
+         )
+
+         await client.request(CREATE_NOTIFICATION, {
+            object: {
+               typeId: id,
+               content: parsed
+            }
+         })
+      }
+
+      await Promise.all(
+         printConfigs.map(async config => {
+            const parsed = JSON.parse(
+               template_compiler(
+                  JSON.stringify(config.template),
+                  req.body.event.data
+               )
+            )
+
+            const { origin } = new URL(process.env.DATA_HUB)
+            const data = encodeURI(JSON.stringify(parsed.data))
+            const template = encodeURI(JSON.stringify(parsed.template))
+
+            const url = `${origin}/template?template=${template}&data=${data}`
+
+            const { printJob } = await client.request(PRINT_JOB, {
+               url,
+               title: trigger.name,
+               source: 'DailyOS',
+               contentType: 'pdf_uri',
+               printerId: config.printerPrintNodeId
+            })
+            return printJob
+         })
       )
-      await client.request(CREATE_NOTIFICATION, {
-         object: {
-            typeId: id,
-            content: parsed
-         }
-      })
+
+      await Promise.all(
+         emailConfigs.map(async config => {
+            try {
+               let html = await getHtml(config.template, req.body.event.data)
+               console.log('config.template', config.template)
+
+               if (!config.email) return
+
+               let mailOptions = {
+                  from: `"DailyKit" ${process.env.EMAIL_USERNAME}`,
+                  to: config.email,
+                  subject: trigger.name,
+                  text: '',
+                  html
+               }
+
+               transport.sendMail(mailOptions, (error, info) => {
+                  if (error) {
+                     throw Error(error.message)
+                  }
+                  return
+               })
+            } catch (error) {
+               throw Error(error.message)
+            }
+         })
+      )
 
       return res
          .status(200)
@@ -102,4 +168,23 @@ const hasuraTrigger = async payloadData => {
       },
       data: payloadData
    })
+}
+
+const getHtml = async (template, data) => {
+   try {
+      const parsed = JSON.parse(
+         template_compiler(JSON.stringify(template), data)
+      )
+
+      const { origin } = new URL(process.env.DATA_HUB)
+      const template_data = encodeURI(JSON.stringify(parsed.data))
+      const template_options = encodeURI(JSON.stringify(parsed.template))
+
+      const url = `${origin}/template?template=${template_options}&data=${template_data}`
+
+      const { data: html } = await axios.get(url)
+      return html
+   } catch (error) {
+      throw Error(error.message)
+   }
 }

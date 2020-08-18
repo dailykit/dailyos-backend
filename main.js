@@ -1,23 +1,25 @@
 require('dotenv').config()
-import express from 'express'
 import cors from 'cors'
-const morgan = require('morgan')
-const AWS = require('aws-sdk')
-const bluebird = require('bluebird')
-
+import express from 'express'
+import morgan from 'morgan'
+import AWS from 'aws-sdk'
+import bluebird from 'bluebird'
 import {
-   OrderRouter,
    MOFRouter,
-   UserRouter,
    MenuRouter,
-   UploadRouter,
-   DeviceRouter,
-   RMKMenuRouter,
-   WorkOrderRouter,
-   initiatePayment,
+   UserRouter,
+   OrderRouter,
    sendMail,
-   NotificationRouter
+   bulkimport,
+   DeviceRouter,
+   UploadRouter,
+   RMKMenuRouter,
+   initiatePayment,
+   OccurenceRouter,
+   WorkOrderRouter,
+   NotificationRouter,
 } from './entities'
+import { PrintRouter } from './entities/print'
 
 const app = express()
 
@@ -41,18 +43,20 @@ AWS.config.setPromisesDependency(bluebird)
 const PORT = process.env.PORT || 4000
 
 // Routes
-app.use('/api/order', OrderRouter)
-app.use('/api/inventory', WorkOrderRouter)
-app.use('/api/menu', MenuRouter)
-app.use('/api/rmk-menu', RMKMenuRouter)
 app.use('/api/mof', MOFRouter)
+app.use('/api/menu', MenuRouter)
+app.use('/api/order', OrderRouter)
 app.use('/api/assets', UploadRouter)
+app.use('/api/printer', PrintRouter)
+app.use('/api/rmk-menu', RMKMenuRouter)
+app.use('/api/inventory', WorkOrderRouter)
 app.post('/api/initiate-payment', initiatePayment)
 app.post('/api/sendmail', sendMail)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)
 app.use('/webhook/notification', NotificationRouter)
+app.use('/webhook/occurence', OccurenceRouter)
 
 app.listen(PORT, () => {
    console.log(`Server started on ${PORT}`)
