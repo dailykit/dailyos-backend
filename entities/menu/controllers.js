@@ -18,9 +18,8 @@ export const getMenu = async (req, res) => {
       const matches = []
       collections.forEach(col => {
          let times = new RRule({
+            ...RRule.parseString(col.availability.rule),
             count: 10,
-            interval: 1,
-            freq: RRule.DAILY,
             tzid: process.env.TIMEZONE
          }).all()
          let index = times.findIndex(
