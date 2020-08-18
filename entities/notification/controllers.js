@@ -67,7 +67,6 @@ export const manage = async (req, res) => {
          emailConfigs.map(async config => {
             try {
                let html = await getHtml(config.template, req.body.event.data)
-               console.log('config.template', config.template)
 
                if (!config.email) return
 
@@ -90,6 +89,25 @@ export const manage = async (req, res) => {
             }
          })
       )
+
+      let html = await getHtml(config.template, req.body.event.data)
+
+      let mailOptions = {
+         from: `"DailyKit" ${process.env.EMAIL_USERNAME}`,
+         to:
+            req.body.event.data.new.deliveryInfo.dropoff.dropoffInfo
+               .customerEmail,
+         subject: trigger.name,
+         text: '',
+         html
+      }
+
+      transport.sendMail(mailOptions, (error, info) => {
+         if (error) {
+            throw Error(error.message)
+         }
+         return
+      })
 
       return res
          .status(200)
