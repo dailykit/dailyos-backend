@@ -5,8 +5,8 @@ export const ORGANIZATION = `query organizations($organizationUrl: String_compar
 }`
 
 export const GET_SES_DOMAIN = `
-query aws_ses {
-  aws_ses {
+query aws_ses($domain: String!) {
+  aws_ses(where: {domain: {_eq: $domain}}) {
     domain
     keySelector
     privateKey

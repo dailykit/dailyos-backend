@@ -4,6 +4,8 @@ const AWS = require('aws-sdk')
 const nodemailer = require('nodemailer')
 import { GET_SES_DOMAIN } from './graphql'
 
+AWS.config.update({ region: 'us-east-2' })
+
 export const initiatePayment = async (req, res) => {
    try {
       const data = req.body.event.data.new
@@ -45,39 +47,50 @@ export const initiatePayment = async (req, res) => {
 export const sendMail = async (req, res) => {
    try {
       const { emailInput } = req.body.input
+      const inputDomain = emailInput.from.split('@')[1]
 
       // Get the DKIM details from dailycloak
-      const dkimDetails = await client.request(GET_SES_DOMAIN)
-
-      // create nodemailer transport
-      const transport = nodemailer.createTransport({
-         SES: new AWS.SES({ apiVersion: '2010-12-01' }),
-         dkim: {
-            domainName: dkimDetails.aws_ses[0].domain,
-            keySelector: dkimDetails.aws_ses[0].keySelector,
-            privateKey: dkimDetails.aws_ses[0].privateKey.toString('binary')
-         }
+      const dkimDetails = await client.request(GET_SES_DOMAIN, {
+         domain: inputDomain
       })
-      // build and send the message
-      const message = {
-         from: emailInput.from,
-         to: emailInput.to,
-         subject: emailInput.subject,
-         html: emailInput.html
-      }
 
-      if (dkimDetails.aws_ses[0].isVerified === true) {
-         await transportEmail(transport, message)
+      if (dkimDetails.aws_ses.length === 0) {
+         return res.status(400).json({
+            success: false,
+            message: `Domain ${inputDomain} is not registered. Cannot send emails.`
+         })
       } else {
-         throw new Error(
-            `Cannot send emails. Domain - ${domain} - is not verified`
-         )
-      }
+         // create nodemailer transport
+         const transport = nodemailer.createTransport({
+            SES: new AWS.SES({ apiVersion: '2010-12-01' }),
+            dkim: {
+               domainName: dkimDetails.aws_ses[0].domain,
+               keySelector: dkimDetails.aws_ses[0].keySelector,
+               privateKey: dkimDetails.aws_ses[0].privateKey.toString('binary')
+            }
+         })
+         // build and send the message
+         const message = {
+            from: emailInput.from,
+            to: emailInput.to,
+            subject: emailInput.subject,
+            html: emailInput.html,
+            attachments: emailInput.attachments
+         }
 
-      return res.status(200).json({
-         success: true,
-         message: 'Email sent successfully!'
-      })
+         if (dkimDetails.aws_ses[0].isVerified === true) {
+            await transportEmail(transport, message)
+         } else {
+            throw new Error(
+               `Domain - ${inputDomain} - is not verified. Cannot send emails.`
+            )
+         }
+
+         return res.status(200).json({
+            success: true,
+            message: 'Email sent successfully!'
+         })
+      }
    } catch (error) {
       console.log(error)
       return res.status(400).json({
