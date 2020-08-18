@@ -10,14 +10,13 @@ import {
    UserRouter,
    OrderRouter,
    sendMail,
-   bulkimport,
    DeviceRouter,
    UploadRouter,
    RMKMenuRouter,
    initiatePayment,
    OccurenceRouter,
    WorkOrderRouter,
-   NotificationRouter,
+   NotificationRouter
 } from './entities'
 import { PrintRouter } from './entities/print'
 
