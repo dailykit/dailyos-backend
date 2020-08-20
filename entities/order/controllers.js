@@ -396,7 +396,7 @@ const processInventory = async ({ product, orderId, comboProductId }) => {
       const {
          packagingId,
          labelTemplateId,
-         labelTemplateId,
+         assemblyStationId,
          instructionCardTemplateId
       } = inventoryProduct.inventoryProductOptions[0]
 
