@@ -6,6 +6,7 @@ export const FETCH_TYPE = `
          isGlobal
          template
          isActive
+         emailFrom
          printConfigs(where: { isActive: { _eq: true } }) {
             id
             template
@@ -16,17 +17,6 @@ export const FETCH_TYPE = `
             email
             template
          }
-      }
-   }
-`
-
-export const EMAIL = `
-   query email {
-      email: storeSettings(
-         where: { identifier: { _eq: "Email Notification" } }
-      ) {
-         id
-         value
       }
    }
 `

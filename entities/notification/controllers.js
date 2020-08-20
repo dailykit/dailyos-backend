@@ -3,7 +3,6 @@ const axios = require('axios')
 import { client } from '../../lib/graphql'
 import { template_compiler } from '../../utils'
 import {
-   EMAIL,
    FETCH_TYPE,
    PRINT_JOB,
    SEND_MAIL,
@@ -25,6 +24,7 @@ export const manage = async (req, res) => {
          template,
          isLocal,
          isGlobal,
+         emailFrom,
          emailConfigs,
          printConfigs
       } = notificationTypes[0]
@@ -68,8 +68,6 @@ export const manage = async (req, res) => {
          })
       )
 
-      const { email } = await client.request(EMAIL)
-
       await Promise.all(
          emailConfigs.map(async config => {
             try {
@@ -79,7 +77,7 @@ export const manage = async (req, res) => {
 
                await client.request(SEND_MAIL, {
                   emailInput: {
-                     from: `"${email[0].value.name}" ${email[0].value.email}`,
+                     from: `"${emailFrom.name}" ${emailFrom.email}`,
                      to: config.email,
                      subject: trigger.name,
                      attachments: [],
