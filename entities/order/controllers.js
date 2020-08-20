@@ -297,6 +297,10 @@ export const take = async (req, res) => {
       await client.request(UPDATE_ORDER, {
          id: order.createOrder.id,
          _set: {
+            ...(isPickup(cart.fulfillmentInfo.type) && {
+               readyByTimestamp: formatTime(cart.fulfillmentInfo.slot.from)
+            }),
+            fulfillmentTimestamp: formatTime(cart.fulfillmentInfo.slot.from),
             deliveryInfo: {
                ...order.createOrder.deliveryInfo,
                orderInfo: {
