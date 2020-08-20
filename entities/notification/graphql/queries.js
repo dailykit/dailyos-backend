@@ -19,3 +19,14 @@ export const FETCH_TYPE = `
       }
    }
 `
+
+export const EMAIL = `
+   query email {
+      email: storeSettings(
+         where: { identifier: { _eq: "Email Notification" } }
+      ) {
+         id
+         value
+      }
+   }
+`

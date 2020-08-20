@@ -2,8 +2,13 @@ const axios = require('axios')
 
 import { client } from '../../lib/graphql'
 import { template_compiler } from '../../utils'
-import { transport } from '../../lib/nodemailer'
-import { FETCH_TYPE, CREATE_NOTIFICATION, PRINT_JOB } from './graphql'
+import {
+   EMAIL,
+   FETCH_TYPE,
+   PRINT_JOB,
+   SEND_MAIL,
+   CREATE_NOTIFICATION
+} from './graphql'
 
 export const manage = async (req, res) => {
    try {
@@ -63,6 +68,8 @@ export const manage = async (req, res) => {
          })
       )
 
+      const { email } = await client.request(EMAIL)
+
       await Promise.all(
          emailConfigs.map(async config => {
             try {
@@ -70,44 +77,20 @@ export const manage = async (req, res) => {
 
                if (!config.email) return
 
-               let mailOptions = {
-                  from: `"DailyKit" ${process.env.EMAIL_USERNAME}`,
-                  to: config.email,
-                  subject: trigger.name,
-                  text: '',
-                  html
-               }
-
-               transport.sendMail(mailOptions, (error, info) => {
-                  if (error) {
-                     throw Error(error.message)
+               await client.request(SEND_MAIL, {
+                  emailInput: {
+                     from: `"${email[0].value.name}" ${email[0].value.email}`,
+                     to: config.email,
+                     subject: trigger.name,
+                     attachments: [],
+                     html
                   }
-                  return
                })
             } catch (error) {
                throw Error(error.message)
             }
          })
       )
-
-      let html = await getHtml(config.template, req.body.event.data)
-
-      let mailOptions = {
-         from: `"DailyKit" ${process.env.EMAIL_USERNAME}`,
-         to:
-            req.body.event.data.new.deliveryInfo.dropoff.dropoffInfo
-               .customerEmail,
-         subject: trigger.name,
-         text: '',
-         html
-      }
-
-      transport.sendMail(mailOptions, (error, info) => {
-         if (error) {
-            throw Error(error.message)
-         }
-         return
-      })
 
       return res
          .status(200)

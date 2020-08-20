@@ -26,3 +26,12 @@ export const PRINT_JOB = `
       }
    }
 `
+
+export const SEND_MAIL = `
+   mutation sendEmail($emailInput: EmailInput!) {
+      sendEmail(emailInput: $emailInput) {
+         message
+         success
+      }
+   }
+`
