@@ -342,7 +342,6 @@ export const take = async (req, res) => {
          success: true
       })
    } catch (error) {
-      console.log('error', error)
       return res.status(404).json({ success: false, error: error.message })
    }
 }
@@ -378,7 +377,6 @@ const processCombo = async ({ product: combo, orderId }) => {
 
 const processInventory = async ({ product, orderId, comboProductId }) => {
    try {
-      console.log(`--- Product Type: INVENTORY: ${product.name}  ---`)
       const variables = { id: product.id, optionId: { _eq: product.option.id } }
       const { inventoryProduct } = await client.request(
          FETCH_INVENTORY_PRODUCT,
@@ -391,16 +389,26 @@ const processInventory = async ({ product, orderId, comboProductId }) => {
          ? product.quantity * optionQuantity
          : optionQuantity
 
+      const {
+         packagingId,
+         labelTemplateId,
+         labelTemplateId,
+         instructionCardTemplateId
+      } = inventoryProduct.inventoryProductOptions[0]
+
       await client.request(CREATE_ORDER_INVENTORY_PRODUCT, {
          object: {
             orderId,
+            packagingId,
+            labelTemplateId,
+            assemblyStationId,
+            instructionCardTemplateId,
             quantity: totalQuantity,
             price: product.totalPrice,
             assemblyStatus: 'PENDING',
             inventoryProductId: product.id,
             ...(comboProductId && { comboProductId }),
             inventoryProductOptionId: product.option.id,
-            assemblyStationId: inventoryProduct.assemblyStationId,
             ...(product.customizableProductId && {
                customizableProductId: product.customizableProductId
             }),
@@ -418,15 +426,21 @@ const processInventory = async ({ product, orderId, comboProductId }) => {
    }
 }
 
-const processSimpleRecipe = async ({ product, orderId, comboProductId }) => {
+const processSimpleRecipe = async data => {
+   const { product, orderId, comboProductId } = data
    try {
-      const {
-         simpleRecipeProduct: { simpleRecipe }
-      } = await client.request(FETCH_SIMPLE_RECIPE_PRODUCT, {
-         id: product.id
-      })
+      const variables = { id: product.option.id }
+      const { simpleRecipeProductOption: productOption } = await client.request(
+         FETCH_SIMPLE_RECIPE_PRODUCT,
+         variables
+      )
 
-      const args = { product, simpleRecipe, orderId, comboProductId }
+      const args = {
+         product,
+         orderId,
+         productOption,
+         comboProductId
+      }
       switch (product.option.type) {
          case 'mealKit':
             return processMealKit(args)
@@ -440,14 +454,9 @@ const processSimpleRecipe = async ({ product, orderId, comboProductId }) => {
    }
 }
 
-const processMealKit = async ({
-   orderId,
-   product,
-   simpleRecipe,
-   comboProductId
-}) => {
+const processMealKit = async data => {
+   const { orderId, product, productOption, comboProductId } = data
    try {
-      console.log(`--- Product Type: MEAL KIT: ${product.name}  ---`)
       const { createOrderMealKitProduct } = await client.request(
          CREATE_ORDER_MEALKIT_PRODUCT,
          {
@@ -455,11 +464,15 @@ const processMealKit = async ({
                orderId,
                assemblyStatus: 'PENDING',
                price: product.totalPrice,
-               simpleRecipeId: simpleRecipe.id,
+               simpleRecipeId: productOption.simpleRecipeProduct.simpleRecipeId,
                simpleRecipeProductId: product.id,
                ...(comboProductId && { comboProductId }),
                simpleRecipeProductOptionId: product.option.id,
-               assemblyStationId: simpleRecipe.assemblyStationId,
+               packagingId: productOption.packagingId,
+               labelTemplateId: productOption.labelTemplateId,
+               assemblyStationId: productOption.assemblyStationId,
+               instructionCardTemplateId:
+                  productOption.instructionCardTemplateId,
                ...(product.customizableProductId && {
                   customizableProductId: product.customizableProductId
                }),
@@ -489,7 +502,8 @@ const processMealKit = async ({
                   unit,
                   quantity,
                   ingredient,
-                  ingredientProcessing
+                  ingredientProcessing,
+                  liveModeOfFulfillment
                } = ingredientSachet
 
                await client.request(CREATE_ORDER_SACHET, {
@@ -500,7 +514,15 @@ const processMealKit = async ({
                      ingredientSachetId: id,
                      ingredientName: ingredient.name,
                      orderMealKitProductId: createOrderMealKitProduct.id,
-                     processingName: ingredientProcessing.processing.name
+                     processingName: ingredientProcessing.processing.name,
+                     ...(liveModeOfFulfillment && {
+                        labelTemplateId: liveModeOfFulfillment.labelTemplateId,
+                        accuracy: liveModeOfFulfillment.accuracy,
+                        bulkItemId: liveModeOfFulfillment.bulkItemId,
+                        sachetItemId: liveModeOfFulfillment.sachetItemId,
+                        packagingId: liveModeOfFulfillment.packagingId,
+                        packingStationId: liveModeOfFulfillment.stationId
+                     })
                   }
                })
             } catch (error) {
@@ -514,25 +536,24 @@ const processMealKit = async ({
    }
 }
 
-const processReadyToEat = async ({
-   orderId,
-   product,
-   simpleRecipe,
-   comboProductId
-}) => {
+const processReadyToEat = async data => {
+   const { orderId, product, productOption, comboProductId } = data
    try {
-      console.log(`--- Product Type: READY_TO_EAT: ${product.name}  ---`)
       const { createOrderReadyToEatProduct } = await client.request(
          CREATE_ORDER_READY_TO_EAT_PRODUCT,
          {
             object: {
                orderId,
                price: product.totalPrice,
-               simpleRecipeId: simpleRecipe.id,
+               simpleRecipeId: productOption.simpleRecipeProduct.simpleRecipeId,
                simpleRecipeProductId: product.id,
                ...(comboProductId && { comboProductId }),
+               packagingId: productOption.packagingId,
                simpleRecipeProductOptionId: product.option.id,
-               assemblyStationId: simpleRecipe.assemblyStationId,
+               labelTemplateId: productOption.labelTemplateId,
+               assemblyStationId: productOption.assemblyStationId,
+               instructionCardTemplateId:
+                  productOption.instructionCardTemplateId,
                ...(product.customizableProductId && {
                   customizableProductId: product.customizableProductId
                }),
@@ -563,7 +584,8 @@ const processReadyToEat = async ({
                   unit,
                   quantity,
                   ingredient,
-                  ingredientProcessing
+                  ingredientProcessing,
+                  liveModeOfFulfillment
                } = ingredientSachet
 
                await client.request(CREATE_ORDER_SACHET, {
@@ -574,7 +596,15 @@ const processReadyToEat = async ({
                      ingredientSachetId: id,
                      ingredientName: ingredient.name,
                      processingName: ingredientProcessing.processing.name,
-                     orderReadyToEatProductId: createOrderReadyToEatProduct.id
+                     orderReadyToEatProductId: createOrderReadyToEatProduct.id,
+                     ...(liveModeOfFulfillment && {
+                        labelTemplateId: liveModeOfFulfillment.labelTemplateId,
+                        accuracy: liveModeOfFulfillment.accuracy,
+                        bulkItemId: liveModeOfFulfillment.bulkItemId,
+                        sachetItemId: liveModeOfFulfillment.sachetItemId,
+                        packagingId: liveModeOfFulfillment.packagingId,
+                        packingStationId: liveModeOfFulfillment.stationId
+                     })
                   }
                })
             } catch (error) {

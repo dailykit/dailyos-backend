@@ -5,24 +5,32 @@ export const FETCH_INVENTORY_PRODUCT = `
          assemblyStationId
          inventoryProductOptions(where: {id: $optionId}) {
             quantity
+            packagingId
+            labelTemplateId
+            assemblyStationId
+            instructionCardTemplateId
          }
       }
    }    
 `
 
 export const FETCH_SIMPLE_RECIPE_PRODUCT = `
-   query simpleRecipeProduct($id: Int!){
-      simpleRecipeProduct(id: $id) {
-         simpleRecipe {
-            id
-            assemblyStationId
+   query simpleRecipeProductOption($id: Int!) {
+      simpleRecipeProductOption(id: $id) {
+         id
+         simpleRecipeProduct {
+            simpleRecipeId
          }
+         packagingId
+         labelTemplateId
+         assemblyStationId
+         instructionCardTemplateId
       }
    }
 `
 
 export const FETCH_SIMPLE_RECIPE_PRODUCT_OPTION = `
-   query simpleRecipeProductOption($id: Int!){
+   query simpleRecipeProductOption($id: Int!) {
       simpleRecipeProductOption(id: $id) {
          id
          simpleRecipeYield {
@@ -32,6 +40,15 @@ export const FETCH_SIMPLE_RECIPE_PRODUCT_OPTION = `
                   id
                   unit
                   quantity
+                  liveModeOfFulfillment {
+                     id
+                     accuracy
+                     bulkItemId
+                     sachetItemId
+                     packagingId
+                     stationId
+                     labelTemplateId
+                  }
                   ingredient {
                      name
                   }
