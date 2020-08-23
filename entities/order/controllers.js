@@ -65,6 +65,7 @@ export const take = async (req, res) => {
             paymentStatus,
             tax: cart.tax,
             orderStatus: 'PENDING',
+            source: cart.cartSource,
             amountPaid: cart.amount,
             itemTotal: cart.cartInfo.total,
             deliveryPrice: cart.deliveryPrice,
