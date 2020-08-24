@@ -6,7 +6,7 @@ import {
    CREATE_COUPON
 } from './graphql/mutations'
 
-export const handleRewards = async (req, res, next) => {
+export const processRewards = async (req, res, next) => {
    try {
       const { rewardIds, keycloakId } = req.body.input
       const rewardsResponse = await client.request(REWARDS, {

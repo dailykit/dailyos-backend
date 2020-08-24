@@ -1,8 +1,8 @@
 import express from 'express'
-import { handleRewards } from './controllers'
+import { processRewards } from './controllers'
 
 const router = express.Router()
 
-router.route('/').post(handleRewards)
+router.route('/process').post(processRewards)
 
 export default router
