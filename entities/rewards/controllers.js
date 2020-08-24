@@ -7,7 +7,7 @@ import {
 
 export const handleRewards = async (req, res, next) => {
    try {
-      const { rewardIds, keycloakId } = req.body
+      const { rewardIds, keycloakId } = req.body.input
       const rewardsResponse = await client.request(REWARDS, {
          rewardIds
       })
