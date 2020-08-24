@@ -16,7 +16,8 @@ import {
    initiatePayment,
    OccurenceRouter,
    WorkOrderRouter,
-   NotificationRouter
+   NotificationRouter,
+   RewardsRouter
 } from './entities'
 import { PrintRouter } from './entities/print'
 
@@ -51,6 +52,7 @@ app.use('/api/rmk-menu', RMKMenuRouter)
 app.use('/api/inventory', WorkOrderRouter)
 app.post('/api/initiate-payment', initiatePayment)
 app.post('/api/sendmail', sendMail)
+app.use('/api/rewards', RewardsRouter)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)
