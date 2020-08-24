@@ -1,18 +1,40 @@
 import { client } from '../../lib/graphql'
-import { REWARDS } from './graphql/queries'
+import { REWARDS, CUSTOMER } from './graphql/queries'
+import {
+   CREATE_LOYALTY_POINTS_TRANSACTION,
+   CREATE_WALLET_TRANSACTION
+} from './graphql/mutations'
 
 export const handleRewards = async (req, res, next) => {
    try {
       const { rewardIds, keycloakId } = req.body
-      const response = await client.request(REWARDS, {
+      const rewardsResponse = await client.request(REWARDS, {
          rewardIds
       })
-      for (const reward of response?.rewards || []) {
+      const customerResponse = await client.request(CUSTOMER, {
+         keycloakId
+      })
+      for (const reward of rewardsResponse.rewards) {
          if (reward.loyaltyPointCredit) {
-            // mutation for loyalty points
+            await client.request(CREATE_LOYALTY_POINTS_TRANSACTION, {
+               object: {
+                  type: 'CREDIT',
+                  points: reward.loyaltyPointCredit,
+                  loyaltyPointId: customerResponse.customer.loyaltyPoint.id
+               }
+            })
          }
          if (reward.walletAmountCredit) {
-            // mutation for wallet amount
+            await client.request(CREATE_WALLET_TRANSACTION, {
+               object: {
+                  type: 'CREDIT',
+                  amount: reward.walletAmountCredit,
+                  walletId: customerResponse.customer.wallet.id
+               }
+            })
+         }
+         if (!reward.rewardsType.isRewardsMulti) {
+            break
          }
       }
       res.json({ success: true, message: 'Rewards given!' })

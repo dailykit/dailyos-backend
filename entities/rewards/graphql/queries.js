@@ -13,3 +13,19 @@ export const REWARDS = `
         }
     }
 `
+
+export const CUSTOMER = `
+    query Customer($keycloakId : String!) {
+        customer(keycloakId: $keycloakId){
+            id
+            wallet {
+                id
+                amount
+            }
+            loyaltyPoint {
+                id
+                points
+            }
+        }
+    }
+`
