@@ -2,7 +2,8 @@ import { client } from '../../lib/graphql'
 import { REWARDS, CUSTOMER } from './graphql/queries'
 import {
    CREATE_LOYALTY_POINTS_TRANSACTION,
-   CREATE_WALLET_TRANSACTION
+   CREATE_WALLET_TRANSACTION,
+   CREATE_COUPON
 } from './graphql/mutations'
 
 export const handleRewards = async (req, res, next) => {
@@ -30,6 +31,15 @@ export const handleRewards = async (req, res, next) => {
                   type: 'CREDIT',
                   amount: reward.walletAmountCredit,
                   walletId: customerResponse.customer.wallet.id
+               }
+            })
+         }
+         if (reward.voucher) {
+            await client.request(CREATE_COUPON, {
+               object: {
+                  code: reward.voucher,
+                  condition: {},
+                  keycloakId
                }
             })
          }

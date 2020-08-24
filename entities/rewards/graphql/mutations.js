@@ -13,3 +13,11 @@ export const CREATE_WALLET_TRANSACTION = `
         }
     }
 `
+
+export const CREATE_COUPON = `
+    mutation CreateCoupon($object: crm_coupon_insert_input!) {
+        createCoupon(object : $object) {
+            id
+        }
+    }
+`
