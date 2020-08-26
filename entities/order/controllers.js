@@ -25,7 +25,7 @@ const isPickup = value => ['ONDEMAND_PICKUP', 'PREORDER_PICKUP'].includes(value)
 
 export const take = async (req, res) => {
    try {
-      const { id, customerId, paymentStatus } = req.body.event.data.new
+      const { id, customerKeycloakId, paymentStatus } = req.body.event.data.new
       const { cartByPK: cart } = await client.request(FETCH_CART, {
          id
       })
@@ -61,13 +61,13 @@ export const take = async (req, res) => {
 
       let order = await client.request(CREATE_ORDER, {
          object: {
-            customerId,
             paymentStatus,
             tax: cart.tax,
             orderStatus: 'PENDING',
             source: cart.cartSource,
             amountPaid: cart.amount,
             itemTotal: cart.cartInfo.total,
+            keycloakId: customerKeycloakId,
             deliveryPrice: cart.deliveryPrice,
             transactionId: cart.transactionId,
             fulfillmentType: cart.fulfillmentInfo.type,
