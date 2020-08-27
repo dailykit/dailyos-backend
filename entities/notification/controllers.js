@@ -52,16 +52,16 @@ export const manage = async (req, res) => {
             )
 
             const { origin } = new URL(process.env.DATA_HUB)
-            const data = encodeURI(JSON.stringify(parsed.data))
-            const template = encodeURI(JSON.stringify(parsed.template))
+            const data = JSON.stringify(parsed.data)
+            const template = JSON.stringify(parsed.template)
 
             const url = `${origin}/template?template=${template}&data=${data}`
 
             const { printJob } = await client.request(PRINT_JOB, {
-               url,
                title: trigger.name,
                source: 'DailyOS',
                contentType: 'pdf_uri',
+               url: encodeURIComponent(url),
                printerId: config.printerPrintNodeId
             })
             return printJob
