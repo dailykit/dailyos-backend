@@ -58,10 +58,10 @@ export const manage = async (req, res) => {
             const url = `${origin}/template?template=${template}&data=${data}`
 
             const { printJob } = await client.request(PRINT_JOB, {
+               url,
                title: trigger.name,
                source: 'DailyOS',
                contentType: 'pdf_uri',
-               url: encodeURIComponent(url),
                printerId: config.printerPrintNodeId
             })
             return printJob
