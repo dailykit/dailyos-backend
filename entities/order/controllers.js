@@ -1,21 +1,25 @@
+import axios from 'axios'
 import moment from 'moment-timezone'
 import { client } from '../../lib/graphql'
+import { template_compiler } from '../../utils'
 
 import {
+   FETCH_CART,
+   ORGANIZATION,
+   EMAIL_CONFIG,
    FETCH_INVENTORY_PRODUCT,
    FETCH_SIMPLE_RECIPE_PRODUCT,
-   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
-   FETCH_CART,
-   ORGANIZATION
+   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION
 } from './graphql/queries'
 import {
+   SEND_MAIL,
    UPDATE_CART,
    CREATE_ORDER,
+   UPDATE_ORDER,
    CREATE_ORDER_SACHET,
    CREATE_ORDER_MEALKIT_PRODUCT,
    CREATE_ORDER_INVENTORY_PRODUCT,
-   CREATE_ORDER_READY_TO_EAT_PRODUCT,
-   UPDATE_ORDER
+   CREATE_ORDER_READY_TO_EAT_PRODUCT
 } from './graphql/mutations'
 
 const formatTime = time =>
@@ -182,12 +186,14 @@ export const take = async (req, res) => {
                   ? {
                        dropoff: {
                           dropoffInfo: {
-                             customerEmail: cart.customerInfo.customerEmail,
-                             customerPhone: cart.customerInfo.customerPhone,
-                             customerLastName:
-                                cart.customerInfo.customerLastName,
-                             customerFirstName:
-                                cart.customerInfo.customerFirstName
+                             ...(Object.keys(cart.customerInfo).length > 0 && {
+                                customerEmail: cart.customerInfo.customerEmail,
+                                customerPhone: cart.customerInfo.customerPhone,
+                                customerLastName:
+                                   cart.customerInfo.customerLastName,
+                                customerFirstName:
+                                   cart.customerInfo.customerFirstName
+                             })
                           }
                        }
                     }
@@ -342,11 +348,37 @@ export const take = async (req, res) => {
          orderId: Number(order.createOrder.id)
       })
 
+      if (Object.keys(cart.customerInfo).length > 0) {
+         const { storeSettings } = await client.request(EMAIL_CONFIG, {
+            identifier: { _eq: 'Email Notification' }
+         })
+
+         if (storeSettings.length > 0) {
+            const [config] = storeSettings
+            let html = await getHtml(config.template, {
+               new: { id: order.createOrder.id }
+            })
+
+            if (!config.email) return
+
+            await client.request(SEND_MAIL, {
+               emailInput: {
+                  from: `"${config.name}" ${config.email}`,
+                  to: cart.customerInfo.customerEmail,
+                  subject: `Order Receipt - ${order.createOrder.id}`,
+                  attachments: [],
+                  html
+               }
+            })
+         }
+      }
+
       return res.status(200).json({
          data: cart,
          success: true
       })
    } catch (error) {
+      console.log('error', error)
       return res.status(404).json({ success: false, error: error.message })
    }
 }
@@ -620,5 +652,24 @@ const processReadyToEat = async data => {
       return
    } catch (error) {
       throw Error(error)
+   }
+}
+
+const getHtml = async (template, data) => {
+   try {
+      const parsed = JSON.parse(
+         template_compiler(JSON.stringify(template), data)
+      )
+
+      const { origin } = new URL(process.env.DATA_HUB)
+      const template_data = encodeURI(JSON.stringify(parsed.data))
+      const template_options = encodeURI(JSON.stringify(parsed.template))
+
+      const url = `${origin}/template?template=${template_options}&data=${template_data}`
+
+      const { data: html } = await axios.get(url)
+      return html
+   } catch (error) {
+      throw Error(error.message)
    }
 }

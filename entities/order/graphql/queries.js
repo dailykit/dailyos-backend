@@ -2,7 +2,6 @@ export const FETCH_INVENTORY_PRODUCT = `
    query inventoryProduct($id: Int!, $optionId: Int_comparison_exp!) {
       inventoryProduct(id: $id) {
          id
-         assemblyStationId
          inventoryProductOptions(where: {id: $optionId}) {
             quantity
             packagingId
@@ -112,6 +111,17 @@ export const ORGANIZATION = `
          type
          value
          identifier
+      }
+   }
+`
+
+export const EMAIL_CONFIG = `
+   query storeSettings($identifier: String_comparison_exp!) {
+      storeSettings(where: { identifier: $identifier }) {
+         id
+         name: value(path: "name")
+         email: value(path: "email")
+         template: value(path: "template")
       }
    }
 `
