@@ -478,28 +478,13 @@ const processSimpleRecipe = async data => {
          productOption,
          comboProductId
       }
+
       switch (product.option.type) {
-         case 'mealKit':
-            return async () => {
-               try {
-                  const count = Array.from(
-                     { length: product.quantity },
-                     (_, v) => v
-                  )
-                  await Promise.all(
-                     count.map(async () => {
-                        try {
-                           await processMealKit(args)
-                           return
-                        } catch (error) {
-                           throw Error(error.message)
-                        }
-                     })
-                  )
-               } catch (error) {
-                  throw Error(error.message)
-               }
-            }
+         case 'mealKit': {
+            const count = Array.from({ length: product.quantity }, (_, v) => v)
+            await Promise.all(count.map(() => processMealKit(args)))
+            return
+         }
          case 'readyToEat':
             return processReadyToEat(args)
          default:
