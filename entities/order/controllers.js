@@ -480,7 +480,26 @@ const processSimpleRecipe = async data => {
       }
       switch (product.option.type) {
          case 'mealKit':
-            return processMealKit(args)
+            return async () => {
+               try {
+                  const count = Array.from(
+                     { length: product.quantity },
+                     (_, v) => v
+                  )
+                  await Promise.all(
+                     count.map(async () => {
+                        try {
+                           await processMealKit(args)
+                           return
+                        } catch (error) {
+                           throw Error(error.message)
+                        }
+                     })
+                  )
+               } catch (error) {
+                  throw Error(error.message)
+               }
+            }
          case 'readyToEat':
             return processReadyToEat(args)
          default:
@@ -629,9 +648,9 @@ const processReadyToEat = async data => {
                   object: {
                      unit: unit,
                      status: 'PENDING',
-                     quantity: quantity,
                      ingredientSachetId: id,
                      ingredientName: ingredient.name,
+                     quantity: quantity * product.quantity,
                      processingName: ingredientProcessing.processing.name,
                      orderReadyToEatProductId: createOrderReadyToEatProduct.id,
                      ...(liveModeOfFulfillment && {
