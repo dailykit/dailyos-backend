@@ -601,6 +601,7 @@ const processReadyToEat = async data => {
             object: {
                orderId,
                price: product.totalPrice,
+               quantity: product.quantity,
                simpleRecipeId: productOption.simpleRecipeProduct.simpleRecipeId,
                simpleRecipeProductId: product.id,
                ...(comboProductId && { comboProductId }),
