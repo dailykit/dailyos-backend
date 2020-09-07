@@ -479,14 +479,16 @@ const processSimpleRecipe = async data => {
          comboProductId
       }
 
+      const count = Array.from({ length: product.quantity }, (_, v) => v)
       switch (product.option.type) {
          case 'mealKit': {
-            const count = Array.from({ length: product.quantity }, (_, v) => v)
             await Promise.all(count.map(() => processMealKit(args)))
             return
          }
-         case 'readyToEat':
-            return processReadyToEat(args)
+         case 'readyToEat': {
+            await Promise.all(count.map(() => processReadyToEat(args)))
+            return
+         }
          default:
             throw Error('No such product type exists!')
       }
@@ -586,7 +588,6 @@ const processReadyToEat = async data => {
             object: {
                orderId,
                price: product.totalPrice,
-               quantity: product.quantity,
                simpleRecipeId: productOption.simpleRecipeProduct.simpleRecipeId,
                simpleRecipeProductId: product.id,
                ...(comboProductId && { comboProductId }),
@@ -632,11 +633,11 @@ const processReadyToEat = async data => {
 
                await client.request(CREATE_ORDER_SACHET, {
                   object: {
+                     quantity,
                      unit: unit,
                      status: 'PENDING',
                      ingredientSachetId: id,
                      ingredientName: ingredient.name,
-                     quantity: quantity * product.quantity,
                      processingName: ingredientProcessing.processing.name,
                      orderReadyToEatProductId: createOrderReadyToEatProduct.id,
                      ...(liveModeOfFulfillment && {
