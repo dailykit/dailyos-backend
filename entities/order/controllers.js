@@ -559,12 +559,17 @@ const processMealKit = async data => {
                      orderMealKitProductId: createOrderMealKitProduct.id,
                      processingName: ingredientProcessing.processing.name,
                      ...(liveModeOfFulfillment && {
-                        labelTemplateId: liveModeOfFulfillment.labelTemplateId,
                         accuracy: liveModeOfFulfillment.accuracy,
                         bulkItemId: liveModeOfFulfillment.bulkItemId,
                         sachetItemId: liveModeOfFulfillment.sachetItemId,
                         packagingId: liveModeOfFulfillment.packagingId,
-                        packingStationId: liveModeOfFulfillment.stationId
+                        packingStationId: liveModeOfFulfillment.stationId,
+                        ...(liveModeOfFulfillment.labelTemplateId
+                           ? {
+                                labelTemplateId:
+                                   liveModeOfFulfillment.labelTemplateId
+                             }
+                           : { isLabelled: true })
                      })
                   }
                })
@@ -641,12 +646,17 @@ const processReadyToEat = async data => {
                      processingName: ingredientProcessing.processing.name,
                      orderReadyToEatProductId: createOrderReadyToEatProduct.id,
                      ...(liveModeOfFulfillment && {
-                        labelTemplateId: liveModeOfFulfillment.labelTemplateId,
                         accuracy: liveModeOfFulfillment.accuracy,
                         bulkItemId: liveModeOfFulfillment.bulkItemId,
                         sachetItemId: liveModeOfFulfillment.sachetItemId,
                         packagingId: liveModeOfFulfillment.packagingId,
-                        packingStationId: liveModeOfFulfillment.stationId
+                        packingStationId: liveModeOfFulfillment.stationId,
+                        ...(liveModeOfFulfillment.labelTemplateId
+                           ? {
+                                labelTemplateId:
+                                   liveModeOfFulfillment.labelTemplateId
+                             }
+                           : { isLabelled: true })
                      })
                   }
                })
