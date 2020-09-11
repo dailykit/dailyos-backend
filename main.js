@@ -20,7 +20,7 @@ import {
    RewardsRouter
 } from './entities'
 import { PrintRouter } from './entities/print'
-import { printSachetLabel } from './entities/events'
+import { printSachetLabel, printProductLabel } from './entities/events'
 
 const app = express()
 
@@ -61,6 +61,7 @@ app.use('/webhook/notification', NotificationRouter)
 app.use('/webhook/occurence', OccurenceRouter)
 
 app.post('/event/print-sachet', printSachetLabel)
+app.post('/event/print-product', printProductLabel)
 
 app.listen(PORT, () => {
    console.log(`Server started on ${PORT}`)
