@@ -54,9 +54,7 @@ export const printProductLabel = async (req, res) => {
             if ('inventoryProductId' in rest) {
                const { product = {} } = await client.request(
                   INVENTORY_PRODUCT,
-                  {
-                     id: rest.inventoryProductId
-                  }
+                  { id }
                )
 
                const name = product.inventory.name
