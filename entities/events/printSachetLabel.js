@@ -34,6 +34,13 @@ export const printSachetLabel = async (req, res) => {
       if (settings.length > 0) {
          const [setting] = settings
          if (setting.isActive) {
+            await client.request(UPDATE_ORDER_SACHET, {
+               id,
+               _set: {
+                  status: 'PACKED',
+                  isLabelled: true
+               }
+            })
             return res
                .status(200)
                .json({ success: true, message: 'Print simulation is on!' })
