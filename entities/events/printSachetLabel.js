@@ -62,6 +62,7 @@ export const printSachetLabel = async (req, res) => {
             await client.request(UPDATE_ORDER_SACHET, {
                id,
                _set: {
+                  status: 'PACKED',
                   isLabelled: true
                }
             })
