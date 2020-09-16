@@ -2,8 +2,11 @@ import { client } from '../../lib/graphql'
 
 export const printKOT = async (req, res) => {
    try {
-      const { id = '' } = req.body.event.data.new
+      const { id = '', orderStatus = '' } = req.body.event.data.new
+
       if (!id) throw Error('Missing order id!')
+      if (orderStatus !== 'UNDER_PROCESSING')
+         throw Error('Not valid for this order status!')
 
       const { settings = [] } = await client.request(SETTINGS, {
          type: {
