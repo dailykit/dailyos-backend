@@ -54,7 +54,18 @@ export const printKOT = async (req, res) => {
          })
       )
 
+      const sachetTemplateOptions = encodeURI(
+         JSON.stringify({
+            name: 'sachet_kot1',
+            type: 'kot',
+            format: 'pdf'
+         })
+      )
+
       if (groupByStation.isActive) {
+         /*
+            print product kot
+         */
          if (groupByProductType.isActive) {
             /*
                group by stations = true x group by product type = true
@@ -150,7 +161,49 @@ export const printKOT = async (req, res) => {
                })
             )
          }
+
+         /*
+            print mealk kit sachet kot
+         */
+         const objects = []
+
+         await Promise.all(
+            sachetStations.map(station => {
+               const sachetTemplateData = encodeURI(
+                  JSON.stringify({
+                     ...data,
+                     station: { ids: [station.id] }
+                  })
+               )
+               const url = `${origin}/template?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
+
+               let printerId
+               if (station.defaultKotPrinterId) {
+                  printerId = station.defaultKotPrinterId
+               } else if (station.kotPrinters.length > 0) {
+                  const [printer] = station.kotPrinters
+                  printerId = printer.id
+               }
+
+               if (printerId) {
+                  objects.push({ url, printer: { id: printerId } })
+               }
+            })
+         )
+
+         await Promise.all(
+            objects.map(async node => {
+               await print_job(
+                  node.url,
+                  `KOT for order #${id}`,
+                  node.printer.id
+               )
+            })
+         )
       } else if (!groupByStation.isActive) {
+         /*
+            print product kot
+         */
          if (groupByProductType.isActive) {
             /*
                group by stations = false x group by product type = true
@@ -210,6 +263,26 @@ export const printKOT = async (req, res) => {
                   defaultKotPrinterId.printNodeId
                )
             }
+         }
+
+         /*
+            print mealk kit sachet kot
+         */
+
+         const sachetTemplateData = encodeURI(
+            JSON.stringify({
+               ...data,
+               station: { ids: productStations.map(node => node.id) }
+            })
+         )
+         const url = `${origin}/template?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
+
+         if (defaultKotPrinterId.printNodeId) {
+            await print_job(
+               url,
+               `KOT for order #${id}`,
+               defaultKotPrinterId.printNodeId
+            )
          }
       }
 
@@ -273,6 +346,10 @@ const SACHET_BY_STATIONS = `
       ) {
          id
          name
+         defaultKotPrinterId
+         kotPrinters: attachedKotPrinters {
+            id: printNodeId
+         }
       }
    }
 `
