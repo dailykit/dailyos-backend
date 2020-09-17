@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { client } from '../../lib/graphql'
 
 export const printKOT = async (req, res) => {
@@ -8,6 +9,39 @@ export const printKOT = async (req, res) => {
       if (orderStatus !== 'UNDER_PROCESSING')
          throw Error('Not valid for this order status!')
 
+      const { data: { data = {}, success } = {} } = await axios.get(
+         `${new URL(process.env.DATA_HUB).origin}/server/api/kot-urls?id=${id}`
+      )
+
+      if (success) {
+         await Promise.all(
+            data.map(async node => {
+               await print_job(node.url, `KOT for ORD#${id}`, node.printer.id)
+            })
+         )
+      }
+      return res
+         .status(200)
+         .json({ success: true, message: 'Successfully printed KOT!' })
+   } catch (error) {
+      return res.status(400).json({ success: false, error: error.message })
+   }
+}
+
+const print_job = async (url, title, printerId) => {
+   await client.request(PRINT_JOB, {
+      url,
+      title,
+      printerId,
+      source: 'DailyOS',
+      contentType: 'pdf_uri'
+   })
+   return
+}
+
+export const getKOTUrls = async (req, res) => {
+   try {
+      const { id } = req.query
       const { settings = [] } = await client.request(SETTINGS, {
          type: {
             _eq: 'kot'
@@ -65,6 +99,8 @@ export const printKOT = async (req, res) => {
          })
       )
 
+      const urlList = []
+
       if (groupByStation.isActive) {
          /*
             print product kot
@@ -81,61 +117,14 @@ export const printKOT = async (req, res) => {
                      inventory
                      ready to eat
             */
-            const objects = []
 
-            await Promise.all(
-               productStations.map(station => {
-                  productTypes.map(type => {
-                     const template_data = encodeURI(
-                        JSON.stringify({
-                           ...data,
-                           product: { types: [type] },
-                           station: { ids: [station.id] }
-                        })
-                     )
-                     const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
-
-                     let printerId
-                     if (station.defaultKotPrinterId) {
-                        printerId = station.defaultKotPrinterId
-                     } else if (station.kotPrinters.length > 0) {
-                        const [printer] = station.kotPrinters
-                        printerId = printer.id
-                     }
-
-                     if (printerId) {
-                        objects.push({ url, printer: { id: printerId } })
-                     }
-                  })
-               })
-            )
-
-            await Promise.all(
-               objects.map(async node => {
-                  await print_job(
-                     node.url,
-                     `KOT for order #${id}`,
-                     node.printer.id
-                  )
-               })
-            )
-         } else if (!groupByProductType.isActive) {
-            /*
-               group by stations = true x group by product type = false
-                  station 13
-                     mealkit x inventory x ready to eat
-                  station 14
-                     mealkit x inventory x ready to eat
-            */
-            const objects = []
-
-            await Promise.all(
-               productStations.map(station => {
+            const urls = productStations.map(station => {
+               return productTypes.map(type => {
                   const template_data = encodeURI(
                      JSON.stringify({
                         ...data,
-                        station: { ids: [station.id] },
-                        product: { types: productTypes }
+                        product: { types: [type] },
+                        station: { ids: [station.id] }
                      })
                   )
                   const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
@@ -149,36 +138,32 @@ export const printKOT = async (req, res) => {
                   }
 
                   if (printerId) {
-                     objects.push({ url, printer: { id: printerId } })
+                     return { url, printer: { id: printerId } }
                   }
+                  return
                })
+            })
+            urlList.push(
+               ...urls.reduce((acc, i) => acc.concat(i), []).filter(Boolean)
             )
+         } else if (!groupByProductType.isActive) {
+            /*
+               group by stations = true x group by product type = false
+                  station 13
+                     mealkit x inventory x ready to eat
+                  station 14
+                     mealkit x inventory x ready to eat
+            */
 
-            await Promise.all(
-               objects.map(async node => {
-                  await print_job(
-                     node.url,
-                     `KOT for order #${id}`,
-                     node.printer.id
-                  )
-               })
-            )
-         }
-
-         /*
-            print mealk kit sachet kot
-         */
-         const objects = []
-
-         await Promise.all(
-            sachetStations.map(station => {
-               const sachetTemplateData = encodeURI(
+            const urls = productStations.map(station => {
+               const template_data = encodeURI(
                   JSON.stringify({
                      ...data,
-                     station: { ids: [station.id] }
+                     station: { ids: [station.id] },
+                     product: { types: productTypes }
                   })
                )
-               const url = `${origin}/template?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
+               const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
 
                let printerId
                if (station.defaultKotPrinterId) {
@@ -189,20 +174,43 @@ export const printKOT = async (req, res) => {
                }
 
                if (printerId) {
-                  objects.push({ url, printer: { id: printerId } })
+                  return { url, printer: { id: printerId } }
                }
+               return
             })
-         )
 
-         await Promise.all(
-            objects.map(async node => {
-               await print_job(
-                  node.url,
-                  `KOT for order #${id}`,
-                  node.printer.id
-               )
-            })
-         )
+            urlList.push(
+               ...urls.reduce((acc, i) => acc.concat(i), []).filter(Boolean)
+            )
+         }
+
+         /*
+            print mealk kit sachet kot
+         */
+         const urls = sachetStations.map(station => {
+            const sachetTemplateData = encodeURI(
+               JSON.stringify({
+                  ...data,
+                  station: { ids: [station.id] }
+               })
+            )
+            const url = `${origin}/template?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
+
+            let printerId
+            if (station.defaultKotPrinterId) {
+               printerId = station.defaultKotPrinterId
+            } else if (station.kotPrinters.length > 0) {
+               const [printer] = station.kotPrinters
+               printerId = printer.id
+            }
+
+            if (printerId) {
+               return { url, printer: { id: printerId } }
+            }
+            return
+         })
+
+         urlList.push(...urls.filter(Boolean))
       } else if (!groupByStation.isActive) {
          /*
             print product kot
@@ -217,31 +225,25 @@ export const printKOT = async (req, res) => {
                   ready to eat
                      station 13 x station 14 x ... x station N
             */
-            const urls = []
 
-            await Promise.all(
-               productTypes.map(type => {
-                  const template_data = encodeURI(
-                     JSON.stringify({
-                        ...data,
-                        product: { types: [type] },
-                        station: { ids: productStations.map(node => node.id) }
-                     })
-                  )
-                  const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
-                  urls.push(url)
-               })
-            )
-
-            if (defaultKotPrinterId.printNodeId) {
-               await Promise.all(
-                  urls.map(async url => {
-                     await print_job(
-                        url,
-                        `KOT for order #${id}`,
-                        defaultKotPrinter.printNodeId
-                     )
+            const urls = productTypes.map(type => {
+               const template_data = encodeURI(
+                  JSON.stringify({
+                     ...data,
+                     product: { types: [type] },
+                     station: { ids: productStations.map(node => node.id) }
                   })
+               )
+               const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
+               return url
+            })
+
+            if (defaultKotPrinter.printNodeId) {
+               urlList.push(
+                  ...urls.map(url => ({
+                     url,
+                     printer: { id: defaultKotPrinter.printNodeId }
+                  }))
                )
             }
          } else if (!groupByProductType.isActive) {
@@ -259,12 +261,11 @@ export const printKOT = async (req, res) => {
             )
             const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
 
-            if (defaultKotPrinterId.printNodeId) {
-               await print_job(
+            if (defaultKotPrinter.printNodeId) {
+               urlList.push({
                   url,
-                  `KOT for order #${id}`,
-                  defaultKotPrinterId.printNodeId
-               )
+                  printer: { id: defaultKotPrinter.printNodeId }
+               })
             }
          }
 
@@ -280,32 +281,19 @@ export const printKOT = async (req, res) => {
          )
          const url = `${origin}/template?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
 
-         if (defaultKotPrinterId.printNodeId) {
-            await print_job(
+         if (defaultKotPrinter.printNodeId) {
+            urlList.push({
                url,
-               `KOT for order #${id}`,
-               defaultKotPrinterId.printNodeId
-            )
+               printer: { id: defaultKotPrinter.printNodeId }
+            })
          }
       }
 
-      return res
-         .status(200)
-         .json({ success: true, message: 'Successfully printed KOT!' })
+      return res.status(200).json({ success: true, data: urlList })
    } catch (error) {
+      console.log('getKOTUrls -> error', error)
       return res.status(400).json({ success: false, error: error.message })
    }
-}
-
-const print_job = async (url, title, printerId) => {
-   await client.request(PRINT_JOB, {
-      url,
-      title,
-      printerId,
-      source: 'DailyOS',
-      contentType: 'pdf_uri'
-   })
-   return
 }
 
 const SETTINGS = `

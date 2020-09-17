@@ -22,6 +22,7 @@ import {
 import { PrintRouter } from './entities/print'
 import {
    printKOT,
+   getKOTUrls,
    printSachetLabel,
    printProductLabel
 } from './entities/events'
@@ -58,6 +59,7 @@ app.use('/api/inventory', WorkOrderRouter)
 app.post('/api/initiate-payment', initiatePayment)
 app.post('/api/sendmail', sendMail)
 app.use('/api/rewards', RewardsRouter)
+app.get('/api/kot-urls', getKOTUrls)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)
