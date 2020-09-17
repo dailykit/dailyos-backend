@@ -9,20 +9,44 @@ export const printKOT = async (req, res) => {
       if (orderStatus !== 'UNDER_PROCESSING')
          throw Error('Not valid for this order status!')
 
-      const { data: { data = {}, success } = {} } = await axios.get(
-         `${new URL(process.env.DATA_HUB).origin}/server/api/kot-urls?id=${id}`
-      )
+      const { settings = [] } = await client.request(SETTINGS, {
+         type: {
+            _eq: 'kot'
+         }
+      })
 
-      if (success) {
-         await Promise.all(
-            data.map(async node => {
-               await print_job(node.url, `KOT for ORD#${id}`, node.printer.id)
-            })
+      const printAutomatically = settings.find(
+         node => node.identifier === 'print automatically'
+      ).value
+
+      if (
+         printAutomatically.isActive ||
+         Object.keys(req.body.event.data.new).length === 2
+      ) {
+         const { data: { data = {}, success } = {} } = await axios.get(
+            `${
+               new URL(process.env.DATA_HUB).origin
+            }/server/api/kot-urls?id=${id}`
          )
+
+         if (success) {
+            await Promise.all(
+               data.map(async node => {
+                  await print_job(
+                     node.url,
+                     `KOT for ORD#${id}`,
+                     node.printer.id
+                  )
+               })
+            )
+         }
+         return res
+            .status(200)
+            .json({ success: true, message: 'Successfully printed KOT!' })
       }
       return res
          .status(200)
-         .json({ success: true, message: 'Successfully printed KOT!' })
+         .json({ success: true, message: 'Print automation is turned off!' })
    } catch (error) {
       return res.status(400).json({ success: false, error: error.message })
    }
