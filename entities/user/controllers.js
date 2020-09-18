@@ -6,20 +6,17 @@ export const manage = async (req, res) => {
    let requestType
    try {
       switch (req.body.event.op) {
-         case 'INSERT':
-            requestType = 'created'
-            user.create(req.body.event.data.new)
+         case 'UPDATE':
+            requestType = 'updation'
+            user.create(req.body.event.data.new, res)
             break
          case 'DELETE':
-            requestType = 'deleted'
-            user.delete(req.body.event.data.new)
+            requestType = 'deletion'
+            user.delete(req.body.event.data.old, res)
             break
          default:
             throw Error('No such operation')
       }
-      return res
-         .status(200)
-         .json({ success: true, message: `User has been ${requestType}!` })
    } catch (error) {
       return res
          .status(400)
@@ -28,8 +25,11 @@ export const manage = async (req, res) => {
 }
 
 const user = {
-   create: async user => {
+   create: async (user, res) => {
       try {
+         if (!user.email) throw Error('Email is required!')
+         if (!user.tempPassword) throw Error('Temporary password is required!')
+
          let response = await axios({
             url: `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/token`,
             method: 'POST',
@@ -81,19 +81,25 @@ const user = {
                keycloakId: data[0].id
             })
          }
+         return res
+            .status(200)
+            .json({ success: true, message: 'User created successfully!' })
       } catch (error) {
-         console.log('error', error)
-         throw Error(error.message)
+         return res.status(400).json({ success: false, error: error.message })
       }
    },
-   delete: async user => {
+   delete: async (user, res) => {
       try {
+         if (!user.keycloakId) throw Error('Keycloak ID is required!')
          await axios({
             method: 'DELETE',
             url: `${process.env.KEYCLOAK_URL}/admin/realm/${process.env.KEYCLOAK_REALM}/users/${user.keycloakId}`
          })
+         return res
+            .status(200)
+            .json({ success: true, message: 'User deleted successfully!' })
       } catch (error) {
-         throw Error(error.message)
+         return res.status(400).json({ success: false, error: error.message })
       }
    }
 }
