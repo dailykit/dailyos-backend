@@ -163,7 +163,8 @@ const hasuraTrigger = async payloadData => {
       method: 'POST',
       headers: {
          'Content-Type': 'application/json',
-         'x-hasura-role': 'admin'
+         'x-hasura-role': 'admin',
+         'x-hasura-admin-secret': process.env.HASURA_GRAPHQL_ADMIN_SECRET
       },
       data: payloadData
    })
