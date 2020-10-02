@@ -16,9 +16,16 @@ import {
    initiatePayment,
    OccurenceRouter,
    WorkOrderRouter,
-   NotificationRouter
+   NotificationRouter,
+   RewardsRouter
 } from './entities'
 import { PrintRouter } from './entities/print'
+import {
+   printKOT,
+   getKOTUrls,
+   printSachetLabel,
+   printProductLabel
+} from './entities/events'
 
 const app = express()
 
@@ -51,11 +58,17 @@ app.use('/api/rmk-menu', RMKMenuRouter)
 app.use('/api/inventory', WorkOrderRouter)
 app.post('/api/initiate-payment', initiatePayment)
 app.post('/api/sendmail', sendMail)
+app.use('/api/rewards', RewardsRouter)
+app.get('/api/kot-urls', getKOTUrls)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)
 app.use('/webhook/notification', NotificationRouter)
 app.use('/webhook/occurence', OccurenceRouter)
+
+app.post('/event/print-sachet', printSachetLabel)
+app.post('/event/print-product', printProductLabel)
+app.post('/event/print-kot', printKOT)
 
 app.listen(PORT, () => {
    console.log(`Server started on ${PORT}`)

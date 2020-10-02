@@ -30,7 +30,6 @@ export const create = async (req, res) => {
 
       options.dtstart = new Date(Date.UTC(startYear, startMonth - 1, startDay))
       options.until = new Date(Date.UTC(endYear, endMonth - 1, endDay))
-      console.log('create -> options', options)
 
       const occurences = new RRule(options).all()
 
@@ -107,7 +106,8 @@ export const createScheduledEvent = async (req, res) => {
          method: 'POST',
          headers: {
             'Content-Type': 'application/json',
-            'x-hasura-role': 'admin'
+            'x-hasura-role': 'admin',
+            'x-hasura-admin-secret': process.env.HASURA_GRAPHQL_ADMIN_SECRET
          },
          data: {
             type: 'create_scheduled_event',
@@ -129,6 +129,7 @@ export const createScheduledEvent = async (req, res) => {
          message: 'Successfully created scheduled events!'
       })
    } catch (error) {
+      console.log('createScheduledEvent -> error', error)
       return res.status(400).json({ success: false, error: error.message })
    }
 }
