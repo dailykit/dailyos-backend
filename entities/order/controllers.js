@@ -66,6 +66,7 @@ export const take = async (req, res) => {
       let order = await client.request(CREATE_ORDER, {
          object: {
             cartId: id,
+            brandId: cart.brandId,
             paymentStatus,
             tax: cart.tax,
             orderStatus: 'PENDING',
