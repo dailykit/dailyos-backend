@@ -14,3 +14,22 @@ query aws_ses($domain: String!) {
   }
 }
 `
+
+export const GET_PAYMENT_SETTINGS = `
+query storeSettings($brandId: Int!) {
+   paymentSettings: storeSettings(where: {type: {_eq: "availability"}, identifier: {_eq: "Store Live"}}) {
+     value
+     brandSettings(where: {brandId: {_eq: $brandId}}) {
+       value
+     }
+   }
+ }
+`
+
+export const GET_CUSTOMER = `
+query Customer($keycloakId: String!) {
+   customer(keycloakId: $keycloakId) {
+     isTest
+   }
+ }
+`
