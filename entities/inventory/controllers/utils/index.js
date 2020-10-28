@@ -1,3 +1,10 @@
+import { client } from '../../../../lib/graphql'
+import {
+   UPDATE_BULK_ITEM_HISTORY,
+   UPDATE_PACKAGING,
+   UPDATE_PACKAGING_HISTORY
+} from '../../graphql/mutations'
+
 export const updateBulktItemHistory = (bulkItemId, status) => {
    return client.request(UPDATE_BULK_ITEM_HISTORY, {
       bulkItemId,
