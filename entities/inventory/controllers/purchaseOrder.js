@@ -4,9 +4,10 @@ import {
    CREATE_BULK_ITEM_HISTORY,
    CREATE_PACKAGING_HISTORY
 } from '../graphql/mutations'
+import { updatePackagingHistoryStatus, updateBulktItemHistory } from './utils'
 
 // Done
-// test -> passes
+// test -> passes for bulk item. packaging pending...
 export const handlePurchaseOrderCreateUpdate = async (req, res) => {
    try {
       const {
@@ -23,28 +24,42 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
       if (packagingId) {
          if (status === 'PENDING' && (mode === 'INSERT' || mode === 'MANUAL')) {
             // create packagingHistory with PENDING status
-            client.request(CREATE_PACKAGING_HISTORY, {
+            await client.request(CREATE_PACKAGING_HISTORY, {
                object: {
                   packagingId,
                   purchaseOrderItemId: id,
                   quantity: orderQuantity
                }
             })
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: 'packaging history created.'
+            })
          }
 
          // update the packagingHistory's status to COMPLETED
-         if (status === 'COMPLETED')
-            updatePackagingHistoryStatus(packagingId, status)
+         if (status === 'COMPLETED') {
+            await updatePackagingHistoryStatus(packagingId, status)
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: `status updated to ${status}`
+            })
+         }
 
          // if status == CANCELLED, mark bulkItemHistory's status -> 'Cancelled'
-         if (status === 'CANCELLED')
-            updatePackagingHistoryStatus(packagingId, status)
+         if (status === 'CANCELLED') {
+            await updatePackagingHistoryStatus(packagingId, status)
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: `status updated to ${status}`
+            })
+         }
 
          return
       }
 
-      if (status === 'PENDING' && mode === 'INSERT') {
-         const response = await client.request(CREATE_BULK_ITEM_HISTORY, {
+      if (status === 'PENDING' || mode === 'INSERT') {
+         await client.request(CREATE_BULK_ITEM_HISTORY, {
             objects: [
                {
                   bulkItemId,
@@ -54,16 +69,33 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
                }
             ]
          })
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'bulk item history created'
+         })
       }
 
       // update the bulkItemHistory's status to COMPLETED
 
-      if (status === 'COMPLETED') updateBulktItemHistory(bulkItemId, status)
+      if (status === 'COMPLETED') {
+         await updateBulktItemHistory(bulkItemId, status)
+
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: `bulk item history marked ${status}`
+         })
+      }
 
       // if status == CANCELLED, mark bulkItemHistory's status -> 'Cancelled'
-      if (status === 'CANCELLED') updateBulktItemHistory(bulkItemId, status)
+      if (status === 'CANCELLED') {
+         await updateBulktItemHistory(bulkItemId, status)
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: `bulk item history marked ${status}`
+         })
+      }
    } catch (error) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      res.status(error.status || StatusCodes.INTERNAL_SERVER_ERROR).json({
          ok: false,
          message: error.message,
          stack: error.stack
