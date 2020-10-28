@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import { client } from '../../../lib/graphql'
 import {
    CREATE_BULK_ITEM_HISTORY,
@@ -13,16 +14,16 @@ import {
 // Done
 // test -> passes
 export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
-   const {
-      id: sachetWorkOrderId,
-      inputBulkItemId,
-      outputSachetItemId,
-      inputQuantity,
-      outputQuantity,
-      status
-   } = req.body.event.data.new
-
    try {
+      const {
+         id: sachetWorkOrderId,
+         inputBulkItemId,
+         outputSachetItemId,
+         inputQuantity,
+         outputQuantity,
+         status
+      } = req.body.event.data.new
+
       // fetch sachetItemHistory( for output ) and bulkItemHistory( for input ) using sachetWorkOrderId
       // will return an array of length 1
       const sachetHistoryResponse = await client.request(
@@ -95,6 +96,10 @@ export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
          )
       }
    } catch (error) {
-      throw error
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+         ok: false,
+         message: error.message,
+         stack: error.stack
+      })
    }
 }

@@ -66,7 +66,7 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
          ok: false,
          message: error.message,
-         error: error.stack
+         stack: error.stack
       })
    }
 }

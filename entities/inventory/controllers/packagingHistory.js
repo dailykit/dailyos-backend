@@ -1,11 +1,12 @@
+import { StatusCodes } from 'http-status-codes'
 import { client } from '../../../lib/graphql'
 import { GET_PACKAGING } from '../graphql/queries'
 
 export const handlePackagingHistory = async (req, _) => {
-   const { quantity, status, packagingId } = req.body.event.data.new
-   const { old } = req.body.event.data
-
    try {
+      const { quantity, status, packagingId } = req.body.event.data.new
+      const { old } = req.body.event.data
+
       // fetch the packaging (with id === packagingId)
       const { packaging = {} } = await client.request(GET_PACKAGING, {
          id: packagingId
@@ -113,6 +114,10 @@ export const handlePackagingHistory = async (req, _) => {
          }
       }
    } catch (error) {
-      throw error
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+         ok: false,
+         message: error.message,
+         stack: error.stack
+      })
    }
 }

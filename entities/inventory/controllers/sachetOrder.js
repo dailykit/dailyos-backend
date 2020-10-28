@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import { client } from '../../../lib/graphql'
 import {
    CREATE_BULK_ITEM_HISTORY,
@@ -14,17 +15,17 @@ export const handleOrderSachetCreation = async (req, res) => {
    // req.body.trigger.name -> hook name
    // req.body.event -> event details -> {op: 'INSERT' | 'UPDATE', data: {old: {}, new: {}}}
 
-   const {
-      sachetItemId,
-      bulkItemId,
-      quantity,
-      status,
-      id
-   } = req.body.event.data.new
-
-   const oldStatus = req.body.event.data.old
-
    try {
+      const {
+         sachetItemId,
+         bulkItemId,
+         quantity,
+         status,
+         id
+      } = req.body.event.data.new
+
+      const oldStatus = req.body.event.data.old
+
       if (sachetItemId && status === 'PENDING') {
          // create sachetItemHistory
          const response = await client.request(CREATE_SACHET_ITEM_HISTORY, {
@@ -86,6 +87,10 @@ export const handleOrderSachetCreation = async (req, res) => {
          })
       }
    } catch (error) {
-      throw error
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+         ok: false,
+         message: error.message,
+         stack: error.stack
+      })
    }
 }

@@ -1,3 +1,5 @@
+import { StatusCodes } from 'http-status-codes'
+
 import { client } from '../../../lib/graphql'
 import { UPDATE_SACHET_ITEM } from '../graphql/mutations'
 import { GET_SACHET_ITEM } from '../graphql/queries'
@@ -5,10 +7,10 @@ import { GET_SACHET_ITEM } from '../graphql/queries'
 // Done
 // test -> passes
 export const handleSachetItemHistory = async (req, res) => {
-   const { id, quantity, status, sachetItemId } = req.body.event.data.new
-   const oldSachetItem = req.body.event.data.old
-
    try {
+      const { id, quantity, status, sachetItemId } = req.body.event.data.new
+      const oldSachetItem = req.body.event.data.old
+
       // fetch the bulkItem (with id === sachetItemId)
       const sachetItemData = await client.request(GET_SACHET_ITEM, {
          id: sachetItemId
@@ -151,6 +153,10 @@ export const handleSachetItemHistory = async (req, res) => {
          }
       }
    } catch (error) {
-      throw error
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+         ok: false,
+         message: error.message,
+         stack: error.stack
+      })
    }
 }
