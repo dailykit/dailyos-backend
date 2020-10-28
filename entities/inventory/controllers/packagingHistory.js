@@ -1,8 +1,10 @@
 import { StatusCodes } from 'http-status-codes'
+
 import { client } from '../../../lib/graphql'
 import { GET_PACKAGING } from '../graphql/queries'
+import { updatePackaging } from './utils'
 
-export const handlePackagingHistory = async (req, _) => {
+export const handlePackagingHistory = async (req, res) => {
    try {
       const { quantity, status, packagingId } = req.body.event.data.new
       const { old } = req.body.event.data
@@ -18,7 +20,11 @@ export const handlePackagingHistory = async (req, _) => {
             committed: packaging.committed + Math.abs(quantity)
          }
 
-         const response = await updatePackaging(packagingId, set)
+         await updatePackaging(packagingId, set)
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'packaging updated'
+         })
       }
 
       if (status === 'COMPLETED' && quantity < 0) {
@@ -31,7 +37,11 @@ export const handlePackagingHistory = async (req, _) => {
             consumed: packaging.consumed + Math.abs(quantity)
          }
 
-         const response = await updatePackaging(packagingId, set)
+         await updatePackaging(packagingId, set)
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'packaging updated'
+         })
       }
 
       if (status === 'PENDING' && quantity > 0) {
@@ -40,7 +50,11 @@ export const handlePackagingHistory = async (req, _) => {
             awaiting: packaging.awaiting + Math.abs(quantity)
          }
 
-         const response = await updatePackaging(packagingId, set)
+         await updatePackaging(packagingId, set)
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'packaging updated'
+         })
       }
 
       if (status === 'COMPLETED' && quantity > 0) {
@@ -51,7 +65,11 @@ export const handlePackagingHistory = async (req, _) => {
             onHand: packaging.onHand + Math.abs(quantity)
          }
 
-         const response = await updatePackaging(packagingId, set)
+         await updatePackaging(packagingId, set)
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'packaging updated'
+         })
       }
 
       if (status === 'CANCELLED' && old && old.status === 'PENDING') {
@@ -60,7 +78,11 @@ export const handlePackagingHistory = async (req, _) => {
             const set = {
                committed: packaging.committed - Math.abs(quantity)
             }
-            const response = await updatePackaging(packagingId, set)
+            await updatePackaging(packagingId, set)
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: 'packaging updated'
+            })
          }
 
          if (quantity > 0) {
@@ -69,7 +91,11 @@ export const handlePackagingHistory = async (req, _) => {
                awaiting: packaging.awaiting - Math.abs(quantity)
             }
 
-            const response = await updatePackaging(packagingId, set)
+            await updatePackaging(packagingId, set)
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: 'packaging updated'
+            })
          }
       }
 
@@ -81,7 +107,11 @@ export const handlePackagingHistory = async (req, _) => {
                consumed: packaging.consumed - Math.abs(quantity)
             }
 
-            const response = await updatePackaging(packagingId, set)
+            await updatePackaging(packagingId, set)
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: 'packaging updated'
+            })
          }
 
          if (quantity > 0) {
@@ -89,7 +119,11 @@ export const handlePackagingHistory = async (req, _) => {
                onHand: packaging.onHand - Math.abs(quantity)
             }
 
-            const response = await updatePackaging(packagingId, set)
+            await updatePackaging(packagingId, set)
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: 'packaging updated'
+            })
          }
       }
 
@@ -100,7 +134,11 @@ export const handlePackagingHistory = async (req, _) => {
                awaiting: packaging.awaiting + Math.abs(quantity)
             }
 
-            const response = await updatePackaging(packagingId, set)
+            await updatePackaging(packagingId, set)
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: 'packaging updated'
+            })
          }
 
          if (quantity < 0) {
@@ -110,11 +148,15 @@ export const handlePackagingHistory = async (req, _) => {
                committed: bulkItemData.bulkItem.committed + Math.abs(quantity)
             }
 
-            const response = await updatePackaging(packagingId, set)
+            await updatePackaging(packagingId, set)
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: 'packaging updated'
+            })
          }
       }
    } catch (error) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      res.status(error.status || StatusCodes.INTERNAL_SERVER_ERROR).json({
          ok: false,
          message: error.message,
          stack: error.stack
