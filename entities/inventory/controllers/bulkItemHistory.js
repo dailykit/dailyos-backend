@@ -17,11 +17,15 @@ export const handleBulkItemHistory = async (req, res) => {
 
       if (status === 'PENDING' && quantity < 0) {
          // update bulkItem's commited field -> +|quantity|
-         const response = await client.request(UPDATE_BULK_ITEM, {
+         await client.request(UPDATE_BULK_ITEM, {
             where: { id: { _eq: bulkItemId } },
             set: {
                committed: bulkItemData.bulkItem.committed + Math.abs(quantity)
             }
+         })
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'bulk item updated'
          })
       }
 
@@ -30,7 +34,7 @@ export const handleBulkItemHistory = async (req, res) => {
          //               on-hand -> - |quantity|
          //               consumed -> + |quantity|
 
-         const response = await client.request(UPDATE_BULK_ITEM, {
+         await client.request(UPDATE_BULK_ITEM, {
             where: { id: { _eq: bulkItemId } },
             set: {
                committed: bulkItemData.bulkItem.committed - Math.abs(quantity),
@@ -38,15 +42,23 @@ export const handleBulkItemHistory = async (req, res) => {
                consumed: bulkItemData.bulkItem.consumed + Math.abs(quantity)
             }
          })
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'bulk item updated'
+         })
       }
 
       if (status === 'PENDING' && quantity > 0) {
          // set bulkItem's awaiting -> + |quantity|
-         const response = await client.request(UPDATE_BULK_ITEM, {
+         await client.request(UPDATE_BULK_ITEM, {
             where: { id: { _eq: bulkItemId } },
             set: {
                awaiting: bulkItemData.bulkItem.awaiting + Math.abs(quantity)
             }
+         })
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'bulk item updated'
          })
       }
 
@@ -54,12 +66,16 @@ export const handleBulkItemHistory = async (req, res) => {
          // set bulkItem's onHand -> + |quantity|
          // set bulkItem's awaiting -> - |awaiting|
 
-         const response = await client.request(UPDATE_BULK_ITEM, {
+         await client.request(UPDATE_BULK_ITEM, {
             where: { id: { _eq: bulkItemId } },
             set: {
                awaiting: bulkItemData.bulkItem.awaiting - Math.abs(quantity),
                onHand: bulkItemData.bulkItem.onHand + Math.abs(quantity)
             }
+         })
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'bulk item updated'
          })
       }
 
@@ -70,22 +86,30 @@ export const handleBulkItemHistory = async (req, res) => {
       ) {
          if (quantity < 0) {
             // set bulkItem's committed -> - |quantity|
-            const response = await client.request(UPDATE_BULK_ITEM, {
+            await client.request(UPDATE_BULK_ITEM, {
                where: { id: { _eq: bulkItemId } },
                set: {
                   committed:
                      bulkItemData.bulkItem.committed - Math.abs(quantity)
                }
             })
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: 'bulk item updated'
+            })
          }
 
          if (quantity > 0) {
             // set bulkItem's awaiting -> - |quantity|
-            const response = await client.request(UPDATE_BULK_ITEM, {
+            await client.request(UPDATE_BULK_ITEM, {
                where: { id: { _eq: bulkItemId } },
                set: {
                   awaiting: bulkItemData.bulkItem.awaiting - Math.abs(quantity)
                }
+            })
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: 'bulk item updated'
             })
          }
       }
@@ -97,21 +121,29 @@ export const handleBulkItemHistory = async (req, res) => {
       ) {
          if (quantity < 0) {
             // set bulkItem's committed -> - |quantity|
-            const response = await client.request(UPDATE_BULK_ITEM, {
+            await client.request(UPDATE_BULK_ITEM, {
                where: { id: { _eq: bulkItemId } },
                set: {
                   onHand: bulkItemData.bulkItem.onHand + Math.abs(quantity),
                   consumed: bulkItemData.bulkItem.consumed - Math.abs(quantity)
                }
             })
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: 'bulk item updated'
+            })
          }
 
          if (quantity > 0) {
-            const response = await client.request(UPDATE_BULK_ITEM, {
+            await client.request(UPDATE_BULK_ITEM, {
                where: { id: { _eq: bulkItemId } },
                set: {
                   onHand: bulkItemData.bulkItem.onHand - Math.abs(quantity)
                }
+            })
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: 'bulk item updated'
             })
          }
       }
@@ -122,17 +154,21 @@ export const handleBulkItemHistory = async (req, res) => {
          oldBulkItem.status === 'COMPLETED'
       ) {
          if (quantity > 0) {
-            const response = await client.request(UPDATE_BULK_ITEM, {
+            await client.request(UPDATE_BULK_ITEM, {
                where: { id: { _eq: bulkItemId } },
                set: {
                   onHand: bulkItemData.bulkItem.onHand - Math.abs(quantity),
                   awaiting: bulkItemData.bulkItem.awaiting + Math.abs(quantity)
                }
             })
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: 'bulk item updated'
+            })
          }
 
          if (quantity < 0) {
-            const response = await client.request(UPDATE_BULK_ITEM, {
+            await client.request(UPDATE_BULK_ITEM, {
                where: { id: { _eq: bulkItemId } },
                set: {
                   onHand: bulkItemData.bulkItem.onHand + Math.abs(quantity),
@@ -141,10 +177,14 @@ export const handleBulkItemHistory = async (req, res) => {
                      bulkItemData.bulkItem.committed + Math.abs(quantity)
                }
             })
+            res.status(StatusCodes.OK).json({
+               ok: true,
+               message: 'bulk item updated'
+            })
          }
       }
    } catch (error) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      res.status(error.status || StatusCodes.INTERNAL_SERVER_ERROR).json({
          ok: false,
          message: error.message,
          stack: error.stack
