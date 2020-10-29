@@ -18,6 +18,15 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res) => {
          outputQuantity,
          status
       } = req.body.event.data.new
+
+      if (status === 'UNPUBLISHED') {
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'work order not published yet.'
+         })
+         return
+      }
+
       // fetch the bulkItemHistory (2) usin bulkWorkOrderId [length 2]
       // will return an array of length 2
       const bulkItemHistories = await client.request(
@@ -33,38 +42,39 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res) => {
          bulkItemHistories.bulkItemHistories.length
       ) {
          // mark the [bulkItemHistory].length = 2 -> COMPLETE or CANCELLED
-         const response = await client.request(
+         await client.request(
             UPDATE_BULK_ITEM_HISTORIES_WITH_BULK_WORK_ORDER_ID,
             {
                bulkWorkOrderId,
                set: { status }
             }
          )
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'histories updated'
+         })
       } else {
          // create 2 bulkItemHistory for input and for output
+         await client.request(CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER, {
+            bulkItemId: outputBulkItemId,
+            quantity: outputQuantity,
+            status: 'PENDING',
+            bulkWorkOrderId: bulkWorkOrderId
+         })
 
-         const outputBulkItemHistoryResponse = await client.request(
-            CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER,
-            {
-               bulkItemId: outputBulkItemId,
-               quantity: outputQuantity,
-               status: 'PENDING',
-               bulkWorkOrderId: bulkWorkOrderId
-            }
-         )
-
-         const inputBulkItemHistoryResponse = await client.request(
-            CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER,
-            {
-               bulkItemId: inputBulkItemId,
-               quantity: -inputQuantity,
-               status: 'PENDING',
-               bulkWorkOrderId: bulkWorkOrderId
-            }
-         )
+         await client.request(CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER, {
+            bulkItemId: inputBulkItemId,
+            quantity: -inputQuantity,
+            status: 'PENDING',
+            bulkWorkOrderId: bulkWorkOrderId
+         })
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'histories created'
+         })
       }
    } catch (error) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      res.status(error.satus || StatusCodes.INTERNAL_SERVER_ERROR).json({
          ok: false,
          message: error.message,
          stack: error.stack
