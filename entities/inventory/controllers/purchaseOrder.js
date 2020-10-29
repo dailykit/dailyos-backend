@@ -31,10 +31,11 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
                   quantity: orderQuantity
                }
             })
-            res.status(StatusCodes.OK).json({
+            res.status(StatusCodes.CREATED).json({
                ok: true,
                message: 'packaging history created.'
             })
+            return
          }
 
          // update the packagingHistory's status to COMPLETED
@@ -44,6 +45,7 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
                ok: true,
                message: `status updated to ${status}`
             })
+            return
          }
 
          // if status == CANCELLED, mark bulkItemHistory's status -> 'Cancelled'
@@ -53,12 +55,11 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
                ok: true,
                message: `status updated to ${status}`
             })
+            return
          }
-
-         return
       }
 
-      if (status === 'PENDING' || mode === 'INSERT') {
+      if (status === 'PENDING' && mode === 'INSERT') {
          await client.request(CREATE_BULK_ITEM_HISTORY, {
             objects: [
                {
@@ -73,6 +74,7 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
             ok: true,
             message: 'bulk item history created'
          })
+         return
       }
 
       // update the bulkItemHistory's status to COMPLETED
@@ -84,6 +86,7 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
             ok: true,
             message: `bulk item history marked ${status}`
          })
+         return
       }
 
       // if status == CANCELLED, mark bulkItemHistory's status -> 'Cancelled'
@@ -93,6 +96,7 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
             ok: true,
             message: `bulk item history marked ${status}`
          })
+         return
       }
    } catch (error) {
       res.status(error.status || StatusCodes.INTERNAL_SERVER_ERROR).json({
