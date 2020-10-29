@@ -27,6 +27,7 @@ export const handleBulkItemHistory = async (req, res) => {
             ok: true,
             message: 'bulk item updated'
          })
+         return
       }
 
       if (status === 'COMPLETED' && quantity < 0) {
@@ -46,6 +47,8 @@ export const handleBulkItemHistory = async (req, res) => {
             ok: true,
             message: 'bulk item updated'
          })
+
+         return
       }
 
       if (status === 'PENDING' && quantity > 0) {
@@ -60,6 +63,7 @@ export const handleBulkItemHistory = async (req, res) => {
             ok: true,
             message: 'bulk item updated'
          })
+         return
       }
 
       if (status === 'COMPLETED' && quantity > 0) {
@@ -77,6 +81,7 @@ export const handleBulkItemHistory = async (req, res) => {
             ok: true,
             message: 'bulk item updated'
          })
+         return
       }
 
       if (
@@ -97,6 +102,7 @@ export const handleBulkItemHistory = async (req, res) => {
                ok: true,
                message: 'bulk item updated'
             })
+            return
          }
 
          if (quantity > 0) {
@@ -111,6 +117,7 @@ export const handleBulkItemHistory = async (req, res) => {
                ok: true,
                message: 'bulk item updated'
             })
+            return
          }
       }
 
@@ -132,6 +139,7 @@ export const handleBulkItemHistory = async (req, res) => {
                ok: true,
                message: 'bulk item updated'
             })
+            return
          }
 
          if (quantity > 0) {
@@ -145,6 +153,7 @@ export const handleBulkItemHistory = async (req, res) => {
                ok: true,
                message: 'bulk item updated'
             })
+            return
          }
       }
 
@@ -165,6 +174,7 @@ export const handleBulkItemHistory = async (req, res) => {
                ok: true,
                message: 'bulk item updated'
             })
+            return
          }
 
          if (quantity < 0) {
@@ -181,6 +191,7 @@ export const handleBulkItemHistory = async (req, res) => {
                ok: true,
                message: 'bulk item updated'
             })
+            return
          }
       }
    } catch (error) {
