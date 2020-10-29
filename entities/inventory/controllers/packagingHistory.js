@@ -14,64 +14,6 @@ export const handlePackagingHistory = async (req, res) => {
          id: packagingId
       })
 
-      if (status === 'PENDING' && quantity < 0) {
-         // update bulkItem's commited field -> +|quantity|
-         const set = {
-            committed: packaging.committed + Math.abs(quantity)
-         }
-
-         await updatePackaging(packagingId, set)
-         res.status(StatusCodes.OK).json({
-            ok: true,
-            message: 'packaging updated'
-         })
-      }
-
-      if (status === 'COMPLETED' && quantity < 0) {
-         // set bulkItem' commited -> - |quantity|
-         //               on-hand -> - |quantity|
-         //               consumed -> + |quantity|
-         const set = {
-            committed: packaging.committed - Math.abs(quantity),
-            onHand: packaging.onHand - Math.abs(quantity),
-            consumed: packaging.consumed + Math.abs(quantity)
-         }
-
-         await updatePackaging(packagingId, set)
-         res.status(StatusCodes.OK).json({
-            ok: true,
-            message: 'packaging updated'
-         })
-      }
-
-      if (status === 'PENDING' && quantity > 0) {
-         // set bulkItem's awaiting -> + |quantity|
-         const set = {
-            awaiting: packaging.awaiting + Math.abs(quantity)
-         }
-
-         await updatePackaging(packagingId, set)
-         res.status(StatusCodes.OK).json({
-            ok: true,
-            message: 'packaging updated'
-         })
-      }
-
-      if (status === 'COMPLETED' && quantity > 0) {
-         // set bulkItem's onHand -> + |quantity|
-         // set bulkItem's awaiting -> - |awaiting|
-         const set = {
-            awaiting: packaging.awaiting - Math.abs(quantity),
-            onHand: packaging.onHand + Math.abs(quantity)
-         }
-
-         await updatePackaging(packagingId, set)
-         res.status(StatusCodes.OK).json({
-            ok: true,
-            message: 'packaging updated'
-         })
-      }
-
       if (status === 'CANCELLED' && old && old.status === 'PENDING') {
          if (quantity < 0) {
             // set bulkItem's committed -> - |quantity|
@@ -154,6 +96,64 @@ export const handlePackagingHistory = async (req, res) => {
                message: 'packaging updated'
             })
          }
+      }
+
+      if (status === 'PENDING' && quantity < 0) {
+         // update bulkItem's commited field -> +|quantity|
+         const set = {
+            committed: packaging.committed + Math.abs(quantity)
+         }
+
+         await updatePackaging(packagingId, set)
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'packaging updated'
+         })
+      }
+
+      if (status === 'COMPLETED' && quantity < 0) {
+         // set bulkItem' commited -> - |quantity|
+         //               on-hand -> - |quantity|
+         //               consumed -> + |quantity|
+         const set = {
+            committed: packaging.committed - Math.abs(quantity),
+            onHand: packaging.onHand - Math.abs(quantity),
+            consumed: packaging.consumed + Math.abs(quantity)
+         }
+
+         await updatePackaging(packagingId, set)
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'packaging updated'
+         })
+      }
+
+      if (status === 'PENDING' && quantity > 0) {
+         // set bulkItem's awaiting -> + |quantity|
+         const set = {
+            awaiting: packaging.awaiting + Math.abs(quantity)
+         }
+
+         await updatePackaging(packagingId, set)
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'packaging updated'
+         })
+      }
+
+      if (status === 'COMPLETED' && quantity > 0) {
+         // set bulkItem's onHand -> + |quantity|
+         // set bulkItem's awaiting -> - |awaiting|
+         const set = {
+            awaiting: packaging.awaiting - Math.abs(quantity),
+            onHand: packaging.onHand + Math.abs(quantity)
+         }
+
+         await updatePackaging(packagingId, set)
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'packaging updated'
+         })
       }
    } catch (error) {
       res.status(error.status || StatusCodes.INTERNAL_SERVER_ERROR).json({
