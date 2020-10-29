@@ -25,6 +25,7 @@ export const handlePackagingHistory = async (req, res) => {
                ok: true,
                message: 'packaging updated'
             })
+            return
          }
 
          if (quantity > 0) {
@@ -38,6 +39,7 @@ export const handlePackagingHistory = async (req, res) => {
                ok: true,
                message: 'packaging updated'
             })
+            return
          }
       }
 
@@ -54,6 +56,7 @@ export const handlePackagingHistory = async (req, res) => {
                ok: true,
                message: 'packaging updated'
             })
+            return
          }
 
          if (quantity > 0) {
@@ -66,6 +69,7 @@ export const handlePackagingHistory = async (req, res) => {
                ok: true,
                message: 'packaging updated'
             })
+            return
          }
       }
 
@@ -81,6 +85,7 @@ export const handlePackagingHistory = async (req, res) => {
                ok: true,
                message: 'packaging updated'
             })
+            return
          }
 
          if (quantity < 0) {
@@ -95,6 +100,7 @@ export const handlePackagingHistory = async (req, res) => {
                ok: true,
                message: 'packaging updated'
             })
+            return
          }
       }
 
@@ -109,6 +115,7 @@ export const handlePackagingHistory = async (req, res) => {
             ok: true,
             message: 'packaging updated'
          })
+         return
       }
 
       if (status === 'COMPLETED' && quantity < 0) {
@@ -126,6 +133,7 @@ export const handlePackagingHistory = async (req, res) => {
             ok: true,
             message: 'packaging updated'
          })
+         return
       }
 
       if (status === 'PENDING' && quantity > 0) {
@@ -139,6 +147,7 @@ export const handlePackagingHistory = async (req, res) => {
             ok: true,
             message: 'packaging updated'
          })
+         return
       }
 
       if (status === 'COMPLETED' && quantity > 0) {
@@ -154,6 +163,7 @@ export const handlePackagingHistory = async (req, res) => {
             ok: true,
             message: 'packaging updated'
          })
+         return
       }
    } catch (error) {
       res.status(error.status || StatusCodes.INTERNAL_SERVER_ERROR).json({
