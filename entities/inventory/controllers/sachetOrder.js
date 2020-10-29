@@ -26,9 +26,34 @@ export const handleOrderSachetCreation = async (req, res) => {
 
       const oldStatus = req.body.event.data.old
 
+      if (sachetItemId && status === 'CANCELLED' && oldStatus === 'PENDING') {
+         // update sachetItemHistory
+         await client.request(UPDATE_SACHET_ITEM_HISTORY, {
+            where: { orderSachetId: { _eq: id } },
+            set: { status }
+         })
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'history updated'
+         })
+      }
+
+      if (bulkItemId && status === 'CANCELLED' && oldStatus === 'PENDING') {
+         // update BulkItemHistory
+         await client.request(UPDATE_BULK_ITEM_HISTORY, {
+            bulkItemId,
+            set: { status }
+         })
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'history updated'
+         })
+         return
+      }
+
       if (sachetItemId && status === 'PENDING') {
          // create sachetItemHistory
-         const response = await client.request(CREATE_SACHET_ITEM_HISTORY, {
+         await client.request(CREATE_SACHET_ITEM_HISTORY, {
             objects: [
                {
                   sachetItemId,
@@ -42,7 +67,7 @@ export const handleOrderSachetCreation = async (req, res) => {
 
       if (bulkItemId && status === 'PENDING') {
          // create bulkItemHistory
-         const response = await client.request(CREATE_BULK_ITEM_HISTORY, {
+         await client.request(CREATE_BULK_ITEM_HISTORY, {
             objects: [
                {
                   bulkItemId,
@@ -52,39 +77,37 @@ export const handleOrderSachetCreation = async (req, res) => {
                }
             ]
          })
+         res.status(StatusCodes.CREATED).json({
+            ok: true,
+            message: 'history created'
+         })
+         return
       }
 
       if (bulkItemId && status === 'COMPLETED') {
          // update BulkItemHistory
-         const response = await client.request(UPDATE_BULK_ITEM_HISTORY, {
+         await client.request(UPDATE_BULK_ITEM_HISTORY, {
             bulkItemId,
             set: { status }
          })
-      }
-
-      if (bulkItemId && status === 'CANCELLED' && oldStatus === 'PENDING') {
-         // update BulkItemHistory
-         const response = await client.request(UPDATE_BULK_ITEM_HISTORY, {
-            bulkItemId,
-            set: { status }
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'history updated'
          })
       }
 
       if (sachetItemId && status === 'COMPELETED') {
          // update sachetItemHistory
 
-         const response = await client.request(UPDATE_SACHET_ITEM_HISTORY, {
+         await client.request(UPDATE_SACHET_ITEM_HISTORY, {
             where: { orderSachetId: { _eq: id } },
             set: { status }
          })
-      }
-
-      if (sachetItemId && status === 'CANCELLED' && oldStatus === 'PENDING') {
-         // update sachetItemHistory
-         const response = await client.request(UPDATE_SACHET_ITEM_HISTORY, {
-            where: { orderSachetId: { _eq: id } },
-            set: { status }
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'history updated'
          })
+         return
       }
    } catch (error) {
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
