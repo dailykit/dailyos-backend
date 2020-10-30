@@ -13,16 +13,13 @@ import {
 const router = Router()
 
 // test -> passes
-router.post('/order-sachet-created-updated', handleOrderSachetCreation)
+router.post('/purchase-order-create-update', handlePurchaseOrderCreateUpdate)
 
 // test -> passes
 router.post('/bulk-item-history-created-updated', handleBulkItemHistory)
 
 // test -> passes
-router.post('/sachet-item-history-created-updated', handleSachetItemHistory)
-
-// test -> fails
-router.post('/purchase-order-create-update', handlePurchaseOrderCreateUpdate)
+router.post('/packaging-history', handlePackagingHistory)
 
 // test -> passes
 router.post('/bulk-work-order-created-updated', handleBulkWorkOrderCreateUpdate)
@@ -33,6 +30,10 @@ router.post(
    handleSachetWorkOrderCreateUpdate
 )
 
-router.post('/packaging-history', handlePackagingHistory)
+// test -> passes
+router.post('/sachet-item-history-created-updated', handleSachetItemHistory)
+
+// test -> passes
+router.post('/order-sachet-created-updated', handleOrderSachetCreation)
 
 export default router
