@@ -13,27 +13,24 @@ import {
 const router = Router()
 
 // test -> passes
-router.post('/purchase-order-create-update', handlePurchaseOrderCreateUpdate)
+router.post('/purchase-order-upsert', handlePurchaseOrderCreateUpdate)
 
 // test -> passes
-router.post('/bulk-item-history-created-updated', handleBulkItemHistory)
+router.post('/bulk-item-history-upsert', handleBulkItemHistory)
 
 // test -> passes
-router.post('/packaging-history', handlePackagingHistory)
+router.post('/packaging-hstory-upsert', handlePackagingHistory)
 
 // test -> passes
-router.post('/bulk-work-order-created-updated', handleBulkWorkOrderCreateUpdate)
+router.post('/bulk-work-order-upsert', handleBulkWorkOrderCreateUpdate)
 
 // test -> passes
-router.post(
-   '/sachet-work-order-created-updated',
-   handleSachetWorkOrderCreateUpdate
-)
+router.post('/sachet-work-order-upsert', handleSachetWorkOrderCreateUpdate)
 
 // test -> passes
-router.post('/sachet-item-history-created-updated', handleSachetItemHistory)
+router.post('/sachet-item-history-upsert', handleSachetItemHistory)
 
 // test -> passes
-router.post('/order-sachet-created-updated', handleOrderSachetCreation)
+router.post('/order-sachet-upsert', handleOrderSachetCreation)
 
 export default router
