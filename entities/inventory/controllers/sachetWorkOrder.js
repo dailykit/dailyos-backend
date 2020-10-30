@@ -13,7 +13,7 @@ import {
 
 // Done
 // test -> passes
-export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
+export const handleSachetWorkOrderCreateUpdate = async (req, res, next) => {
    try {
       const {
          id: sachetWorkOrderId,
@@ -106,10 +106,6 @@ export const handleSachetWorkOrderCreateUpdate = async (req, res) => {
          })
       }
    } catch (error) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-         ok: false,
-         message: error.message,
-         stack: error.stack
-      })
+      next(error)
    }
 }

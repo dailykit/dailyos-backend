@@ -6,7 +6,7 @@ import { GET_SACHET_ITEM } from '../graphql/queries'
 
 // Done
 // test -> passes
-export const handleSachetItemHistory = async (req, res) => {
+export const handleSachetItemHistory = async (req, res, next) => {
    try {
       const { quantity, status, sachetItemId } = req.body.event.data.new
       const oldSachetItem = req.body.event.data.old
@@ -203,10 +203,6 @@ export const handleSachetItemHistory = async (req, res) => {
          return
       }
    } catch (error) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-         ok: false,
-         message: error.message,
-         stack: error.stack
-      })
+      next(error)
    }
 }

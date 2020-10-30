@@ -1,5 +1,6 @@
 require('dotenv').config()
 import cors from 'cors'
+import { StatusCodes } from 'http-status-codes'
 import express from 'express'
 import morgan from 'morgan'
 import AWS from 'aws-sdk'
@@ -69,6 +70,20 @@ app.use('/webhook/occurence', OccurenceRouter)
 app.post('/event/print-sachet', printSachetLabel)
 app.post('/event/print-product', printProductLabel)
 app.post('/event/print-kot', printKOT)
+
+app.use((_req, _res, next) => {
+   const error = new Error('Not found')
+   error.status = StatusCodes.NOT_FOUND
+   next(error)
+})
+
+app.use((error, _req, res, next) => {
+   res.status(error.status || StatusCodes.INTERNAL_SERVER_ERROR).json({
+      ok: false,
+      message: error.message,
+      stack: error.stack
+   })
+})
 
 app.listen(PORT, () => {
    console.log(`Server started on ${PORT}`)

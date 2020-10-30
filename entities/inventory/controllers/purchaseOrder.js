@@ -8,7 +8,7 @@ import { updatePackagingHistoryStatus, updateBulktItemHistory } from './utils'
 
 // Done
 // test -> passes for bulk item. packaging pending...
-export const handlePurchaseOrderCreateUpdate = async (req, res) => {
+export const handlePurchaseOrderCreateUpdate = async (req, res, next) => {
    try {
       const {
          id,
@@ -99,10 +99,6 @@ export const handlePurchaseOrderCreateUpdate = async (req, res) => {
          return
       }
    } catch (error) {
-      res.status(error.status || StatusCodes.INTERNAL_SERVER_ERROR).json({
-         ok: false,
-         message: error.message,
-         stack: error.stack
-      })
+      next(error)
    }
 }

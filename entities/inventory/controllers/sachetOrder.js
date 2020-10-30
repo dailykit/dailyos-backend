@@ -9,7 +9,7 @@ import {
 
 // Done
 // test -> passes
-export const handleOrderSachetCreation = async (req, res) => {
+export const handleOrderSachetCreation = async (req, res, next) => {
    // req.body contains the whole event
    // req.body.table -> table related details -> schema and table name
    // req.body.trigger.name -> hook name
@@ -110,10 +110,6 @@ export const handleOrderSachetCreation = async (req, res) => {
          return
       }
    } catch (error) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-         ok: false,
-         message: error.message,
-         stack: error.stack
-      })
+      next(error)
    }
 }

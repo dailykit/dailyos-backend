@@ -8,7 +8,7 @@ import { GET_BULK_ITEM_HISTORIES_WITH_BULK_WORK_ORDER_ID } from '../graphql/quer
 
 // Done
 // test -> passes -> finally
-export const handleBulkWorkOrderCreateUpdate = async (req, res) => {
+export const handleBulkWorkOrderCreateUpdate = async (req, res, next) => {
    try {
       const {
          id: bulkWorkOrderId,
@@ -74,10 +74,6 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res) => {
          })
       }
    } catch (error) {
-      res.status(error.satus || StatusCodes.INTERNAL_SERVER_ERROR).json({
-         ok: false,
-         message: error.message,
-         stack: error.stack
-      })
+      next(error)
    }
 }
