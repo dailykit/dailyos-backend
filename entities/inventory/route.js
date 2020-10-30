@@ -19,7 +19,7 @@ router.post('/purchase-order-upsert', handlePurchaseOrderCreateUpdate)
 router.post('/bulk-item-history-upsert', handleBulkItemHistory)
 
 // test -> passes
-router.post('/packaging-hstory-upsert', handlePackagingHistory)
+router.post('/packaging-history-upsert', handlePackagingHistory)
 
 // test -> passes
 router.post('/bulk-work-order-upsert', handleBulkWorkOrderCreateUpdate)
