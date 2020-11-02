@@ -12,9 +12,9 @@ export const updateBulktItemHistory = (bulkItemId, status) => {
    })
 }
 
-export const updatePackagingHistoryStatus = (packagingId, status) => {
+export const updatePackagingHistoryStatus = (purchaseOrderId, status) => {
    return client.request(UPDATE_PACKAGING_HISTORY, {
-      packagingId,
+      id: purchaseOrderId,
       set: { status }
    })
 }

@@ -2,10 +2,14 @@ import { StatusCodes } from 'http-status-codes'
 import { client } from '../../../lib/graphql'
 import {
    CREATE_BULK_ITEM_HISTORY,
-   CREATE_PACKAGING_HISTORY
+   CREATE_PACKAGING_HISTORY,
+   UPDATE_BULK_ITEM_HISTORIES_WITH_PURCHASE_ORDER_ID
 } from '../graphql/mutations'
-import { updatePackagingHistoryStatus, updateBulktItemHistory } from './utils'
-
+import {
+   GET_BULK_ITEM_HISTORIES_WITH_PURCHASE_ORDER_ID,
+   GET_PACKAGING_HISTORY
+} from '../graphql/queries'
+import { updatePackagingHistoryStatus } from './utils'
 // Done
 // test -> passes for bulk item. packaging pending...
 export const handlePurchaseOrderCreateUpdate = async (req, res, next) => {
@@ -17,49 +21,42 @@ export const handlePurchaseOrderCreateUpdate = async (req, res, next) => {
          status,
          packagingId
       } = req.body.event.data.new
-      const mode = req.body.event.op
-      // create bulkItemHistory if status is pending
 
-      // cases if packagingId is available.
-      if (packagingId) {
-         if (status === 'PENDING' && (mode === 'INSERT' || mode === 'MANUAL')) {
-            // create packagingHistory with PENDING status
-            await client.request(CREATE_PACKAGING_HISTORY, {
-               object: {
-                  packagingId,
-                  purchaseOrderItemId: id,
-                  quantity: orderQuantity
-               }
-            })
-            res.status(StatusCodes.CREATED).json({
-               ok: true,
-               message: 'packaging history created.'
-            })
-            return
-         }
-
-         // update the packagingHistory's status to COMPLETED
-         if (status === 'COMPLETED') {
-            await updatePackagingHistoryStatus(packagingId, status)
-            res.status(StatusCodes.OK).json({
-               ok: true,
-               message: `status updated to ${status}`
-            })
-            return
-         }
-
-         // if status == CANCELLED, mark bulkItemHistory's status -> 'Cancelled'
-         if (status === 'CANCELLED') {
-            await updatePackagingHistoryStatus(packagingId, status)
-            res.status(StatusCodes.OK).json({
-               ok: true,
-               message: `status updated to ${status}`
-            })
-            return
-         }
+      if (status === 'UNPUBLISHED') {
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: 'purchase order not published yet.'
+         })
+         return
       }
 
-      if (status === 'PENDING' && mode === 'INSERT') {
+      // if the order is for packaging
+      if (packagingId) {
+         handlePackagingPurchaseOrders(req, res)
+         return
+      }
+
+      const { bulkItemHistories = [] } = await client.request(
+         GET_BULK_ITEM_HISTORIES_WITH_PURCHASE_ORDER_ID,
+         {
+            id
+         }
+      )
+
+      if (bulkItemHistories.length) {
+         // update history
+         await client.request(
+            UPDATE_BULK_ITEM_HISTORIES_WITH_PURCHASE_ORDER_ID,
+            { id, set: { status } }
+         )
+
+         res.status(StatusCodes.OK).json({
+            ok: true,
+            message: `bulk item history marked ${status}`
+         })
+         return
+      } else {
+         // create history
          await client.request(CREATE_BULK_ITEM_HISTORY, {
             objects: [
                {
@@ -76,29 +73,38 @@ export const handlePurchaseOrderCreateUpdate = async (req, res, next) => {
          })
          return
       }
-
-      // update the bulkItemHistory's status to COMPLETED
-
-      if (status === 'COMPLETED') {
-         await updateBulktItemHistory(bulkItemId, status)
-
-         res.status(StatusCodes.OK).json({
-            ok: true,
-            message: `bulk item history marked ${status}`
-         })
-         return
-      }
-
-      // if status == CANCELLED, mark bulkItemHistory's status -> 'Cancelled'
-      if (status === 'CANCELLED') {
-         await updateBulktItemHistory(bulkItemId, status)
-         res.status(StatusCodes.OK).json({
-            ok: true,
-            message: `bulk item history marked ${status}`
-         })
-         return
-      }
    } catch (error) {
       next(error)
+   }
+}
+
+async function handlePackagingPurchaseOrders(req, res) {
+   const { id, orderQuantity, status, packagingId } = req.body.event.data.new
+
+   const {
+      inventory_packagingHistory: packagingHistories = []
+   } = await client.request(GET_PACKAGING_HISTORY, { id })
+
+   if (!packagingHistories.length) {
+      await client.request(CREATE_PACKAGING_HISTORY, {
+         object: {
+            packagingId,
+            quantity: orderQuantity,
+            purchaseOrderItemId: id
+         }
+      })
+      res.status(StatusCodes.CREATED).json({
+         ok: true,
+         message: 'packaging history created.'
+      })
+      return
+   } else {
+      // update the packagingHistory's status
+      await updatePackagingHistoryStatus(id, status)
+      res.status(StatusCodes.OK).json({
+         ok: true,
+         message: `status updated to ${status}`
+      })
+      return
    }
 }
