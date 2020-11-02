@@ -115,7 +115,7 @@ export const take = async (req, res) => {
             brandId: cart.brandId,
             orderStatus: 'PENDING',
             source: cart.cartSource,
-            amountPaid: cart.amount,
+            amountPaid: cart.totalPrice,
             itemTotal: cart.cartInfo.total,
             keycloakId: customerKeycloakId,
             deliveryPrice: cart.deliveryPrice,
