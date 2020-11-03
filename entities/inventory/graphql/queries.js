@@ -39,6 +39,15 @@ export const GET_BULK_ITEM_HISTORIES_WITH_SACHET_WORK_ORDER_ID = `
       }
    }
 `
+export const GET_BULK_ITEM_HISTORIES_WITH_PURCHASE_ORDER_ID = `
+   query BulkItemHistories($id: Int!) {
+      bulkItemHistories(where: { purchaseOrderItemId: { _eq: $id } }) {
+         id
+         status
+         quantity
+      }
+   }
+`
 
 export const GET_SACHET_ITEM_HISTORIES = `
    query SachetItemHistories ($sachetWorkOrderId: Int!){
@@ -56,6 +65,14 @@ export const GET_PACKAGING = `
          awaiting
          committed
          consumed
+      }
+   }
+`
+export const GET_PACKAGING_HISTORY = `
+   query GetPackagingHistory($id: Int!) {
+      inventory_packagingHistory(where: { purchaseOrderItemId: { _eq: $id } }) {
+         id
+         status
       }
    }
 `
