@@ -114,6 +114,19 @@ export const UPDATE_BULK_ITEM_HISTORY_WITH_SACHET_ORDER_ID = `
       }
    }
 `
+export const UPDATE_BULK_ITEM_HISTORIES_WITH_PURCHASE_ORDER_ID = `
+   mutation UpdateBulkItemHistory(
+      $set: inventory_bulkItemHistory_set_input
+      $id: Int!
+   ) {
+      updateBulkItemHistory(
+         _set: $set
+         where: { purchaseOrderItemId: { _eq: $id } }
+      ) {
+         affected_rows
+      }
+   }
+`
 
 export const UPDATE_SACHET_ITEM = `
    mutation UpdateSachetItem(
@@ -141,12 +154,12 @@ export const CREATE_PACKAGING_HISTORY = `
 
 export const UPDATE_PACKAGING_HISTORY = `
    mutation UpdatePackagingHistory(
-      $packagingId: Int!
       $set: inventory_packagingHistory_set_input
+      $id: Int!
    ) {
       update_inventory_packagingHistory(
-         where: { packagingId: { _eq: $packagingId } }
          _set: $set
+         where: { purchaseOrderItemId: { _eq: $id } }
       ) {
          affected_rows
       }

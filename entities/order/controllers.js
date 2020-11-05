@@ -5,11 +5,12 @@ import { template_compiler } from '../../utils'
 
 import {
    FETCH_CART,
-   ORGANIZATION,
    EMAIL_CONFIG,
+   BRAND_ON_DEMAND_SETTING,
    FETCH_INVENTORY_PRODUCT,
    FETCH_SIMPLE_RECIPE_PRODUCT,
-   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION
+   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
+   BRAND_SUBSCRIPTION_SETTING
 } from './graphql/queries'
 import {
    SEND_MAIL,
@@ -61,17 +62,60 @@ export const take = async (req, res) => {
          })
       )
 
-      const { brand, address, contact } = await client.request(ORGANIZATION)
+      const settings = {
+         brand: {
+            name: ''
+         },
+         address: {},
+         contact: {
+            phoneNo: '',
+            email: ''
+         }
+      }
+      if (cart.cartSource === 'a-la-carte') {
+         const { brand = {} } = client.request(BRAND_ON_DEMAND_SETTING, {
+            id: cart.brandId
+         })
+         if ('brand' in brand) {
+            settings.brand = brand.brand.length > 0 ? brand.brand[0].value : {}
+         }
+         if ('contact' in brand) {
+            settings.contact =
+               brand.contact.length > 0 ? brand.contact[0].value : {}
+         }
+         if ('address' in brand) {
+            const address =
+               brand.address.length > 0 ? brand.address[0].value : {}
+            if ('address' in address) {
+               settings.address = address
+            }
+         }
+      } else if (cart.cartSource === 'subscription') {
+         const { brand = {} } = client.request(BRAND_SUBSCRIPTION_SETTING, {
+            id: cart.brandId
+         })
+         if ('brand' in brand) {
+            settings.brand = brand.brand.length > 0 ? brand.brand[0].value : {}
+         }
+         if ('contact' in brand) {
+            settings.contact =
+               brand.contact.length > 0 ? brand.contact[0].value : {}
+         }
+         if ('address' in brand) {
+            settings.address =
+               brand.address.length > 0 ? brand.address[0].value : {}
+         }
+      }
 
       let order = await client.request(CREATE_ORDER, {
          object: {
             cartId: id,
-            brandId: cart.brandId,
             paymentStatus,
             tax: cart.tax,
+            brandId: cart.brandId,
             orderStatus: 'PENDING',
             source: cart.cartSource,
-            amountPaid: cart.amount,
+            amountPaid: cart.totalPrice,
             itemTotal: cart.cartInfo.total,
             keycloakId: customerKeycloakId,
             deliveryPrice: cart.deliveryPrice,
@@ -169,18 +213,18 @@ export const take = async (req, res) => {
                   },
                   pickupInfo: {
                      organizationId: process.env.ORGANIZATION_ID,
-                     organizationName: brand[0].value.name,
-                     organizationPhone: contact[0].value.phoneNo,
-                     organizationEmail: contact[0].value.email,
+                     organizationName: settings.brand.name,
+                     organizationPhone: settings.contact.phoneNo,
+                     organizationEmail: settings.contact.email,
                      organizationAddress: {
-                        line1: address[0].value.address.line1,
-                        line2: address[0].value.address.line2,
-                        city: address[0].value.address.city,
-                        state: address[0].value.address.state,
-                        country: address[0].value.address.country,
-                        zipcode: address[0].value.address.zip,
-                        latitude: address[0].value.address.lat,
-                        longitude: address[0].value.address.lng
+                        line1: settings.address.line1,
+                        line2: settings.address.line2,
+                        city: settings.address.city,
+                        state: settings.address.state,
+                        country: settings.address.country,
+                        zipcode: settings.address.zip,
+                        latitude: settings.address.lat,
+                        longitude: settings.address.lng
                      }
                   }
                },
@@ -284,18 +328,18 @@ export const take = async (req, res) => {
                   },
                   returnInfo: {
                      organizationId: process.env.ORGANIZATION_ID,
-                     organizationName: brand[0].value.name,
-                     organizationPhone: contact[0].value.phoneNo,
-                     organizationEmail: contact[0].value.email,
+                     organizationName: settings.brand.name,
+                     organizationPhone: settings.contact.phoneNo,
+                     organizationEmail: settings.contact.email,
                      organizationAddress: {
-                        line1: address[0].value.address.line1,
-                        line2: address[0].value.address.line2,
-                        city: address[0].value.address.city,
-                        state: address[0].value.address.state,
-                        country: address[0].value.address.country,
-                        zipcode: address[0].value.address.zip,
-                        latitude: address[0].value.address.lat,
-                        longitude: address[0].value.address.lng
+                        line1: settings.address.line1,
+                        line2: settings.address.line2,
+                        city: settings.address.city,
+                        state: settings.address.state,
+                        country: settings.address.country,
+                        zipcode: settings.address.zip,
+                        latitude: settings.address.lat,
+                        longitude: settings.address.lng
                      }
                   }
                }
@@ -351,12 +395,12 @@ export const take = async (req, res) => {
       })
 
       if (Object.keys(cart.customerInfo).length > 0) {
-         const { storeSettings } = await client.request(EMAIL_CONFIG, {
-            identifier: { _eq: 'Email Notification' }
+         const { brand } = await client.request(EMAIL_CONFIG, {
+            id: cart.brandId
          })
 
-         if (storeSettings.length > 0) {
-            const [config] = storeSettings
+         if ('email' in brand && brand.email.length > 0) {
+            const [config] = brand.email
             let html = await getHtml(config.template, {
                new: { id: order.createOrder.id }
             })
@@ -688,6 +732,7 @@ const getHtml = async (template, data) => {
       const { data: html } = await axios.get(url)
       return html
    } catch (error) {
+      console.log('getHtml -> error', error)
       throw Error(error.message)
    }
 }

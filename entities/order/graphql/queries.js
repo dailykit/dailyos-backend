@@ -72,9 +72,11 @@ export const FETCH_CART = `
          amount
          status
          address
+         brandId
          cartInfo
          orderId
          isValid
+         cartSource
          taxPercent
          totalPrice
          itemTotal
@@ -92,36 +94,68 @@ export const FETCH_CART = `
    }
 `
 
-export const ORGANIZATION = `
-   query organization {
-      brand: storeSettings(where: {identifier: {_eq: "Brand Name"}}) {
-         id
-         type
-         value
-         identifier
+export const BRAND_ON_DEMAND_SETTING = `
+   query brand($id: Int!) {
+      brand(id: $id) {
+         brand: onDemandSettings(
+            where: { onDemandSetting: { identifier: { _eq: "Brand Name" } } }
+         ) {
+            value
+         }
+         address: onDemandSettings(
+            where: { onDemandSetting: { identifier: { _eq: "Location" } } }
+         ) {
+            value
+         }
+         contact: onDemandSettings(
+            where: { onDemandSetting: { identifier: { _eq: "Contact" } } }
+         ) {
+            value
+         }
       }
-      address: storeSettings(where: {identifier: {_eq: "Location"}}) {
-         id
-         type
-         value
-         identifier
-      }
-      contact: storeSettings(where: {identifier: {_eq: "Contact"}}) {
-         id
-         type
-         value
-         identifier
+   }
+`
+
+export const BRAND_SUBSCRIPTION_SETTING = `
+   query brand($id: Int!) {
+      brand(id: $id) {
+         brand: subscriptionStoreSettings(
+            where: {
+               subscriptionStoreSetting: { identifier: { _eq: "theme-brand" } }
+            }
+         ) {
+            name: value(path: "name")
+         }
+         address: subscriptionStoreSettings(
+            where: {
+               subscriptionStoreSetting: { identifier: { _eq: "Location" } }
+            }
+         ) {
+            value
+         }
+         contact: subscriptionStoreSettings(
+            where: {
+               subscriptionStoreSetting: { identifier: { _eq: "Contact" } }
+            }
+         ) {
+            value
+         }
       }
    }
 `
 
 export const EMAIL_CONFIG = `
-   query storeSettings($identifier: String_comparison_exp!) {
-      storeSettings(where: { identifier: $identifier }) {
-         id
-         name: value(path: "name")
-         email: value(path: "email")
-         template: value(path: "template")
+   query brand($id: Int!) {
+      brand(id: $id) {
+         email: onDemandSettings(
+            where: {
+               onDemandSetting: { identifier: { _eq: "Email Notification" } }
+            }
+         ) {
+            name: value(path: "name")
+            email: value(path: "email")
+            template: value(path: "template")
+         }
       }
    }
 `
