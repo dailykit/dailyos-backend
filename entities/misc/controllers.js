@@ -33,7 +33,7 @@ export const initiatePayment = async (req, res) => {
             ? paymentSettings[0].brandSettings[0].value.isStoreLive
             : paymentSettings[0].value.isStoreLive
 
-         if (isStripeConfigured || isStoreLive || customer.isTest) {
+         if (!isStripeConfigured || !isStoreLive || customer.isTest) {
             await client.request(UPDATE_CART, {
                id: data.id,
                set: {
