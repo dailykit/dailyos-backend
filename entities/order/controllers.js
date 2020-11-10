@@ -70,40 +70,53 @@ export const take = async (req, res) => {
          contact: {
             phoneNo: '',
             email: ''
+         },
+         email: {
+            name: '',
+            email: '',
+            template: {}
          }
       }
       if (cart.cartSource === 'a-la-carte') {
          const { brand = {} } = client.request(BRAND_ON_DEMAND_SETTING, {
             id: cart.brandId
          })
-         if ('brand' in brand) {
+         if ('brand' in brand && brand.brand) {
             settings.brand = brand.brand.length > 0 ? brand.brand[0].value : {}
          }
-         if ('contact' in brand) {
+         if ('contact' in brand && brand.contact) {
             settings.contact =
                brand.contact.length > 0 ? brand.contact[0].value : {}
          }
-         if ('address' in brand) {
+         if ('address' in brand && brand.address) {
             const address =
                brand.address.length > 0 ? brand.address[0].value : {}
             if ('address' in address) {
                settings.address = address
             }
          }
+         if ('email' in brand && brand.email) {
+            const email = brand.email.length > 0 ? brand.email[0].value : {}
+            settings.email = email
+         }
       } else if (cart.cartSource === 'subscription') {
          const { brand = {} } = client.request(BRAND_SUBSCRIPTION_SETTING, {
             id: cart.brandId
          })
-         if ('brand' in brand) {
+         if ('brand' in brand && brand.brand) {
             settings.brand = brand.brand.length > 0 ? brand.brand[0].value : {}
          }
-         if ('contact' in brand) {
+         if ('contact' in brand && brand.contact) {
             settings.contact =
                brand.contact.length > 0 ? brand.contact[0].value : {}
          }
-         if ('address' in brand) {
+         if ('address' in brand && brand.address) {
             settings.address =
                brand.address.length > 0 ? brand.address[0].value : {}
+         }
+         if ('email' in brand && brand.email) {
+            const email = brand.email.length > 0 ? brand.email[0].value : {}
+            settings.email = email
          }
       }
 
@@ -395,21 +408,19 @@ export const take = async (req, res) => {
       })
 
       if (Object.keys(cart.customerInfo).length > 0) {
-         const { brand } = await client.request(EMAIL_CONFIG, {
-            id: cart.brandId
-         })
-
-         if ('email' in brand && brand.email.length > 0) {
-            const [config] = brand.email
-            let html = await getHtml(config.template, {
+         if (
+            settings.email.name &&
+            settings.email.email &&
+            Object.keys(settings.email.template).length > 0
+         ) {
+            const { name, email, template } = settings.email
+            let html = await getHtml(template, {
                new: { id: order.createOrder.id }
             })
 
-            if (!config.email) return
-
             await client.request(SEND_MAIL, {
                emailInput: {
-                  from: `"${config.name}" ${config.email}`,
+                  from: `"${name}" ${email}`,
                   to: cart.customerInfo.customerEmail,
                   subject: `Order Receipt - ${order.createOrder.id}`,
                   attachments: [],

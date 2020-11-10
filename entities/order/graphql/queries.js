@@ -112,6 +112,9 @@ export const BRAND_ON_DEMAND_SETTING = `
          ) {
             value
          }
+         email: onDemandSettings(where: {onDemandSetting: {identifier: {_eq: "Email Notification"}}}) {
+           value
+         }
       }
    }
 `
@@ -138,6 +141,9 @@ export const BRAND_SUBSCRIPTION_SETTING = `
                subscriptionStoreSetting: { identifier: { _eq: "Contact" } }
             }
          ) {
+            value
+         }
+         email: subscriptionStoreSettings(where: {subscriptionStoreSetting: {identifier: {_eq: "Email Notification"}}}) {
             value
          }
       }
