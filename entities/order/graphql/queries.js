@@ -127,7 +127,7 @@ export const BRAND_SUBSCRIPTION_SETTING = `
                subscriptionStoreSetting: { identifier: { _eq: "theme-brand" } }
             }
          ) {
-            name: value(path: "name")
+            value
          }
          address: subscriptionStoreSettings(
             where: {

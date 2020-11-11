@@ -78,7 +78,7 @@ export const take = async (req, res) => {
          }
       }
       if (cart.cartSource === 'a-la-carte') {
-         const { brand = {} } = client.request(BRAND_ON_DEMAND_SETTING, {
+         const { brand = {} } = await client.request(BRAND_ON_DEMAND_SETTING, {
             id: cart.brandId
          })
          if ('brand' in brand && brand.brand) {
@@ -100,9 +100,12 @@ export const take = async (req, res) => {
             settings.email = email
          }
       } else if (cart.cartSource === 'subscription') {
-         const { brand = {} } = client.request(BRAND_SUBSCRIPTION_SETTING, {
-            id: cart.brandId
-         })
+         const { brand = {} } = await client.request(
+            BRAND_SUBSCRIPTION_SETTING,
+            {
+               id: cart.brandId
+            }
+         )
          if ('brand' in brand && brand.brand) {
             settings.brand = brand.brand.length > 0 ? brand.brand[0].value : {}
          }
@@ -435,7 +438,6 @@ export const take = async (req, res) => {
          success: true
       })
    } catch (error) {
-      console.log('error', error)
       return res.status(404).json({ success: false, error: error.message })
    }
 }
