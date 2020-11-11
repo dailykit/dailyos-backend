@@ -91,9 +91,7 @@ export const take = async (req, res) => {
          if ('address' in brand && brand.address) {
             const address =
                brand.address.length > 0 ? brand.address[0].value : {}
-            if ('address' in address) {
-               settings.address = address
-            }
+            settings.address = address
          }
          if ('email' in brand && brand.email) {
             const email = brand.email.length > 0 ? brand.email[0].value : {}
