@@ -18,7 +18,8 @@ import {
    OccurenceRouter,
    WorkOrderRouter,
    NotificationRouter,
-   RewardsRouter
+   RewardsRouter,
+   ModifierRouter
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -61,6 +62,7 @@ app.post('/api/initiate-payment', initiatePayment)
 app.post('/api/sendmail', sendMail)
 app.use('/api/rewards', RewardsRouter)
 app.get('/api/kot-urls', getKOTUrls)
+app.use('/api/modifier', ModifierRouter)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)

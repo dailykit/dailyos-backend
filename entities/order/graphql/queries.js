@@ -2,15 +2,39 @@ export const FETCH_INVENTORY_PRODUCT = `
    query inventoryProduct($id: Int!, $optionId: Int_comparison_exp!) {
       inventoryProduct(id: $id) {
          id
-         inventoryProductOptions(where: {id: $optionId}) {
+         sachetItemId
+         sachetItem {
+            id
+            unit
+            bulkItemId
+            bulkItem {
+               id
+               processingName
+               supplierItemId
+               supplierItem {
+                 id
+                 name
+               }
+            }
+         }
+         supplierItemId
+         supplierItem {
+            id
+            name
+            unit
+         }
+         inventoryProductOptions(where: { id: $optionId }) {
             quantity
             packagingId
-            labelTemplateId
-            assemblyStationId
             instructionCardTemplateId
+            operationConfigId
+            operationConfig {
+               stationId
+               labelTemplateId
+            }            
          }
       }
-   }    
+   }
 `
 
 export const FETCH_SIMPLE_RECIPE_PRODUCT = `
@@ -21,9 +45,12 @@ export const FETCH_SIMPLE_RECIPE_PRODUCT = `
             simpleRecipeId
          }
          packagingId
-         labelTemplateId
-         assemblyStationId
          instructionCardTemplateId
+         operationConfigId
+         operationConfig {
+            stationId
+            labelTemplateId
+         }            
       }
    }
 `

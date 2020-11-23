@@ -301,7 +301,9 @@ export const take = async (req, res) => {
                                 state: cart.address.state,
                                 zipcode: cart.address.zipcode,
                                 country: cart.address.country,
-                                notes: cart.address.notes
+                                notes: cart.address.notes,
+                                label: cart.address.label,
+                                landmark: cart.address.landmark
                              }
                           }
                        }
@@ -401,7 +403,6 @@ export const take = async (req, res) => {
             }
          })
       )
-
       await client.request(UPDATE_CART, {
          id,
          status: 'ORDER_PLACED',
@@ -436,6 +437,7 @@ export const take = async (req, res) => {
          success: true
       })
    } catch (error) {
+      console.log('error', error)
       return res.status(404).json({ success: false, error: error.message })
    }
 }
@@ -469,7 +471,11 @@ const processCombo = async ({ product: combo, orderId }) => {
    }
 }
 
-const processInventory = async ({ product, orderId, comboProductId }) => {
+export const processInventory = async ({
+   product,
+   orderId,
+   comboProductId = null
+}) => {
    try {
       const variables = { id: product.id, optionId: { _eq: product.option.id } }
       const { inventoryProduct } = await client.request(
@@ -477,51 +483,110 @@ const processInventory = async ({ product, orderId, comboProductId }) => {
          variables
       )
 
-      const optionQuantity =
-         inventoryProduct.inventoryProductOptions[0].quantity
+      const [productOption] = inventoryProduct.inventoryProductOptions
+
       const totalQuantity = product.quantity
-         ? product.quantity * optionQuantity
-         : optionQuantity
+         ? product.quantity * productOption.quantity
+         : productOption.quantity
 
       const {
-         packagingId,
-         labelTemplateId,
-         assemblyStationId,
-         instructionCardTemplateId
-      } = inventoryProduct.inventoryProductOptions[0]
+         packagingId = null,
+         operationConfig = null,
+         operationConfigId = null,
+         instructionCardTemplateId = null
+      } = productOption
 
-      await client.request(CREATE_ORDER_INVENTORY_PRODUCT, {
-         object: {
-            orderId,
-            packagingId,
-            labelTemplateId,
-            assemblyStationId,
-            instructionCardTemplateId,
-            quantity: totalQuantity,
-            price: product.totalPrice,
-            assemblyStatus: 'PENDING',
-            inventoryProductId: product.id,
-            ...(comboProductId && { comboProductId }),
-            inventoryProductOptionId: product.option.id,
-            ...(product.customizableProductId && {
-               customizableProductId: product.customizableProductId
-            }),
-            ...(product.comboProductComponentId && {
-               comboProductComponentId: product.comboProductComponentId
-            }),
-            ...(product.customizableProductOptionId && {
-               customizableProductOptionId: product.customizableProductOptionId
-            })
+      const { createOrderInventoryProduct } = await client.request(
+         CREATE_ORDER_INVENTORY_PRODUCT,
+         {
+            object: {
+               orderId,
+               packagingId,
+               instructionCardTemplateId,
+               quantity: totalQuantity,
+               price: product.totalPrice,
+               assemblyStatus: 'PENDING',
+               inventoryProductId: product.id,
+               ...(operationConfigId && {
+                  assemblyStationId: operationConfig.stationId
+               }),
+               ...(operationConfigId && {
+                  labelTemplateId: operationConfig.labelTemplateId
+               }),
+               ...(comboProductId && { comboProductId }),
+               inventoryProductOptionId: product.option.id,
+               ...(product.customizableProductId && {
+                  customizableProductId: product.customizableProductId
+               }),
+               ...(product.comboProductComponentId && {
+                  comboProductComponentId: product.comboProductComponentId
+               }),
+               ...(product.customizableProductOptionId && {
+                  customizableProductOptionId:
+                     product.customizableProductOptionId
+               }),
+               ...(Array.isArray(product.modifiers) &&
+                  product.modifiers.length > 0 && {
+                     orderModifiers: {
+                        data: product.modifiers.map(node => ({
+                           data: node
+                        }))
+                     }
+                  })
+            }
          }
-      })
+      )
+
+      let unit = null
+      let processingName = null
+      let ingredientName = null
+
+      if (inventoryProduct.sachetItemId) {
+         unit = inventoryProduct.sachetItem.unit
+         if (inventoryProduct.sachetItem.bulkItemId) {
+            processingName =
+               inventoryProduct.sachetItemId.bulkItem.processingName
+            if (inventoryProduct.sachetItem.bulkItem.supplierItemId) {
+               ingredientName =
+                  inventoryProduct.sachetItem.bulkItem.supplierItem.name
+            }
+         }
+      } else if (inventoryProduct.supplierItemId) {
+         unit = inventoryProduct.supplierItem.unit
+         ingredientName = inventoryProduct.supplierItem.name
+      }
+
+      const count = Array.from({ length: product.quantity }, (_, v) => v)
+      await Promise.all(
+         count.map(async () => {
+            await client.request(CREATE_ORDER_SACHET, {
+               object: {
+                  unit,
+                  packagingId,
+                  processingName,
+                  ingredientName,
+                  labelTemplateId,
+                  status: 'PENDING',
+                  quantity: productOption.quantity,
+                  packingStationId: assemblyStationId,
+                  sachetItemId: inventoryProduct.sachetItemId,
+                  ...(!Boolean(labelTemplateId) && { isLabelled: true }),
+                  orderInventoryProductId: createOrderInventoryProduct.id
+               }
+            })
+         })
+      )
       return
    } catch (error) {
       throw Error(error)
    }
 }
 
-const processSimpleRecipe = async data => {
-   const { product, orderId, comboProductId } = data
+export const processSimpleRecipe = async ({
+   product,
+   orderId,
+   comboProductId = null
+}) => {
    try {
       const variables = { id: product.option.id }
       const { simpleRecipeProductOption: productOption } = await client.request(
@@ -569,8 +634,12 @@ const processMealKit = async data => {
                ...(comboProductId && { comboProductId }),
                simpleRecipeProductOptionId: product.option.id,
                packagingId: productOption.packagingId,
-               labelTemplateId: productOption.labelTemplateId,
-               assemblyStationId: productOption.assemblyStationId,
+               ...(productOption.operationConfigId && {
+                  assemblyStationId: productOption.operationConfig.stationId
+               }),
+               ...(productOption.operationConfigId && {
+                  labelTemplateId: productOption.operationConfig.labelTemplateId
+               }),
                instructionCardTemplateId:
                   productOption.instructionCardTemplateId,
                ...(product.customizableProductId && {
@@ -582,7 +651,15 @@ const processMealKit = async data => {
                ...(product.customizableProductOptionId && {
                   customizableProductOptionId:
                      product.customizableProductOptionId
-               })
+               }),
+               ...(Array.isArray(product.modifiers) &&
+                  product.modifiers.length > 0 && {
+                     orderModifiers: {
+                        data: product.modifiers.map(node => ({
+                           data: node
+                        }))
+                     }
+                  })
             }
          }
       )
@@ -655,8 +732,12 @@ const processReadyToEat = async data => {
                ...(comboProductId && { comboProductId }),
                packagingId: productOption.packagingId,
                simpleRecipeProductOptionId: product.option.id,
-               labelTemplateId: productOption.labelTemplateId,
-               assemblyStationId: productOption.assemblyStationId,
+               ...(productOption.operationConfigId && {
+                  assemblyStationId: productOption.operationConfig.stationId
+               }),
+               ...(productOption.operationConfigId && {
+                  labelTemplateId: productOption.operationConfig.labelTemplateId
+               }),
                instructionCardTemplateId:
                   productOption.instructionCardTemplateId,
                ...(product.customizableProductId && {
@@ -668,7 +749,15 @@ const processReadyToEat = async data => {
                ...(product.customizableProductOptionId && {
                   customizableProductOptionId:
                      product.customizableProductOptionId
-               })
+               }),
+               ...(Array.isArray(product.modifiers) &&
+                  product.modifiers.length > 0 && {
+                     orderModifiers: {
+                        data: product.modifiers.map(node => ({
+                           data: node
+                        }))
+                     }
+                  })
             }
          }
       )
