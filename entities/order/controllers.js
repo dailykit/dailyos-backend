@@ -474,6 +474,7 @@ const processCombo = async ({ product: combo, orderId }) => {
 export const processInventory = async ({
    product,
    orderId,
+   modifier = null,
    comboProductId = null
 }) => {
    try {
@@ -489,28 +490,41 @@ export const processInventory = async ({
          ? product.quantity * productOption.quantity
          : productOption.quantity
 
-      const {
-         packagingId = null,
-         operationConfig = null,
-         operationConfigId = null,
-         instructionCardTemplateId = null
-      } = productOption
+      const operationConfig = {
+         labelTemplateId: null,
+         stationId: null
+      }
+
+      if (productOption.operationConfigId) {
+         if ('labelTemplateId' in productOption.operationConfig) {
+            operationConfig.labelTemplateId =
+               productOption.operationConfig.labelTemplateId
+         }
+         if ('stationId' in productOption.operationConfig) {
+            operationConfig.stationId = productOption.operationConfig.stationId
+         }
+      }
 
       const { createOrderInventoryProduct } = await client.request(
          CREATE_ORDER_INVENTORY_PRODUCT,
          {
             object: {
                orderId,
-               packagingId,
-               instructionCardTemplateId,
                quantity: totalQuantity,
                price: product.totalPrice,
                assemblyStatus: 'PENDING',
                inventoryProductId: product.id,
-               ...(operationConfigId && {
+               ...(productOption.packagingId && {
+                  packagingId: productOption.packagingId
+               }),
+               ...(productOption.instructionCardTemplateId && {
+                  instructionCardTemplateId:
+                     productOption.instructionCardTemplateId
+               }),
+               ...(operationConfig.stationId && {
                   assemblyStationId: operationConfig.stationId
                }),
-               ...(operationConfigId && {
+               ...(operationConfig.labelTemplateId && {
                   labelTemplateId: operationConfig.labelTemplateId
                }),
                ...(comboProductId && { comboProductId }),
@@ -525,6 +539,7 @@ export const processInventory = async ({
                   customizableProductOptionId:
                      product.customizableProductOptionId
                }),
+               ...(modifier && modifier.id && { orderModifierId: modifier.id }),
                ...(Array.isArray(product.modifiers) &&
                   product.modifiers.length > 0 && {
                      orderModifiers: {
@@ -562,15 +577,22 @@ export const processInventory = async ({
             await client.request(CREATE_ORDER_SACHET, {
                object: {
                   unit,
-                  packagingId,
                   processingName,
                   ingredientName,
-                  labelTemplateId,
                   status: 'PENDING',
                   quantity: productOption.quantity,
-                  packingStationId: assemblyStationId,
+                  ...(operationConfig.stationId && {
+                     packingStationId: operationConfig.stationId
+                  }),
                   sachetItemId: inventoryProduct.sachetItemId,
-                  ...(!Boolean(labelTemplateId) && { isLabelled: true }),
+                  ...(productOption.packagingId && {
+                     packagingId: productOption.packagingId
+                  }),
+                  ...(operationConfig.labelTemplateId
+                     ? {
+                          labelTemplateId: operationConfig.labelTemplateId
+                       }
+                     : { isLabelled: true }),
                   orderInventoryProductId: createOrderInventoryProduct.id
                }
             })
@@ -585,7 +607,8 @@ export const processInventory = async ({
 export const processSimpleRecipe = async ({
    product,
    orderId,
-   comboProductId = null
+   comboProductId = null,
+   modifier = null
 }) => {
    try {
       const variables = { id: product.option.id }
@@ -598,7 +621,8 @@ export const processSimpleRecipe = async ({
          product,
          orderId,
          productOption,
-         comboProductId
+         comboProductId,
+         modifier
       }
 
       const count = Array.from({ length: product.quantity }, (_, v) => v)
@@ -620,7 +644,7 @@ export const processSimpleRecipe = async ({
 }
 
 const processMealKit = async data => {
-   const { orderId, product, productOption, comboProductId } = data
+   const { orderId, product, productOption, comboProductId, modifier } = data
    try {
       const { createOrderMealKitProduct } = await client.request(
          CREATE_ORDER_MEALKIT_PRODUCT,
@@ -652,6 +676,7 @@ const processMealKit = async data => {
                   customizableProductOptionId:
                      product.customizableProductOptionId
                }),
+               ...(modifier && modifier.id && { orderModifierId: modifier.id }),
                ...(Array.isArray(product.modifiers) &&
                   product.modifiers.length > 0 && {
                      orderModifiers: {
@@ -719,7 +744,7 @@ const processMealKit = async data => {
 }
 
 const processReadyToEat = async data => {
-   const { orderId, product, productOption, comboProductId } = data
+   const { orderId, product, productOption, comboProductId, modifier } = data
    try {
       const { createOrderReadyToEatProduct } = await client.request(
          CREATE_ORDER_READY_TO_EAT_PRODUCT,
@@ -750,6 +775,7 @@ const processReadyToEat = async data => {
                   customizableProductOptionId:
                      product.customizableProductOptionId
                }),
+               ...(modifier && modifier.id && { orderModifierId: modifier.id }),
                ...(Array.isArray(product.modifiers) &&
                   product.modifiers.length > 0 && {
                      orderModifiers: {

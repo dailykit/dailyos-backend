@@ -41,14 +41,19 @@ export const handle = async (req, res) => {
             productKey = 'orderReadyToEatProductId'
          }
 
-         switch (modifier.data.productKey) {
+         switch (modifier.data.productType) {
             case 'inventoryProductOption':
-               await processInventoryProduct({ data: modifier.data, orderId })
+               await processInventoryProduct({
+                  data: modifier.data,
+                  orderId,
+                  modifier
+               })
                break
             case 'simpleRecipeProductOption':
                await processSimpleRecipeProduct({
                   data: modifier.data,
-                  orderId
+                  orderId,
+                  modifier
                })
                break
             case 'sachetItem':
@@ -90,7 +95,7 @@ export const handle = async (req, res) => {
    }
 }
 
-const processInventoryProduct = async ({ data, orderId }) => {
+const processInventoryProduct = async ({ data, orderId, modifier }) => {
    try {
       const { inventoryProductOption } = await client.request(
          QUERIES.PRODUCT.INVENTORY.OPTION,
@@ -105,13 +110,13 @@ const processInventoryProduct = async ({ data, orderId }) => {
       cartItem.quantity = data.quantity
       cartItem.discount = data.discount
       cartItem.modifiers = []
-      await processInventory({ product: cartItem, orderId })
+      await processInventory({ product: cartItem, orderId, modifier })
    } catch (error) {
       throw Error(error)
    }
 }
 
-const processSimpleRecipeProduct = async ({ data, orderId }) => {
+const processSimpleRecipeProduct = async ({ data, orderId, modifier }) => {
    try {
       const { simpleRecipeProductOption } = await client.request(
          QUERIES.PRODUCT.SIMPLE_RECIPE.OPTION,
@@ -126,7 +131,7 @@ const processSimpleRecipeProduct = async ({ data, orderId }) => {
       cartItem.quantity = data.quantity
       cartItem.discount = data.discount
       cartItem.modifiers = []
-      await processSimpleRecipe({ product: cartItem, orderId })
+      await processSimpleRecipe({ product: cartItem, orderId, modifier })
    } catch (error) {
       throw Error(error)
    }
@@ -147,12 +152,23 @@ const processSachetItem = async ({ data, modifier, productKey }) => {
          }
       }
 
-      const { operationConfig } = await client.request(
-         QUERIES.OPERATION_CONFIG,
-         {
-            id: modifier.operationConfigId
+      const config = {
+         labelTemplateId: null,
+         stationId: null
+      }
+
+      if ('operationConfigId' in modifier && modifier.operationConfigId) {
+         const { operationConfig } = await client.request(
+            QUERIES.OPERATION_CONFIG,
+            {
+               id: modifier.operationConfigId
+            }
+         )
+         if (operationConfig && Object.keys(operationConfig).length > 0) {
+            config.labelTemplateId = operationConfig.labelTemplateId
+            config.stationId = operationConfig.stationId
          }
-      )
+      }
 
       await client.request(MUTATIONS.ORDER.SACHET, {
          object: {
@@ -162,14 +178,14 @@ const processSachetItem = async ({ data, modifier, productKey }) => {
             isModifier: true,
             packagingId: null,
             unit: sachetItem.unit,
+            quantity: data.quantity,
             sachetItemId: sachetItem.id,
-            quantity: productOption.quantity,
             [productKey]: modifier[productKey],
-            ...(operationConfig && {
-               packingStationId: operationConfig.stationId
+            ...(config.stationId && {
+               packingStationId: config.stationId
             }),
-            ...(operationConfig && {
-               labelTemplateId: operationConfig.labelTemplateId
+            ...(config.labelTemplateId && {
+               labelTemplateId: config.labelTemplateId
             })
          }
       })
@@ -191,12 +207,23 @@ const processBulkItem = async ({ data, modifier, productKey }) => {
          ingredientName = bulkItem.supplierItem.name
       }
 
-      const { operationConfig } = await client.request(
-         QUERIES.OPERATION_CONFIG,
-         {
-            id: modifier.operationConfigId
+      const config = {
+         labelTemplateId: null,
+         stationId: null
+      }
+
+      if ('operationConfigId' in modifier && modifier.operationConfigId) {
+         const { operationConfig } = await client.request(
+            QUERIES.OPERATION_CONFIG,
+            {
+               id: modifier.operationConfigId
+            }
+         )
+         if (operationConfig && Object.keys(operationConfig).length > 0) {
+            config.labelTemplateId = operationConfig.labelTemplateId
+            config.stationId = operationConfig.stationId
          }
-      )
+      }
 
       await client.request(MUTATIONS.ORDER.SACHET, {
          object: {
@@ -205,15 +232,15 @@ const processBulkItem = async ({ data, modifier, productKey }) => {
             status: 'PENDING',
             isModifier: true,
             packagingId: null,
-            unit: bulkItem.item,
+            unit: bulkItem.unit,
             bulkItemId: bulkItem.id,
-            quantity: productOption.quantity,
+            quantity: data.quantity,
             [productKey]: modifier[productKey],
-            ...(operationConfig && {
-               packingStationId: operationConfig.stationId
+            ...(config.stationId && {
+               packingStationId: config.stationId
             }),
-            ...(operationConfig && {
-               labelTemplateId: operationConfig.labelTemplateId
+            ...(config.labelTemplateId && {
+               labelTemplateId: config.labelTemplateId
             })
          }
       })
@@ -235,12 +262,23 @@ const processSupplierItem = async ({ data, modifier, productKey }) => {
          processingName = supplierItem.bulkItemAsShipped.processingName
       }
 
-      const { operationConfig } = await client.request(
-         QUERIES.OPERATION_CONFIG,
-         {
-            id: modifier.operationConfigId
+      const config = {
+         labelTemplateId: null,
+         stationId: null
+      }
+
+      if ('operationConfigId' in modifier && modifier.operationConfigId) {
+         const { operationConfig } = await client.request(
+            QUERIES.OPERATION_CONFIG,
+            {
+               id: modifier.operationConfigId
+            }
+         )
+         if (operationConfig && Object.keys(operationConfig).length > 0) {
+            config.labelTemplateId = operationConfig.labelTemplateId
+            config.stationId = operationConfig.stationId
          }
-      )
+      }
 
       await client.request(MUTATIONS.ORDER.SACHET, {
          object: {
@@ -249,15 +287,15 @@ const processSupplierItem = async ({ data, modifier, productKey }) => {
             status: 'PENDING',
             isModifier: true,
             packagingId: null,
-            unit: bulkItem.item,
-            bulkItemId: bulkItem.id,
-            quantity: productOption.quantity,
+            unit: supplierItem.unit,
+            quantity: data.quantity,
             [productKey]: modifier[productKey],
-            ...(operationConfig && {
-               packingStationId: operationConfig.stationId
+            ...(config.stationId && {
+               packingStationId: config.stationId
             }),
-            ...(operationConfig && {
-               labelTemplateId: operationConfig.labelTemplateId
+            bulkItemId: supplierItem.bulkItemAsShipped.id,
+            ...(config.labelTemplateId && {
+               labelTemplateId: config.labelTemplateId
             })
          }
       })
