@@ -180,6 +180,7 @@ const processSachetItem = async ({ data, modifier, productKey }) => {
             unit: sachetItem.unit,
             quantity: data.quantity,
             sachetItemId: sachetItem.id,
+            orderModifierId: modifier.id,
             [productKey]: modifier[productKey],
             ...(config.stationId && {
                packingStationId: config.stationId
@@ -235,6 +236,7 @@ const processBulkItem = async ({ data, modifier, productKey }) => {
             unit: bulkItem.unit,
             bulkItemId: bulkItem.id,
             quantity: data.quantity,
+            orderModifierId: modifier.id,
             [productKey]: modifier[productKey],
             ...(config.stationId && {
                packingStationId: config.stationId
@@ -289,6 +291,7 @@ const processSupplierItem = async ({ data, modifier, productKey }) => {
             packagingId: null,
             unit: supplierItem.unit,
             quantity: data.quantity,
+            orderModifierId: modifier.id,
             [productKey]: modifier[productKey],
             ...(config.stationId && {
                packingStationId: config.stationId
