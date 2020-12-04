@@ -18,7 +18,8 @@ import {
    OccurenceRouter,
    WorkOrderRouter,
    NotificationRouter,
-   RewardsRouter
+   RewardsRouter,
+   placeAutoComplete
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -58,6 +59,7 @@ app.use('/api/printer', PrintRouter)
 app.use('/api/rmk-menu', RMKMenuRouter)
 app.use('/api/inventory', WorkOrderRouter)
 app.post('/api/initiate-payment', initiatePayment)
+app.get('/api/place/autocomplete/json', placeAutoComplete)
 app.post('/api/sendmail', sendMail)
 app.use('/api/rewards', RewardsRouter)
 app.get('/api/kot-urls', getKOTUrls)

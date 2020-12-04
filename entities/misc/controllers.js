@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { client } from '../../lib/graphql'
 const fetch = require('node-fetch')
 const AWS = require('aws-sdk')
@@ -165,4 +166,22 @@ const transportEmail = async (transporter, message) => {
          }
       })
    })
+}
+
+export const placeAutoComplete = async (req, res) => {
+   try {
+      const { key, input, location, components, language } = req.query
+      if (key && input) {
+         const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${input}&key=${key}&language=${language}&components=${components}&location=${location}`
+         const response = await axios.get(url)
+         return res.json(response.data)
+      } else {
+         throw Error('No key or input provided!')
+      }
+   } catch (err) {
+      return res.status(400).json({
+         success: false,
+         message: err.message
+      })
+   }
 }
