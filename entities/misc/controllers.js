@@ -172,7 +172,7 @@ export const placeAutoComplete = async (req, res) => {
    try {
       const { key, input, location, components, language, types } = req.query
       if (key && input) {
-         const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${input}&key=${key}&language=${language}&components=${components}&location=${location}&types=${types}`
+         const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${input}&key=${key}&language=${language}&components=${components}&location=${location}`
          const response = await axios.get(url)
          return res.json(response.data)
       } else {
