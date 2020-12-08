@@ -246,7 +246,7 @@ export const take = async (req, res) => {
                   ? {
                        dropoff: {
                           dropoffInfo: {
-                             ...(Object.keys(cart.customerInfo).length > 0 && {
+                             ...(cart.customerInfo && Object.keys(cart.customerInfo).length > 0 && {
                                 customerEmail: cart.customerInfo.customerEmail,
                                 customerPhone: cart.customerInfo.customerPhone,
                                 customerLastName:
@@ -288,22 +288,24 @@ export const take = async (req, res) => {
                              }
                           },
                           dropoffInfo: {
-                             customerEmail: cart.customerInfo.customerEmail,
-                             customerPhone: cart.customerInfo.customerPhone,
-                             customerLastName:
-                                cart.customerInfo.customerLastName,
-                             customerFirstName:
-                                cart.customerInfo.customerFirstName,
-                             customerAddress: {
-                                line1: cart.address.line1,
-                                line2: cart.address.line2,
-                                city: cart.address.city,
-                                state: cart.address.state,
-                                zipcode: cart.address.zipcode,
-                                country: cart.address.country,
-                                notes: cart.address.notes,
-                                label: cart.address.label,
-                                landmark: cart.address.landmark
+                             ...(cart.customerInfo && Object.keys(cart.customerInfo).length > 0 && {
+                                customerEmail: cart.customerInfo.customerEmail,
+                                customerPhone: cart.customerInfo.customerPhone,
+                                customerLastName:
+                                   cart.customerInfo.customerLastName,
+                                customerFirstName:
+                                   cart.customerInfo.customerFirstName,
+                                  ...('customerAddress' in cart.customerInfo && Object.keys(cart.customerInfo.customerAddress).length > 0 && {customerAddress: {
+                                   line1: cart.address.line1,
+                                   line2: cart.address.line2,
+                                   city: cart.address.city,
+                                   state: cart.address.state,
+                                   zipcode: cart.address.zipcode,
+                                   country: cart.address.country,
+                                   notes: cart.address.notes,
+                                   label: cart.address.label,
+                                   landmark: cart.address.landmark
+                                }})
                              }
                           }
                        }
@@ -853,7 +855,7 @@ const getHtml = async (template, data) => {
       const template_data = encodeURI(JSON.stringify(parsed.data))
       const template_options = encodeURI(JSON.stringify(parsed.template))
 
-      const url = `${origin}/template?template=${template_options}&data=${template_data}`
+      const url = `${origin}/template/?template=${template_options}&data=${template_data}`
 
       const { data: html } = await axios.get(url)
       return html

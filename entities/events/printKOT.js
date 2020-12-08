@@ -147,7 +147,7 @@ export const getKOTUrls = async (req, res) => {
                            station: { ids: [station.id] }
                         })
                      )
-                     const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
+                     const url = `${origin}/template/?template=${productTemplateOptions}&data=${template_data}`
 
                      let printerId
                      if (station.defaultKotPrinterId) {
@@ -177,7 +177,7 @@ export const getKOTUrls = async (req, res) => {
                         station: { ids: [] }
                      })
                   )
-                  const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
+                  const url = `${origin}/template/?template=${productTemplateOptions}&data=${template_data}`
 
                   let printerId
                   if (
@@ -216,7 +216,7 @@ export const getKOTUrls = async (req, res) => {
                         product: { types: productTypes }
                      })
                   )
-                  const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
+                  const url = `${origin}/template/?template=${productTemplateOptions}&data=${template_data}`
 
                   let printerId
                   if (station.defaultKotPrinterId) {
@@ -244,7 +244,7 @@ export const getKOTUrls = async (req, res) => {
                      product: { types: productTypes }
                   })
                )
-               const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
+               const url = `${origin}/template/?template=${productTemplateOptions}&data=${template_data}`
 
                let printerId
                if (
@@ -276,7 +276,7 @@ export const getKOTUrls = async (req, res) => {
                      station: { ids: [station.id] }
                   })
                )
-               const url = `${origin}/template?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
+               const url = `${origin}/template/?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
 
                let printerId
                if (station.defaultKotPrinterId) {
@@ -303,7 +303,7 @@ export const getKOTUrls = async (req, res) => {
                   station: { ids: [] }
                })
             )
-            const url = `${origin}/template?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
+            const url = `${origin}/template/?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
 
             let printerId
             if (
@@ -342,7 +342,7 @@ export const getKOTUrls = async (req, res) => {
                      station: { ids: productStations.map(node => node.id) }
                   })
                )
-               const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
+               const url = `${origin}/template/?template=${productTemplateOptions}&data=${template_data}`
                return url
             })
 
@@ -367,7 +367,7 @@ export const getKOTUrls = async (req, res) => {
                   station: { ids: productStations.map(node => node.id) }
                })
             )
-            const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
+            const url = `${origin}/template/?template=${productTemplateOptions}&data=${template_data}`
 
             if (defaultKotPrinter.printNodeId) {
                urlList.push({
@@ -387,7 +387,7 @@ export const getKOTUrls = async (req, res) => {
                station: { ids: productStations.map(node => node.id) }
             })
          )
-         const url = `${origin}/template?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
+         const url = `${origin}/template/?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
 
          if (defaultKotPrinter.printNodeId) {
             urlList.push({
