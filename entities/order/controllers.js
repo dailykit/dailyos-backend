@@ -246,14 +246,17 @@ export const take = async (req, res) => {
                   ? {
                        dropoff: {
                           dropoffInfo: {
-                             ...(cart.customerInfo && Object.keys(cart.customerInfo).length > 0 && {
-                                customerEmail: cart.customerInfo.customerEmail,
-                                customerPhone: cart.customerInfo.customerPhone,
-                                customerLastName:
-                                   cart.customerInfo.customerLastName,
-                                customerFirstName:
-                                   cart.customerInfo.customerFirstName
-                             })
+                             ...(cart.customerInfo &&
+                                Object.keys(cart.customerInfo).length > 0 && {
+                                   customerEmail:
+                                      cart.customerInfo.customerEmail,
+                                   customerPhone:
+                                      cart.customerInfo.customerPhone,
+                                   customerLastName:
+                                      cart.customerInfo.customerLastName,
+                                   customerFirstName:
+                                      cart.customerInfo.customerFirstName
+                                })
                           }
                        }
                     }
@@ -288,25 +291,34 @@ export const take = async (req, res) => {
                              }
                           },
                           dropoffInfo: {
-                             ...(cart.customerInfo && Object.keys(cart.customerInfo).length > 0 && {
-                                customerEmail: cart.customerInfo.customerEmail,
-                                customerPhone: cart.customerInfo.customerPhone,
-                                customerLastName:
-                                   cart.customerInfo.customerLastName,
-                                customerFirstName:
-                                   cart.customerInfo.customerFirstName,
-                                  ...('customerAddress' in cart.customerInfo && Object.keys(cart.customerInfo.customerAddress).length > 0 && {customerAddress: {
-                                   line1: cart.address.line1,
-                                   line2: cart.address.line2,
-                                   city: cart.address.city,
-                                   state: cart.address.state,
-                                   zipcode: cart.address.zipcode,
-                                   country: cart.address.country,
-                                   notes: cart.address.notes,
-                                   label: cart.address.label,
-                                   landmark: cart.address.landmark
-                                }})
-                             }
+                             ...(cart.customerInfo &&
+                                Object.keys(cart.customerInfo).length > 0 && {
+                                   customerEmail:
+                                      cart.customerInfo.customerEmail,
+                                   customerPhone:
+                                      cart.customerInfo.customerPhone,
+                                   customerLastName:
+                                      cart.customerInfo.customerLastName,
+                                   customerFirstName:
+                                      cart.customerInfo.customerFirstName,
+                                   ...('customerAddress' in cart.customerInfo &&
+                                      cart.customerInfo.customerAddress &&
+                                      Object.keys(
+                                         cart.customerInfo.customerAddress
+                                      ).length > 0 && {
+                                         customerAddress: {
+                                            line1: cart.address.line1,
+                                            line2: cart.address.line2,
+                                            city: cart.address.city,
+                                            state: cart.address.state,
+                                            zipcode: cart.address.zipcode,
+                                            country: cart.address.country,
+                                            notes: cart.address.notes,
+                                            label: cart.address.label,
+                                            landmark: cart.address.landmark
+                                         }
+                                      })
+                                })
                           }
                        }
                     }),
