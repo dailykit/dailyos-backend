@@ -98,14 +98,9 @@ export const getKOTUrls = async (req, res) => {
          query_args
       )
 
-      if (productStations.length === 0)
-         throw Error('No stations assigned to the ordered products!')
-      if (sachetStations.length === 0)
-         throw Error('No stations assigned to the product sachets!')
-
       const data = { order: { id } }
       const { origin } = new URL(process.env.DATA_HUB)
-      const productTypes = ['inventoryProduct', 'mealKit', 'readyToEat']
+      const productTypes = ['inventory', 'mealKit', 'readyToEat']
 
       const productTemplateOptions = encodeURI(
          JSON.stringify({
@@ -141,24 +136,55 @@ export const getKOTUrls = async (req, res) => {
                      inventory
                      ready to eat
             */
+            let urls = []
+            if (productStations.length > 0) {
+               urls = productStations.map(station => {
+                  return productTypes.map(type => {
+                     const template_data = encodeURI(
+                        JSON.stringify({
+                           ...data,
+                           product: { types: [type] },
+                           station: { ids: [station.id] }
+                        })
+                     )
+                     const url = `${origin}/template/?template=${productTemplateOptions}&data=${template_data}`
 
-            const urls = productStations.map(station => {
-               return productTypes.map(type => {
+                     let printerId
+                     if (station.defaultKotPrinterId) {
+                        printerId = station.defaultKotPrinterId
+                     } else if (station.kotPrinters.length > 0) {
+                        const [printer] = station.kotPrinters
+                        printerId = printer.id
+                     } else if (
+                        'printNodeId' in defaultKotPrinter &&
+                        defaultKotPrinter.printNodeId
+                     ) {
+                        printerId = defaultKotPrinter.printNodeId
+                     }
+
+                     if (printerId) {
+                        return { url, printer: { id: printerId } }
+                     }
+                     return
+                  })
+               })
+            } else {
+               urls = productTypes.map(type => {
                   const template_data = encodeURI(
                      JSON.stringify({
                         ...data,
                         product: { types: [type] },
-                        station: { ids: [station.id] }
+                        station: { ids: [] }
                      })
                   )
-                  const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
+                  const url = `${origin}/template/?template=${productTemplateOptions}&data=${template_data}`
 
                   let printerId
-                  if (station.defaultKotPrinterId) {
-                     printerId = station.defaultKotPrinterId
-                  } else if (station.kotPrinters.length > 0) {
-                     const [printer] = station.kotPrinters
-                     printerId = printer.id
+                  if (
+                     'printNodeId' in defaultKotPrinter &&
+                     defaultKotPrinter.printNodeId
+                  ) {
+                     printerId = defaultKotPrinter.printNodeId
                   }
 
                   if (printerId) {
@@ -166,7 +192,8 @@ export const getKOTUrls = async (req, res) => {
                   }
                   return
                })
-            })
+            }
+
             urlList.push(
                ...urls.reduce((acc, i) => acc.concat(i), []).filter(Boolean)
             )
@@ -179,29 +206,58 @@ export const getKOTUrls = async (req, res) => {
                      mealkit x inventory x ready to eat
             */
 
-            const urls = productStations.map(station => {
+            let urls = []
+            if (productStations.length > 0) {
+               productStations.map(station => {
+                  const template_data = encodeURI(
+                     JSON.stringify({
+                        ...data,
+                        station: { ids: [station.id] },
+                        product: { types: productTypes }
+                     })
+                  )
+                  const url = `${origin}/template/?template=${productTemplateOptions}&data=${template_data}`
+
+                  let printerId
+                  if (station.defaultKotPrinterId) {
+                     printerId = station.defaultKotPrinterId
+                  } else if (station.kotPrinters.length > 0) {
+                     const [printer] = station.kotPrinters
+                     printerId = printer.id
+                  } else if (
+                     'printNodeId' in defaultKotPrinter &&
+                     defaultKotPrinter.printNodeId
+                  ) {
+                     printerId = defaultKotPrinter.printNodeId
+                  }
+
+                  if (printerId) {
+                     return { url, printer: { id: printerId } }
+                  }
+                  return
+               })
+            } else {
                const template_data = encodeURI(
                   JSON.stringify({
                      ...data,
-                     station: { ids: [station.id] },
+                     station: { ids: [] },
                      product: { types: productTypes }
                   })
                )
-               const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
+               const url = `${origin}/template/?template=${productTemplateOptions}&data=${template_data}`
 
                let printerId
-               if (station.defaultKotPrinterId) {
-                  printerId = station.defaultKotPrinterId
-               } else if (station.kotPrinters.length > 0) {
-                  const [printer] = station.kotPrinters
-                  printerId = printer.id
+               if (
+                  'printNodeId' in defaultKotPrinter &&
+                  defaultKotPrinter.printNodeId
+               ) {
+                  printerId = defaultKotPrinter.printNodeId
                }
 
                if (printerId) {
-                  return { url, printer: { id: printerId } }
+                  urls = [{ url, printer: { id: printerId } }]
                }
-               return
-            })
+            }
 
             urlList.push(
                ...urls.reduce((acc, i) => acc.concat(i), []).filter(Boolean)
@@ -211,28 +267,56 @@ export const getKOTUrls = async (req, res) => {
          /*
             print mealk kit sachet kot
          */
-         const urls = sachetStations.map(station => {
+         let urls = []
+         if (sachetStations.length > 0) {
+            urls = sachetStations.map(station => {
+               const sachetTemplateData = encodeURI(
+                  JSON.stringify({
+                     ...data,
+                     station: { ids: [station.id] }
+                  })
+               )
+               const url = `${origin}/template/?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
+
+               let printerId
+               if (station.defaultKotPrinterId) {
+                  printerId = station.defaultKotPrinterId
+               } else if (station.kotPrinters.length > 0) {
+                  const [printer] = station.kotPrinters
+                  printerId = printer.id
+               } else if (
+                  'printNodeId' in defaultKotPrinter &&
+                  defaultKotPrinter.printNodeId
+               ) {
+                  printerId = defaultKotPrinter.printNodeId
+               }
+
+               if (printerId) {
+                  return { url, printer: { id: printerId } }
+               }
+               return
+            })
+         } else {
             const sachetTemplateData = encodeURI(
                JSON.stringify({
                   ...data,
-                  station: { ids: [station.id] }
+                  station: { ids: [] }
                })
             )
-            const url = `${origin}/template?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
+            const url = `${origin}/template/?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
 
             let printerId
-            if (station.defaultKotPrinterId) {
-               printerId = station.defaultKotPrinterId
-            } else if (station.kotPrinters.length > 0) {
-               const [printer] = station.kotPrinters
-               printerId = printer.id
+            if (
+               'printNodeId' in defaultKotPrinter &&
+               defaultKotPrinter.printNodeId
+            ) {
+               printerId = defaultKotPrinter.printNodeId
             }
 
             if (printerId) {
-               return { url, printer: { id: printerId } }
+               urls = [{ url, printer: { id: printerId } }]
             }
-            return
-         })
+         }
 
          urlList.push(...urls.filter(Boolean))
       } else if (!groupByStation.isActive) {
@@ -258,7 +342,7 @@ export const getKOTUrls = async (req, res) => {
                      station: { ids: productStations.map(node => node.id) }
                   })
                )
-               const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
+               const url = `${origin}/template/?template=${productTemplateOptions}&data=${template_data}`
                return url
             })
 
@@ -283,7 +367,7 @@ export const getKOTUrls = async (req, res) => {
                   station: { ids: productStations.map(node => node.id) }
                })
             )
-            const url = `${origin}/template?template=${productTemplateOptions}&data=${template_data}`
+            const url = `${origin}/template/?template=${productTemplateOptions}&data=${template_data}`
 
             if (defaultKotPrinter.printNodeId) {
                urlList.push({
@@ -303,7 +387,7 @@ export const getKOTUrls = async (req, res) => {
                station: { ids: productStations.map(node => node.id) }
             })
          )
-         const url = `${origin}/template?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
+         const url = `${origin}/template/?template=${sachetTemplateOptions}&data=${sachetTemplateData}`
 
          if (defaultKotPrinter.printNodeId) {
             urlList.push({

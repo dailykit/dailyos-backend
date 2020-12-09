@@ -2,15 +2,39 @@ export const FETCH_INVENTORY_PRODUCT = `
    query inventoryProduct($id: Int!, $optionId: Int_comparison_exp!) {
       inventoryProduct(id: $id) {
          id
-         inventoryProductOptions(where: {id: $optionId}) {
+         sachetItemId
+         sachetItem {
+            id
+            unit
+            bulkItemId
+            bulkItem {
+               id
+               processingName
+               supplierItemId
+               supplierItem {
+                 id
+                 name
+               }
+            }
+         }
+         supplierItemId
+         supplierItem {
+            id
+            name
+            unit
+         }
+         inventoryProductOptions(where: { id: $optionId }) {
             quantity
             packagingId
-            labelTemplateId
-            assemblyStationId
             instructionCardTemplateId
+            operationConfigId
+            operationConfig {
+               stationId
+               labelTemplateId
+            }            
          }
       }
-   }    
+   }
 `
 
 export const FETCH_SIMPLE_RECIPE_PRODUCT = `
@@ -21,9 +45,12 @@ export const FETCH_SIMPLE_RECIPE_PRODUCT = `
             simpleRecipeId
          }
          packagingId
-         labelTemplateId
-         assemblyStationId
          instructionCardTemplateId
+         operationConfigId
+         operationConfig {
+            stationId
+            labelTemplateId
+         }            
       }
    }
 `
@@ -112,6 +139,9 @@ export const BRAND_ON_DEMAND_SETTING = `
          ) {
             value
          }
+         email: onDemandSettings(where: {onDemandSetting: {identifier: {_eq: "Email Notification"}}}) {
+           value
+         }
       }
    }
 `
@@ -124,7 +154,7 @@ export const BRAND_SUBSCRIPTION_SETTING = `
                subscriptionStoreSetting: { identifier: { _eq: "theme-brand" } }
             }
          ) {
-            name: value(path: "name")
+            value
          }
          address: subscriptionStoreSettings(
             where: {
@@ -138,6 +168,9 @@ export const BRAND_SUBSCRIPTION_SETTING = `
                subscriptionStoreSetting: { identifier: { _eq: "Contact" } }
             }
          ) {
+            value
+         }
+         email: subscriptionStoreSettings(where: {subscriptionStoreSetting: {identifier: {_eq: "Email Notification"}}}) {
             value
          }
       }

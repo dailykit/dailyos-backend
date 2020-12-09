@@ -19,6 +19,7 @@ import {
    WorkOrderRouter,
    NotificationRouter,
    RewardsRouter,
+   ModifierRouter
    placeAutoComplete,
    placeDetails
 } from './entities'
@@ -65,6 +66,7 @@ app.get('/api/place/details/json', placeDetails)
 app.post('/api/sendmail', sendMail)
 app.use('/api/rewards', RewardsRouter)
 app.get('/api/kot-urls', getKOTUrls)
+app.use('/api/modifier', ModifierRouter)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)

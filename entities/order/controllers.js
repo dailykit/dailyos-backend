@@ -70,40 +70,54 @@ export const take = async (req, res) => {
          contact: {
             phoneNo: '',
             email: ''
+         },
+         email: {
+            name: '',
+            email: '',
+            template: {}
          }
       }
       if (cart.cartSource === 'a-la-carte') {
-         const { brand = {} } = client.request(BRAND_ON_DEMAND_SETTING, {
+         const { brand = {} } = await client.request(BRAND_ON_DEMAND_SETTING, {
             id: cart.brandId
          })
-         if ('brand' in brand) {
+         if ('brand' in brand && brand.brand) {
             settings.brand = brand.brand.length > 0 ? brand.brand[0].value : {}
          }
-         if ('contact' in brand) {
+         if ('contact' in brand && brand.contact) {
             settings.contact =
                brand.contact.length > 0 ? brand.contact[0].value : {}
          }
-         if ('address' in brand) {
+         if ('address' in brand && brand.address) {
             const address =
                brand.address.length > 0 ? brand.address[0].value : {}
-            if ('address' in address) {
-               settings.address = address
-            }
+            settings.address = address
+         }
+         if ('email' in brand && brand.email) {
+            const email = brand.email.length > 0 ? brand.email[0].value : {}
+            settings.email = email
          }
       } else if (cart.cartSource === 'subscription') {
-         const { brand = {} } = client.request(BRAND_SUBSCRIPTION_SETTING, {
-            id: cart.brandId
-         })
-         if ('brand' in brand) {
+         const { brand = {} } = await client.request(
+            BRAND_SUBSCRIPTION_SETTING,
+            {
+               id: cart.brandId
+            }
+         )
+         if ('brand' in brand && brand.brand) {
             settings.brand = brand.brand.length > 0 ? brand.brand[0].value : {}
          }
-         if ('contact' in brand) {
+         if ('contact' in brand && brand.contact) {
             settings.contact =
                brand.contact.length > 0 ? brand.contact[0].value : {}
          }
-         if ('address' in brand) {
+         if ('address' in brand && brand.address) {
             settings.address =
                brand.address.length > 0 ? brand.address[0].value : {}
+         }
+         if ('email' in brand && brand.email) {
+            const email = brand.email.length > 0 ? brand.email[0].value : {}
+            settings.email = email
          }
       }
 
@@ -232,14 +246,17 @@ export const take = async (req, res) => {
                   ? {
                        dropoff: {
                           dropoffInfo: {
-                             ...(Object.keys(cart.customerInfo).length > 0 && {
-                                customerEmail: cart.customerInfo.customerEmail,
-                                customerPhone: cart.customerInfo.customerPhone,
-                                customerLastName:
-                                   cart.customerInfo.customerLastName,
-                                customerFirstName:
-                                   cart.customerInfo.customerFirstName
-                             })
+                             ...(cart.customerInfo &&
+                                Object.keys(cart.customerInfo).length > 0 && {
+                                   customerEmail:
+                                      cart.customerInfo.customerEmail,
+                                   customerPhone:
+                                      cart.customerInfo.customerPhone,
+                                   customerLastName:
+                                      cart.customerInfo.customerLastName,
+                                   customerFirstName:
+                                      cart.customerInfo.customerFirstName
+                                })
                           }
                        }
                     }
@@ -274,21 +291,34 @@ export const take = async (req, res) => {
                              }
                           },
                           dropoffInfo: {
-                             customerEmail: cart.customerInfo.customerEmail,
-                             customerPhone: cart.customerInfo.customerPhone,
-                             customerLastName:
-                                cart.customerInfo.customerLastName,
-                             customerFirstName:
-                                cart.customerInfo.customerFirstName,
-                             customerAddress: {
-                                line1: cart.address.line1,
-                                line2: cart.address.line2,
-                                city: cart.address.city,
-                                state: cart.address.state,
-                                zipcode: cart.address.zipcode,
-                                country: cart.address.country,
-                                notes: cart.address.notes
-                             }
+                             ...(cart.customerInfo &&
+                                Object.keys(cart.customerInfo).length > 0 && {
+                                   customerEmail:
+                                      cart.customerInfo.customerEmail,
+                                   customerPhone:
+                                      cart.customerInfo.customerPhone,
+                                   customerLastName:
+                                      cart.customerInfo.customerLastName,
+                                   customerFirstName:
+                                      cart.customerInfo.customerFirstName,
+                                   ...('customerAddress' in cart.customerInfo &&
+                                      cart.customerInfo.customerAddress &&
+                                      Object.keys(
+                                         cart.customerInfo.customerAddress
+                                      ).length > 0 && {
+                                         customerAddress: {
+                                            line1: cart.address.line1,
+                                            line2: cart.address.line2,
+                                            city: cart.address.city,
+                                            state: cart.address.state,
+                                            zipcode: cart.address.zipcode,
+                                            country: cart.address.country,
+                                            notes: cart.address.notes,
+                                            label: cart.address.label,
+                                            landmark: cart.address.landmark
+                                         }
+                                      })
+                                })
                           }
                        }
                     }),
@@ -387,7 +417,6 @@ export const take = async (req, res) => {
             }
          })
       )
-
       await client.request(UPDATE_CART, {
          id,
          status: 'ORDER_PLACED',
@@ -395,21 +424,19 @@ export const take = async (req, res) => {
       })
 
       if (Object.keys(cart.customerInfo).length > 0) {
-         const { brand } = await client.request(EMAIL_CONFIG, {
-            id: cart.brandId
-         })
-
-         if ('email' in brand && brand.email.length > 0) {
-            const [config] = brand.email
-            let html = await getHtml(config.template, {
+         if (
+            settings.email.name &&
+            settings.email.email &&
+            Object.keys(settings.email.template).length > 0
+         ) {
+            const { name, email, template } = settings.email
+            let html = await getHtml(template, {
                new: { id: order.createOrder.id }
             })
 
-            if (!config.email) return
-
             await client.request(SEND_MAIL, {
                emailInput: {
-                  from: `"${config.name}" ${config.email}`,
+                  from: `"${name}" ${email}`,
                   to: cart.customerInfo.customerEmail,
                   subject: `Order Receipt - ${order.createOrder.id}`,
                   attachments: [],
@@ -458,7 +485,12 @@ const processCombo = async ({ product: combo, orderId }) => {
    }
 }
 
-const processInventory = async ({ product, orderId, comboProductId }) => {
+export const processInventory = async ({
+   product,
+   orderId,
+   modifier = null,
+   comboProductId = null
+}) => {
    try {
       const variables = { id: product.id, optionId: { _eq: product.option.id } }
       const { inventoryProduct } = await client.request(
@@ -466,51 +498,132 @@ const processInventory = async ({ product, orderId, comboProductId }) => {
          variables
       )
 
-      const optionQuantity =
-         inventoryProduct.inventoryProductOptions[0].quantity
+      const [productOption] = inventoryProduct.inventoryProductOptions
+
       const totalQuantity = product.quantity
-         ? product.quantity * optionQuantity
-         : optionQuantity
+         ? product.quantity * productOption.quantity
+         : productOption.quantity
 
-      const {
-         packagingId,
-         labelTemplateId,
-         assemblyStationId,
-         instructionCardTemplateId
-      } = inventoryProduct.inventoryProductOptions[0]
+      const operationConfig = {
+         labelTemplateId: null,
+         stationId: null
+      }
 
-      await client.request(CREATE_ORDER_INVENTORY_PRODUCT, {
-         object: {
-            orderId,
-            packagingId,
-            labelTemplateId,
-            assemblyStationId,
-            instructionCardTemplateId,
-            quantity: totalQuantity,
-            price: product.totalPrice,
-            assemblyStatus: 'PENDING',
-            inventoryProductId: product.id,
-            ...(comboProductId && { comboProductId }),
-            inventoryProductOptionId: product.option.id,
-            ...(product.customizableProductId && {
-               customizableProductId: product.customizableProductId
-            }),
-            ...(product.comboProductComponentId && {
-               comboProductComponentId: product.comboProductComponentId
-            }),
-            ...(product.customizableProductOptionId && {
-               customizableProductOptionId: product.customizableProductOptionId
-            })
+      if (productOption.operationConfigId) {
+         if ('labelTemplateId' in productOption.operationConfig) {
+            operationConfig.labelTemplateId =
+               productOption.operationConfig.labelTemplateId
          }
-      })
+         if ('stationId' in productOption.operationConfig) {
+            operationConfig.stationId = productOption.operationConfig.stationId
+         }
+      }
+
+      const { createOrderInventoryProduct } = await client.request(
+         CREATE_ORDER_INVENTORY_PRODUCT,
+         {
+            object: {
+               orderId,
+               quantity: totalQuantity,
+               price: product.totalPrice,
+               assemblyStatus: 'PENDING',
+               inventoryProductId: product.id,
+               ...(productOption.packagingId && {
+                  packagingId: productOption.packagingId
+               }),
+               ...(productOption.instructionCardTemplateId && {
+                  instructionCardTemplateId:
+                     productOption.instructionCardTemplateId
+               }),
+               ...(operationConfig.stationId && {
+                  assemblyStationId: operationConfig.stationId
+               }),
+               ...(operationConfig.labelTemplateId && {
+                  labelTemplateId: operationConfig.labelTemplateId
+               }),
+               ...(comboProductId && { comboProductId }),
+               inventoryProductOptionId: product.option.id,
+               ...(product.customizableProductId && {
+                  customizableProductId: product.customizableProductId
+               }),
+               ...(product.comboProductComponentId && {
+                  comboProductComponentId: product.comboProductComponentId
+               }),
+               ...(product.customizableProductOptionId && {
+                  customizableProductOptionId:
+                     product.customizableProductOptionId
+               }),
+               ...(modifier && modifier.id && { orderModifierId: modifier.id }),
+               ...(Array.isArray(product.modifiers) &&
+                  product.modifiers.length > 0 && {
+                     orderModifiers: {
+                        data: product.modifiers.map(node => ({
+                           data: node
+                        }))
+                     }
+                  })
+            }
+         }
+      )
+
+      let unit = null
+      let processingName = null
+      let ingredientName = null
+
+      if (inventoryProduct.sachetItemId) {
+         unit = inventoryProduct.sachetItem.unit
+         if (inventoryProduct.sachetItem.bulkItemId) {
+            processingName =
+               inventoryProduct.sachetItemId.bulkItem.processingName
+            if (inventoryProduct.sachetItem.bulkItem.supplierItemId) {
+               ingredientName =
+                  inventoryProduct.sachetItem.bulkItem.supplierItem.name
+            }
+         }
+      } else if (inventoryProduct.supplierItemId) {
+         unit = inventoryProduct.supplierItem.unit
+         ingredientName = inventoryProduct.supplierItem.name
+      }
+
+      const count = Array.from({ length: product.quantity }, (_, v) => v)
+      await Promise.all(
+         count.map(async () => {
+            await client.request(CREATE_ORDER_SACHET, {
+               object: {
+                  unit,
+                  processingName,
+                  ingredientName,
+                  status: 'PENDING',
+                  quantity: productOption.quantity,
+                  ...(operationConfig.stationId && {
+                     packingStationId: operationConfig.stationId
+                  }),
+                  sachetItemId: inventoryProduct.sachetItemId,
+                  ...(productOption.packagingId && {
+                     packagingId: productOption.packagingId
+                  }),
+                  ...(operationConfig.labelTemplateId
+                     ? {
+                          labelTemplateId: operationConfig.labelTemplateId
+                       }
+                     : { isLabelled: true }),
+                  orderInventoryProductId: createOrderInventoryProduct.id
+               }
+            })
+         })
+      )
       return
    } catch (error) {
       throw Error(error)
    }
 }
 
-const processSimpleRecipe = async data => {
-   const { product, orderId, comboProductId } = data
+export const processSimpleRecipe = async ({
+   product,
+   orderId,
+   comboProductId = null,
+   modifier = null
+}) => {
    try {
       const variables = { id: product.option.id }
       const { simpleRecipeProductOption: productOption } = await client.request(
@@ -522,7 +635,8 @@ const processSimpleRecipe = async data => {
          product,
          orderId,
          productOption,
-         comboProductId
+         comboProductId,
+         modifier
       }
 
       const count = Array.from({ length: product.quantity }, (_, v) => v)
@@ -544,7 +658,7 @@ const processSimpleRecipe = async data => {
 }
 
 const processMealKit = async data => {
-   const { orderId, product, productOption, comboProductId } = data
+   const { orderId, product, productOption, comboProductId, modifier } = data
    try {
       const { createOrderMealKitProduct } = await client.request(
          CREATE_ORDER_MEALKIT_PRODUCT,
@@ -558,8 +672,12 @@ const processMealKit = async data => {
                ...(comboProductId && { comboProductId }),
                simpleRecipeProductOptionId: product.option.id,
                packagingId: productOption.packagingId,
-               labelTemplateId: productOption.labelTemplateId,
-               assemblyStationId: productOption.assemblyStationId,
+               ...(productOption.operationConfigId && {
+                  assemblyStationId: productOption.operationConfig.stationId
+               }),
+               ...(productOption.operationConfigId && {
+                  labelTemplateId: productOption.operationConfig.labelTemplateId
+               }),
                instructionCardTemplateId:
                   productOption.instructionCardTemplateId,
                ...(product.customizableProductId && {
@@ -571,7 +689,16 @@ const processMealKit = async data => {
                ...(product.customizableProductOptionId && {
                   customizableProductOptionId:
                      product.customizableProductOptionId
-               })
+               }),
+               ...(modifier && modifier.id && { orderModifierId: modifier.id }),
+               ...(Array.isArray(product.modifiers) &&
+                  product.modifiers.length > 0 && {
+                     orderModifiers: {
+                        data: product.modifiers.map(node => ({
+                           data: node
+                        }))
+                     }
+                  })
             }
          }
       )
@@ -631,7 +758,7 @@ const processMealKit = async data => {
 }
 
 const processReadyToEat = async data => {
-   const { orderId, product, productOption, comboProductId } = data
+   const { orderId, product, productOption, comboProductId, modifier } = data
    try {
       const { createOrderReadyToEatProduct } = await client.request(
          CREATE_ORDER_READY_TO_EAT_PRODUCT,
@@ -644,8 +771,12 @@ const processReadyToEat = async data => {
                ...(comboProductId && { comboProductId }),
                packagingId: productOption.packagingId,
                simpleRecipeProductOptionId: product.option.id,
-               labelTemplateId: productOption.labelTemplateId,
-               assemblyStationId: productOption.assemblyStationId,
+               ...(productOption.operationConfigId && {
+                  assemblyStationId: productOption.operationConfig.stationId
+               }),
+               ...(productOption.operationConfigId && {
+                  labelTemplateId: productOption.operationConfig.labelTemplateId
+               }),
                instructionCardTemplateId:
                   productOption.instructionCardTemplateId,
                ...(product.customizableProductId && {
@@ -657,7 +788,16 @@ const processReadyToEat = async data => {
                ...(product.customizableProductOptionId && {
                   customizableProductOptionId:
                      product.customizableProductOptionId
-               })
+               }),
+               ...(modifier && modifier.id && { orderModifierId: modifier.id }),
+               ...(Array.isArray(product.modifiers) &&
+                  product.modifiers.length > 0 && {
+                     orderModifiers: {
+                        data: product.modifiers.map(node => ({
+                           data: node
+                        }))
+                     }
+                  })
             }
          }
       )
@@ -727,7 +867,7 @@ const getHtml = async (template, data) => {
       const template_data = encodeURI(JSON.stringify(parsed.data))
       const template_options = encodeURI(JSON.stringify(parsed.template))
 
-      const url = `${origin}/template?template=${template_options}&data=${template_data}`
+      const url = `${origin}/template/?template=${template_options}&data=${template_data}`
 
       const { data: html } = await axios.get(url)
       return html

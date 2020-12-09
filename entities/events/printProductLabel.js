@@ -48,7 +48,7 @@ export const printProductLabel = async (req, res) => {
                station.defaultLabelPrinterId ||
                station.attachedLabelPrinters[0].printNodeId
 
-            const url = new URL(process.env.DATA_HUB).origin + '/template'
+            const url = new URL(process.env.DATA_HUB).origin + '/template/'
             const template = `{"name":${labelTemplate.name},"type":"label","format":"pdf"}`
 
             if ('inventoryProductId' in rest) {
