@@ -19,14 +19,16 @@ import {
    WorkOrderRouter,
    NotificationRouter,
    RewardsRouter,
-   ModifierRouter
+   ModifierRouter,
+   emailParser
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
    printKOT,
    getKOTUrls,
    printSachetLabel,
-   printProductLabel
+   printProductLabel,
+   handleThirdPartyOrder
 } from './entities/events'
 
 const app = express()
@@ -68,10 +70,12 @@ app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)
 app.use('/webhook/notification', NotificationRouter)
 app.use('/webhook/occurence', OccurenceRouter)
+app.post('/webhook/parse/email', emailParser)
 
 app.post('/event/print-sachet', printSachetLabel)
 app.post('/event/print-product', printProductLabel)
 app.post('/event/print-kot', printKOT)
+app.post('/event/order/third-party', handleThirdPartyOrder)
 
 app.use((_req, _res, next) => {
    const error = new Error('Not found')
