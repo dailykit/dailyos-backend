@@ -19,7 +19,7 @@ import {
    WorkOrderRouter,
    NotificationRouter,
    RewardsRouter,
-   ModifierRouter
+   ModifierRouter,
    placeAutoComplete,
    placeDetails
 } from './entities'

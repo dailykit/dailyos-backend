@@ -55,7 +55,7 @@ export const manage = async (req, res) => {
             const data = JSON.stringify(parsed.data)
             const template = JSON.stringify(parsed.template)
 
-            const url = `${origin}/template?template=${template}&data=${data}`
+            const url = `${origin}/template/?template=${template}&data=${data}`
 
             const { printJob } = await client.request(PRINT_JOB, {
                url,
@@ -180,7 +180,7 @@ const getHtml = async (template, data) => {
       const template_data = encodeURI(JSON.stringify(parsed.data))
       const template_options = encodeURI(JSON.stringify(parsed.template))
 
-      const url = `${origin}/template?template=${template_options}&data=${template_data}`
+      const url = `${origin}/template/?template=${template_options}&data=${template_data}`
 
       const { data: html } = await axios.get(url)
       return html
