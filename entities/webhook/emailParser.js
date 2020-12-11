@@ -1,15 +1,29 @@
 import { client } from '../../lib/graphql'
 
+const sources = {
+   swiggy: {
+      title: 'Swiggy',
+      imageUrl:
+         'https://s3.us-east-2.amazonaws.com/dailykit.org/third-party-orders/swiggy.png'
+   }
+}
+
 export const emailParser = async (req, res) => {
    try {
-      console.log(req.body)
       const { createThirdPartyOrder } = await client.request(
          CREATE_THIRD_PARTY_ORDER,
          {
             object: {
                parsedData: req.body,
                source: req.body.source,
-               thirdPartyOrderId: req.body.orderId
+               thirdPartyOrderId: req.body.orderId,
+               orderSource: {
+                  data: sources[req.body.source.toLowerCase()],
+                  on_conflict: {
+                     update_columns: 'imageUrl',
+                     constraint: 'thirdPartySource_title_key'
+                  }
+               }
             }
          }
       )
