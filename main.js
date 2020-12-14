@@ -20,7 +20,8 @@ import {
    NotificationRouter,
    RewardsRouter,
    ModifierRouter,
-   emailParser
+   emailParser,
+   ParseurRouter
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -65,6 +66,7 @@ app.post('/api/sendmail', sendMail)
 app.use('/api/rewards', RewardsRouter)
 app.get('/api/kot-urls', getKOTUrls)
 app.use('/api/modifier', ModifierRouter)
+app.use('/api/parseur', ParseurRouter)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)
