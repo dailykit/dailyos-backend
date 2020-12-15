@@ -23,9 +23,6 @@ import {
    CREATE_ORDER_READY_TO_EAT_PRODUCT
 } from './graphql/mutations'
 
-const formatTime = time =>
-   moment(time).tz(process.env.TIMEZONE).format('YYYY-MM-DD hh:mm')
-
 const isPickup = value => ['ONDEMAND_PICKUP', 'PREORDER_PICKUP'].includes(value)
 
 export const take = async (req, res) => {
@@ -200,10 +197,10 @@ export const take = async (req, res) => {
                      ...(isPickup(cart.fulfillmentInfo.type)
                         ? {
                              approved: {
-                                startsAt: formatTime(
+                                startsAt: moment(
                                    cart.fulfillmentInfo.slot.from
                                 ),
-                                endsAt: formatTime(cart.fulfillmentInfo.slot.to)
+                                endsAt: moment(cart.fulfillmentInfo.slot.to)
                              }
                           }
                         : { approved: {} })
@@ -381,9 +378,9 @@ export const take = async (req, res) => {
          id: order.createOrder.id,
          _set: {
             ...(isPickup(cart.fulfillmentInfo.type) && {
-               readyByTimestamp: formatTime(cart.fulfillmentInfo.slot.from)
+               readyByTimestamp: moment(cart.fulfillmentInfo.slot.from)
             }),
-            fulfillmentTimestamp: formatTime(cart.fulfillmentInfo.slot.from),
+            fulfillmentTimestamp: moment(cart.fulfillmentInfo.slot.from),
             deliveryInfo: {
                ...order.createOrder.deliveryInfo,
                orderInfo: {
