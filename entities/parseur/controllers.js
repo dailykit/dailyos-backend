@@ -2,6 +2,28 @@ import axios from 'axios'
 import { client } from '../../lib/graphql'
 
 const parseur = {
+   one: async (req, res) => {
+      try {
+         const { id = null } = req.params
+
+         if (!id) throw { message: 'Mailbox id is required!', status_code: 409 }
+
+         const { data = {} } = await axios({
+            method: 'GET',
+            url: `${process.env.PARSEUR_API_URL}/parser/${id}`,
+            headers: {
+               Authorization: `Token ${process.env.PARSEUR_API_KEY}`
+            }
+         })
+         res.status(200).json({ success: true, data })
+      } catch (error) {
+         const code =
+            'status_code' in error && error.status_code
+               ? error.status_code
+               : 500
+         res.status(code).json({ success: false, error })
+      }
+   },
    insert: async (req, res) => {
       try {
          const { brand = {} } = req.body
