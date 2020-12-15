@@ -40,6 +40,7 @@ const parseur = {
             if ('data' in data && Object.keys(data.data).length > 0) {
                try {
                   await client.request(UPDATE_BRAND, {
+                     id: brand.id,
                      _set: {
                         parseurMailBoxId: data.data.id
                      }
