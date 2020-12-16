@@ -60,6 +60,44 @@ const parseur = {
                : 500
          res.status(code).json({ success: false, error })
       }
+   },
+   delete: async (req, res) => {
+      try {
+         const { brand = {}, mailbox = {} } = req.body
+
+         if (!('id' in brand) && !brand.id)
+            throw { message: 'Brand id is required!', status_code: 409 }
+         if (!('id' in mailbox) && !mailbox.id)
+            throw { message: 'Mailbox id is required!', status_code: 409 }
+
+         const { status, data = {} } = await axios({
+            method: 'DELETE',
+            url: `${process.env.PLATFORM_URL}/api/parseur/${mailbox.id}`
+         })
+         if (status === 200) {
+            try {
+               await client.request(UPDATE_BRAND, {
+                  id: brand.id,
+                  _set: {
+                     parseurMailBoxId: null
+                  }
+               })
+            } catch (error) {
+               throw {
+                  stack_trace: error,
+                  status_code: 500,
+                  message: 'Failed to remove mailbox id!'
+               }
+            }
+         }
+         res.status(200).json({ success: true, data })
+      } catch (error) {
+         const code =
+            'status_code' in error && error.status_code
+               ? error.status_code
+               : 500
+         res.status(code).json({ success: false, error })
+      }
    }
 }
 
