@@ -6,11 +6,13 @@ import { template_compiler } from '../../utils'
 import {
    FETCH_CART,
    EMAIL_CONFIG,
+   CUSTOMER,
+   ORDER_STATUS_EMAIL,
    BRAND_ON_DEMAND_SETTING,
    FETCH_INVENTORY_PRODUCT,
+   BRAND_SUBSCRIPTION_SETTING,
    FETCH_SIMPLE_RECIPE_PRODUCT,
-   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
-   BRAND_SUBSCRIPTION_SETTING
+   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION
 } from './graphql/queries'
 import {
    SEND_MAIL,
@@ -851,6 +853,102 @@ const processReadyToEat = async data => {
       return
    } catch (error) {
       throw Error(error)
+   }
+}
+
+export const handleStatusChange = async (req, res) => {
+   try {
+      const {
+         id = null,
+         brandId = null,
+         keycloakId = '',
+         orderStatus: status = '',
+         isRejected = false
+      } = req.body.event.data.new
+
+      if (!id) throw { message: 'Order id is required!', code: 409 }
+      if (!status) throw { message: 'Order status is required!', code: 409 }
+      if (!brandId) throw { message: 'Brand id is required!', code: 409 }
+      if (!keycloakId) throw { message: 'Customer id is required!', code: 409 }
+
+      const { brand } = await client.request(ORDER_STATUS_EMAIL, {
+         id: brandId
+      })
+
+      if (!brand) throw { message: 'No such brand id exists!', code: 404 }
+
+      const template = {
+         type: '',
+         name: '',
+         email: '',
+         template: {}
+      }
+
+      if (status === 'DELIVERED') {
+         if (brand.delivered_template.length === 0)
+            throw {
+               message: 'Setting for order delivered template doesnt exists!',
+               code: 404
+            }
+         const [data] = brand.delivered_template
+         template.type = 'Delivered'
+         template.name = data.name
+         template.email = data.email
+         template.template = data.template
+      } else if (isRejected) {
+         if (brand.cancelled_template.length === 0)
+            throw {
+               message: 'Setting for order cancelled template doesnt exists!',
+               code: 404
+            }
+
+         const [data] = brand.cancelled_template
+         template.type = 'Cancelled'
+         template.name = data.name
+         template.email = data.email
+         template.template = data.template
+      }
+
+      let html = await getHtml(template.template, {
+         new: { id }
+      })
+
+      const customer = {
+         email: ''
+      }
+
+      const { customer: consumer } = await client.request(CUSTOMER, {
+         keycloakId
+      })
+
+      if (!consumer) throw { message: 'No such customer exists', code: 404 }
+
+      if ('email' in consumer && consumer.email) {
+         customer.email = consumer.email
+      }
+
+      if (!customer.email)
+         throw { message: 'Customer does not have email linked!', code: 404 }
+
+      await client.request(SEND_MAIL, {
+         emailInput: {
+            from: `"${template.name}" ${template.email}`,
+            to: customer.email,
+            subject: `Order ${template.type} - ${id}`,
+            attachments: [],
+            html
+         }
+      })
+      return res.status(200).json({ success: true, template, customer, html })
+   } catch (error) {
+      console.log(
+         '🚀 ~ file: controllers.js ~ line 945 ~ handleStatusChange ~ error',
+         error
+      )
+      return res.status('code' in error && error.code ? error.code : 500).json({
+         success: false,
+         error
+      })
    }
 }
 
