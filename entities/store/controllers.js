@@ -3,7 +3,7 @@ import { GET_STORE_DATA, GET_CUSTOMER } from './graphql/queries'
 import { CREATE_CUSTOMER, CREATE_BRAND_CUSTOMER } from './graphql/mutations'
 
 export const getStoreData = async (req, res, next) => {
-   const { domain, email, keycloakId } = req.body
+   const { clientId, domain, email, keycloakId } = req.body
 
    if (!domain) {
       return res.status(400).json({
@@ -49,6 +49,7 @@ export const getStoreData = async (req, res, next) => {
                      object: {
                         keycloakId,
                         email,
+                        clientId,
                         source: 'online store',
                         sourceBrandId: brandId,
                         brandCustomers: {
