@@ -1,5 +1,6 @@
 import { client } from '../../lib/graphql'
 import { GET_STORE_DATA, GET_CUSTOMER } from './graphql/queries'
+import { CREATE_CUSTOMER, CREATE_BRAND_CUSTOMER } from './graphql/mutations'
 
 export const getStoreData = async (req, res, next) => {
    const { domain, email, keycloakId } = req.body
@@ -22,15 +23,52 @@ export const getStoreData = async (req, res, next) => {
             const { customer } = await client.request(GET_CUSTOMER, {
                keycloakId
             })
-            return res.status(200).json({
-               success: true,
-               message: 'Settings fetched!',
-               data: {
-                  brandId,
-                  settings,
-                  customer
+            if (customer) {
+               const brandCustomer = customer.brandCustomers.find(
+                  record => record.brandId === brandId
+               )
+               if (!brandCustomer) {
+                  await client.request(CREATE_BRAND_CUSTOMER, {
+                     brandId,
+                     keycloakId
+                  })
                }
-            })
+               return res.status(200).json({
+                  success: true,
+                  message: 'Customer and settings fetched!',
+                  data: {
+                     brandId,
+                     settings,
+                     customer
+                  }
+               })
+            } else {
+               const { createCustomer } = await client.request(
+                  CREATE_CUSTOMER,
+                  {
+                     object: {
+                        keycloakId,
+                        email,
+                        source: 'online store',
+                        sourceBrandId: brandId,
+                        brandCustomers: {
+                           data: {
+                              brandId
+                           }
+                        }
+                     }
+                  }
+               )
+               return res.status(201).json({
+                  success: true,
+                  message: 'Customer created and settings fetched!',
+                  data: {
+                     brandId,
+                     settings,
+                     customer: createCustomer
+                  }
+               })
+            }
          } else {
             return res.status(200).json({
                success: true,

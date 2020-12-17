@@ -14,6 +14,9 @@ export const GET_CUSTOMER = `
          id
          email
          keycloakId
+         brandCustomers {
+            brandId
+         }
       }
    }
 `
