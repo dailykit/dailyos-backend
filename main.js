@@ -21,7 +21,8 @@ import {
    RewardsRouter,
    ModifierRouter,
    placeAutoComplete,
-   placeDetails
+   placeDetails,
+   StoreRouter
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -76,6 +77,8 @@ app.use('/webhook/occurence', OccurenceRouter)
 app.post('/event/print-sachet', printSachetLabel)
 app.post('/event/print-product', printProductLabel)
 app.post('/event/print-kot', printKOT)
+
+app.use('/api/store', StoreRouter)
 
 app.use((_req, _res, next) => {
    const error = new Error('Not found')
