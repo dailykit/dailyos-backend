@@ -192,3 +192,37 @@ export const EMAIL_CONFIG = `
       }
    }
 `
+
+export const ORDER_STATUS_EMAIL = `
+   query brand($id: Int!) {
+      brand(id: $id) {
+         id
+         delivered_template: onDemandSettings(
+            where: {
+               onDemandSetting: { identifier: { _eq: "Order Delivered" } }
+            }
+         ) {
+            name: value(path: "name")
+            email: value(path: "email")
+            template: value(path: "template")
+         }
+         cancelled_template: onDemandSettings(
+            where: {
+               onDemandSetting: { identifier: { _eq: "Order Cancelled" } }
+            }
+         ) {
+            name: value(path: "name")
+            email: value(path: "email")
+            template: value(path: "template")
+         }
+      }
+   }
+`
+
+export const CUSTOMER = `
+   query customer($keycloakId: String!) {
+      customer(keycloakId: $keycloakId) {
+         email
+      }
+   }
+`

@@ -6,11 +6,13 @@ import { template_compiler } from '../../utils'
 import {
    FETCH_CART,
    EMAIL_CONFIG,
+   CUSTOMER,
+   ORDER_STATUS_EMAIL,
    BRAND_ON_DEMAND_SETTING,
    FETCH_INVENTORY_PRODUCT,
+   BRAND_SUBSCRIPTION_SETTING,
    FETCH_SIMPLE_RECIPE_PRODUCT,
-   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
-   BRAND_SUBSCRIPTION_SETTING
+   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION
 } from './graphql/queries'
 import {
    SEND_MAIL,
@@ -22,9 +24,6 @@ import {
    CREATE_ORDER_INVENTORY_PRODUCT,
    CREATE_ORDER_READY_TO_EAT_PRODUCT
 } from './graphql/mutations'
-
-const formatTime = time =>
-   moment(time).tz(process.env.TIMEZONE).format('YYYY-MM-DD hh:mm')
 
 const isPickup = value => ['ONDEMAND_PICKUP', 'PREORDER_PICKUP'].includes(value)
 
@@ -200,10 +199,10 @@ export const take = async (req, res) => {
                      ...(isPickup(cart.fulfillmentInfo.type)
                         ? {
                              approved: {
-                                startsAt: formatTime(
+                                startsAt: moment(
                                    cart.fulfillmentInfo.slot.from
                                 ),
-                                endsAt: formatTime(cart.fulfillmentInfo.slot.to)
+                                endsAt: moment(cart.fulfillmentInfo.slot.to)
                              }
                           }
                         : { approved: {} })
@@ -381,9 +380,9 @@ export const take = async (req, res) => {
          id: order.createOrder.id,
          _set: {
             ...(isPickup(cart.fulfillmentInfo.type) && {
-               readyByTimestamp: formatTime(cart.fulfillmentInfo.slot.from)
+               readyByTimestamp: moment(cart.fulfillmentInfo.slot.from)
             }),
-            fulfillmentTimestamp: formatTime(cart.fulfillmentInfo.slot.from),
+            fulfillmentTimestamp: moment(cart.fulfillmentInfo.slot.from),
             deliveryInfo: {
                ...order.createOrder.deliveryInfo,
                orderInfo: {
@@ -854,6 +853,102 @@ const processReadyToEat = async data => {
       return
    } catch (error) {
       throw Error(error)
+   }
+}
+
+export const handleStatusChange = async (req, res) => {
+   try {
+      const {
+         id = null,
+         brandId = null,
+         keycloakId = '',
+         orderStatus: status = '',
+         isRejected = false
+      } = req.body.event.data.new
+
+      if (!id) throw { message: 'Order id is required!', code: 409 }
+      if (!status) throw { message: 'Order status is required!', code: 409 }
+      if (!brandId) throw { message: 'Brand id is required!', code: 409 }
+      if (!keycloakId) throw { message: 'Customer id is required!', code: 409 }
+
+      const { brand } = await client.request(ORDER_STATUS_EMAIL, {
+         id: brandId
+      })
+
+      if (!brand) throw { message: 'No such brand id exists!', code: 404 }
+
+      const template = {
+         type: '',
+         name: '',
+         email: '',
+         template: {}
+      }
+
+      if (status === 'DELIVERED') {
+         if (brand.delivered_template.length === 0)
+            throw {
+               message: 'Setting for order delivered template doesnt exists!',
+               code: 404
+            }
+         const [data] = brand.delivered_template
+         template.type = 'Delivered'
+         template.name = data.name
+         template.email = data.email
+         template.template = data.template
+      } else if (isRejected) {
+         if (brand.cancelled_template.length === 0)
+            throw {
+               message: 'Setting for order cancelled template doesnt exists!',
+               code: 404
+            }
+
+         const [data] = brand.cancelled_template
+         template.type = 'Cancelled'
+         template.name = data.name
+         template.email = data.email
+         template.template = data.template
+      }
+
+      let html = await getHtml(template.template, {
+         new: { id }
+      })
+
+      const customer = {
+         email: ''
+      }
+
+      const { customer: consumer } = await client.request(CUSTOMER, {
+         keycloakId
+      })
+
+      if (!consumer) throw { message: 'No such customer exists', code: 404 }
+
+      if ('email' in consumer && consumer.email) {
+         customer.email = consumer.email
+      }
+
+      if (!customer.email)
+         throw { message: 'Customer does not have email linked!', code: 404 }
+
+      await client.request(SEND_MAIL, {
+         emailInput: {
+            from: `"${template.name}" ${template.email}`,
+            to: customer.email,
+            subject: `Order ${template.type} - ${id}`,
+            attachments: [],
+            html
+         }
+      })
+      return res.status(200).json({ success: true, template, customer, html })
+   } catch (error) {
+      console.log(
+         '🚀 ~ file: controllers.js ~ line 945 ~ handleStatusChange ~ error',
+         error
+      )
+      return res.status('code' in error && error.code ? error.code : 500).json({
+         success: false,
+         error
+      })
    }
 }
 
