@@ -1,29 +1,21 @@
-import axios from 'axios'
 import moment from 'moment-timezone'
 import { client } from '../../lib/graphql'
-import { template_compiler } from '../../utils'
 
 import {
    FETCH_CART,
-   EMAIL_CONFIG,
    CUSTOMER,
    ORDER_STATUS_EMAIL,
    BRAND_ON_DEMAND_SETTING,
-   FETCH_INVENTORY_PRODUCT,
-   BRAND_SUBSCRIPTION_SETTING,
-   FETCH_SIMPLE_RECIPE_PRODUCT,
-   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION
+   BRAND_SUBSCRIPTION_SETTING
 } from './graphql/queries'
 import {
    SEND_MAIL,
    UPDATE_CART,
    CREATE_ORDER,
-   UPDATE_ORDER,
-   CREATE_ORDER_SACHET,
-   CREATE_ORDER_MEALKIT_PRODUCT,
-   CREATE_ORDER_INVENTORY_PRODUCT,
-   CREATE_ORDER_READY_TO_EAT_PRODUCT
+   UPDATE_ORDER
 } from './graphql/mutations'
+
+import { handle, fetch_html } from './functions'
 
 const isPickup = value => ['ONDEMAND_PICKUP', 'PREORDER_PICKUP'].includes(value)
 
@@ -397,17 +389,17 @@ export const take = async (req, res) => {
          cart.cartInfo.products.map(product => {
             switch (product.type) {
                case 'comboProduct':
-                  return processCombo({
+                  return handle.combo({
                      product,
                      orderId: order.createOrder.id
                   })
                case 'simpleRecipeProduct':
-                  return processSimpleRecipe({
+                  return handle.simpleRecipe({
                      product,
                      orderId: order.createOrder.id
                   })
                case 'inventoryProduct':
-                  return processInventory({
+                  return handle.inventory({
                      product,
                      orderId: order.createOrder.id
                   })
@@ -429,7 +421,7 @@ export const take = async (req, res) => {
             Object.keys(settings.email.template).length > 0
          ) {
             const { name, email, template } = settings.email
-            let html = await getHtml(template, {
+            let html = await fetch_html(template, {
                new: { id: order.createOrder.id }
             })
 
@@ -452,407 +444,6 @@ export const take = async (req, res) => {
    } catch (error) {
       console.log('error', error)
       return res.status(404).json({ success: false, error: error.message })
-   }
-}
-
-const processCombo = async ({ product: combo, orderId }) => {
-   try {
-      const repetitions = Array.from({ length: combo.quantity }, (_, v) => v)
-
-      await Promise.all(
-         repetitions.map(async () => {
-            const result = await Promise.all(
-               combo.components.map(product => {
-                  const args = { product, orderId, comboProductId: combo.id }
-                  switch (product.type) {
-                     case 'simpleRecipeProduct':
-                        return processSimpleRecipe(args)
-                     case 'inventoryProduct':
-                        return processInventory(args)
-                     default:
-                        throw Error('No such product type exists!')
-                  }
-               })
-            )
-            return result
-         })
-      )
-
-      return
-   } catch (error) {
-      throw Error(error)
-   }
-}
-
-export const processInventory = async ({
-   product,
-   orderId,
-   modifier = null,
-   comboProductId = null
-}) => {
-   try {
-      const variables = { id: product.id, optionId: { _eq: product.option.id } }
-      const { inventoryProduct } = await client.request(
-         FETCH_INVENTORY_PRODUCT,
-         variables
-      )
-
-      const [productOption] = inventoryProduct.inventoryProductOptions
-
-      const totalQuantity = product.quantity
-         ? product.quantity * productOption.quantity
-         : productOption.quantity
-
-      const operationConfig = {
-         labelTemplateId: null,
-         stationId: null
-      }
-
-      if (productOption.operationConfigId) {
-         if ('labelTemplateId' in productOption.operationConfig) {
-            operationConfig.labelTemplateId =
-               productOption.operationConfig.labelTemplateId
-         }
-         if ('stationId' in productOption.operationConfig) {
-            operationConfig.stationId = productOption.operationConfig.stationId
-         }
-      }
-
-      const { createOrderInventoryProduct } = await client.request(
-         CREATE_ORDER_INVENTORY_PRODUCT,
-         {
-            object: {
-               orderId,
-               quantity: totalQuantity,
-               price: product.totalPrice,
-               assemblyStatus: 'PENDING',
-               inventoryProductId: product.id,
-               ...(productOption.packagingId && {
-                  packagingId: productOption.packagingId
-               }),
-               ...(productOption.instructionCardTemplateId && {
-                  instructionCardTemplateId:
-                     productOption.instructionCardTemplateId
-               }),
-               ...(operationConfig.stationId && {
-                  assemblyStationId: operationConfig.stationId
-               }),
-               ...(operationConfig.labelTemplateId && {
-                  labelTemplateId: operationConfig.labelTemplateId
-               }),
-               ...(comboProductId && { comboProductId }),
-               inventoryProductOptionId: product.option.id,
-               ...(product.customizableProductId && {
-                  customizableProductId: product.customizableProductId
-               }),
-               ...(product.comboProductComponentId && {
-                  comboProductComponentId: product.comboProductComponentId
-               }),
-               ...(product.customizableProductOptionId && {
-                  customizableProductOptionId:
-                     product.customizableProductOptionId
-               }),
-               ...(modifier && modifier.id && { orderModifierId: modifier.id }),
-               ...(Array.isArray(product.modifiers) &&
-                  product.modifiers.length > 0 && {
-                     orderModifiers: {
-                        data: product.modifiers.map(node => ({
-                           data: node
-                        }))
-                     }
-                  })
-            }
-         }
-      )
-
-      let unit = null
-      let processingName = null
-      let ingredientName = null
-
-      if (inventoryProduct.sachetItemId) {
-         unit = inventoryProduct.sachetItem.unit
-         if (inventoryProduct.sachetItem.bulkItemId) {
-            processingName =
-               inventoryProduct.sachetItemId.bulkItem.processingName
-            if (inventoryProduct.sachetItem.bulkItem.supplierItemId) {
-               ingredientName =
-                  inventoryProduct.sachetItem.bulkItem.supplierItem.name
-            }
-         }
-      } else if (inventoryProduct.supplierItemId) {
-         unit = inventoryProduct.supplierItem.unit
-         ingredientName = inventoryProduct.supplierItem.name
-      }
-
-      const count = Array.from({ length: product.quantity }, (_, v) => v)
-      await Promise.all(
-         count.map(async () => {
-            await client.request(CREATE_ORDER_SACHET, {
-               object: {
-                  unit,
-                  processingName,
-                  ingredientName,
-                  status: 'PENDING',
-                  quantity: productOption.quantity,
-                  ...(operationConfig.stationId && {
-                     packingStationId: operationConfig.stationId
-                  }),
-                  sachetItemId: inventoryProduct.sachetItemId,
-                  ...(productOption.packagingId && {
-                     packagingId: productOption.packagingId
-                  }),
-                  ...(operationConfig.labelTemplateId
-                     ? {
-                          labelTemplateId: operationConfig.labelTemplateId
-                       }
-                     : { isLabelled: true }),
-                  orderInventoryProductId: createOrderInventoryProduct.id
-               }
-            })
-         })
-      )
-      return
-   } catch (error) {
-      throw Error(error)
-   }
-}
-
-export const processSimpleRecipe = async ({
-   product,
-   orderId,
-   comboProductId = null,
-   modifier = null
-}) => {
-   try {
-      const variables = { id: product.option.id }
-      const { simpleRecipeProductOption: productOption } = await client.request(
-         FETCH_SIMPLE_RECIPE_PRODUCT,
-         variables
-      )
-
-      const args = {
-         product,
-         orderId,
-         productOption,
-         comboProductId,
-         modifier
-      }
-
-      const count = Array.from({ length: product.quantity }, (_, v) => v)
-      switch (product.option.type) {
-         case 'mealKit': {
-            await Promise.all(count.map(() => processMealKit(args)))
-            return
-         }
-         case 'readyToEat': {
-            await Promise.all(count.map(() => processReadyToEat(args)))
-            return
-         }
-         default:
-            throw Error('No such product type exists!')
-      }
-   } catch (error) {
-      throw Error(error)
-   }
-}
-
-const processMealKit = async data => {
-   const { orderId, product, productOption, comboProductId, modifier } = data
-   try {
-      const { createOrderMealKitProduct } = await client.request(
-         CREATE_ORDER_MEALKIT_PRODUCT,
-         {
-            object: {
-               orderId,
-               assemblyStatus: 'PENDING',
-               price: product.totalPrice,
-               simpleRecipeId: productOption.simpleRecipeProduct.simpleRecipeId,
-               simpleRecipeProductId: product.id,
-               ...(comboProductId && { comboProductId }),
-               simpleRecipeProductOptionId: product.option.id,
-               packagingId: productOption.packagingId,
-               ...(productOption.operationConfigId && {
-                  assemblyStationId: productOption.operationConfig.stationId
-               }),
-               ...(productOption.operationConfigId && {
-                  labelTemplateId: productOption.operationConfig.labelTemplateId
-               }),
-               instructionCardTemplateId:
-                  productOption.instructionCardTemplateId,
-               ...(product.customizableProductId && {
-                  customizableProductId: product.customizableProductId
-               }),
-               ...(product.comboProductComponentId && {
-                  comboProductComponentId: product.comboProductComponentId
-               }),
-               ...(product.customizableProductOptionId && {
-                  customizableProductOptionId:
-                     product.customizableProductOptionId
-               }),
-               ...(modifier && modifier.id && { orderModifierId: modifier.id }),
-               ...(Array.isArray(product.modifiers) &&
-                  product.modifiers.length > 0 && {
-                     orderModifiers: {
-                        data: product.modifiers.map(node => ({
-                           data: node
-                        }))
-                     }
-                  })
-            }
-         }
-      )
-      const variables = { id: product.option.id }
-      const { simpleRecipeProductOption } = await client.request(
-         FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
-         variables
-      )
-
-      const { ingredientSachets } = simpleRecipeProductOption.simpleRecipeYield
-
-      await Promise.all(
-         ingredientSachets.map(async ({ ingredientSachet }) => {
-            try {
-               const {
-                  id,
-                  unit,
-                  quantity,
-                  ingredient,
-                  ingredientProcessing,
-                  liveModeOfFulfillment
-               } = ingredientSachet
-
-               await client.request(CREATE_ORDER_SACHET, {
-                  object: {
-                     unit: unit,
-                     status: 'PENDING',
-                     quantity: quantity,
-                     ingredientSachetId: id,
-                     ingredientName: ingredient.name,
-                     orderMealKitProductId: createOrderMealKitProduct.id,
-                     processingName: ingredientProcessing.processing.name,
-                     ...(liveModeOfFulfillment && {
-                        accuracy: liveModeOfFulfillment.accuracy,
-                        bulkItemId: liveModeOfFulfillment.bulkItemId,
-                        sachetItemId: liveModeOfFulfillment.sachetItemId,
-                        packagingId: liveModeOfFulfillment.packagingId,
-                        packingStationId: liveModeOfFulfillment.stationId,
-                        ...(liveModeOfFulfillment.labelTemplateId
-                           ? {
-                                labelTemplateId:
-                                   liveModeOfFulfillment.labelTemplateId
-                             }
-                           : { isLabelled: true })
-                     })
-                  }
-               })
-            } catch (error) {
-               throw Error(error)
-            }
-         })
-      )
-      return
-   } catch (error) {
-      throw Error(error)
-   }
-}
-
-const processReadyToEat = async data => {
-   const { orderId, product, productOption, comboProductId, modifier } = data
-   try {
-      const { createOrderReadyToEatProduct } = await client.request(
-         CREATE_ORDER_READY_TO_EAT_PRODUCT,
-         {
-            object: {
-               orderId,
-               price: product.totalPrice,
-               simpleRecipeId: productOption.simpleRecipeProduct.simpleRecipeId,
-               simpleRecipeProductId: product.id,
-               ...(comboProductId && { comboProductId }),
-               packagingId: productOption.packagingId,
-               simpleRecipeProductOptionId: product.option.id,
-               ...(productOption.operationConfigId && {
-                  assemblyStationId: productOption.operationConfig.stationId
-               }),
-               ...(productOption.operationConfigId && {
-                  labelTemplateId: productOption.operationConfig.labelTemplateId
-               }),
-               instructionCardTemplateId:
-                  productOption.instructionCardTemplateId,
-               ...(product.customizableProductId && {
-                  customizableProductId: product.customizableProductId
-               }),
-               ...(product.comboProductComponentId && {
-                  comboProductComponentId: product.comboProductComponentId
-               }),
-               ...(product.customizableProductOptionId && {
-                  customizableProductOptionId:
-                     product.customizableProductOptionId
-               }),
-               ...(modifier && modifier.id && { orderModifierId: modifier.id }),
-               ...(Array.isArray(product.modifiers) &&
-                  product.modifiers.length > 0 && {
-                     orderModifiers: {
-                        data: product.modifiers.map(node => ({
-                           data: node
-                        }))
-                     }
-                  })
-            }
-         }
-      )
-
-      const variables = { id: product.option.id }
-      const { simpleRecipeProductOption } = await client.request(
-         FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
-         variables
-      )
-
-      const { ingredientSachets } = simpleRecipeProductOption.simpleRecipeYield
-
-      await Promise.all(
-         ingredientSachets.map(async ({ ingredientSachet }) => {
-            try {
-               const {
-                  id,
-                  unit,
-                  quantity,
-                  ingredient,
-                  ingredientProcessing,
-                  liveModeOfFulfillment
-               } = ingredientSachet
-
-               await client.request(CREATE_ORDER_SACHET, {
-                  object: {
-                     quantity,
-                     unit: unit,
-                     status: 'PENDING',
-                     ingredientSachetId: id,
-                     ingredientName: ingredient.name,
-                     processingName: ingredientProcessing.processing.name,
-                     orderReadyToEatProductId: createOrderReadyToEatProduct.id,
-                     ...(liveModeOfFulfillment && {
-                        accuracy: liveModeOfFulfillment.accuracy,
-                        bulkItemId: liveModeOfFulfillment.bulkItemId,
-                        sachetItemId: liveModeOfFulfillment.sachetItemId,
-                        packagingId: liveModeOfFulfillment.packagingId,
-                        packingStationId: liveModeOfFulfillment.stationId,
-                        ...(liveModeOfFulfillment.labelTemplateId
-                           ? {
-                                labelTemplateId:
-                                   liveModeOfFulfillment.labelTemplateId
-                             }
-                           : { isLabelled: true })
-                     })
-                  }
-               })
-            } catch (error) {
-               throw Error(error)
-            }
-         })
-      )
-      return
-   } catch (error) {
-      throw Error(error)
    }
 }
 
@@ -909,7 +500,7 @@ export const handleStatusChange = async (req, res) => {
          template.template = data.template
       }
 
-      let html = await getHtml(template.template, {
+      let html = await fetch_html(template.template, {
          new: { id }
       })
 
@@ -949,25 +540,5 @@ export const handleStatusChange = async (req, res) => {
          success: false,
          error
       })
-   }
-}
-
-const getHtml = async (template, data) => {
-   try {
-      const parsed = JSON.parse(
-         template_compiler(JSON.stringify(template), data)
-      )
-
-      const { origin } = new URL(process.env.DATA_HUB)
-      const template_data = encodeURI(JSON.stringify(parsed.data))
-      const template_options = encodeURI(JSON.stringify(parsed.template))
-
-      const url = `${origin}/template/?template=${template_options}&data=${template_data}`
-
-      const { data: html } = await axios.get(url)
-      return html
-   } catch (error) {
-      console.log('getHtml -> error', error)
-      throw Error(error.message)
    }
 }

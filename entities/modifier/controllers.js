@@ -1,6 +1,6 @@
 import { client } from '../../lib/graphql'
 import { QUERIES, MUTATIONS } from './graphql'
-import { processInventory, processSimpleRecipe } from '../order/controllers'
+import { handle as methods } from '../order/functions'
 
 export const handle = async (req, res) => {
    try {
@@ -110,7 +110,7 @@ const processInventoryProduct = async ({ data, orderId, modifier }) => {
       cartItem.quantity = data.quantity
       cartItem.discount = data.discount
       cartItem.modifiers = []
-      await processInventory({ product: cartItem, orderId, modifier })
+      await methods.inventory({ product: cartItem, orderId, modifier })
    } catch (error) {
       throw Error(error)
    }
@@ -131,7 +131,7 @@ const processSimpleRecipeProduct = async ({ data, orderId, modifier }) => {
       cartItem.quantity = data.quantity
       cartItem.discount = data.discount
       cartItem.modifiers = []
-      await processSimpleRecipe({ product: cartItem, orderId, modifier })
+      await hanmethodsdle.simpleRecipe({ product: cartItem, orderId, modifier })
    } catch (error) {
       throw Error(error)
    }
