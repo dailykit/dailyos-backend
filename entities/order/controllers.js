@@ -120,6 +120,56 @@ export const take = async (req, res) => {
          }
       }
 
+      let customerInfo = {
+         customerFirstName: '',
+         customerLastName: '',
+         customerEmail: '',
+         customerPhone: ''
+      }
+
+      if (cart.customerInfo) {
+         customerInfo = cart.customerInfo
+      }
+
+      const customerAddress = {
+         city: '',
+         label: '',
+         line1: '',
+         line2: '',
+         notes: '',
+         state: '',
+         country: '',
+         zipcode: '',
+         landmark: ''
+      }
+
+      if (cart.address) {
+         if ('line1' in cart.address) {
+            customerAddress.line1 = cart.address.line1 || ''
+         }
+         if ('line2' in cart.address) {
+            customerAddress.line2 = cart.address.line2 || ''
+         }
+         if ('city' in cart.address) {
+            customerAddress.city = cart.address.city || ''
+         }
+         if ('state' in cart.address) {
+            customerAddress.state = cart.address.state || ''
+         }
+         if ('country' in cart.address) {
+            customerAddress.country = cart.address.country || ''
+         }
+         if ('zipcode' in cart.address) {
+            customerAddress.zipcode = cart.address.zipcode || ''
+         }
+         if ('label' in cart.address) {
+            customerAddress.label = cart.address.label || ''
+         }
+         if ('landmark' in cart.address) {
+            customerAddress.landmark = cart.address.landmark || ''
+         }
+      }
+
       let order = await client.request(CREATE_ORDER, {
          object: {
             cartId: id,
@@ -245,19 +295,7 @@ export const take = async (req, res) => {
                ...(isPickup(cart.fulfillmentInfo.type)
                   ? {
                        dropoff: {
-                          dropoffInfo: {
-                             ...(cart.customerInfo &&
-                                Object.keys(cart.customerInfo).length > 0 && {
-                                   customerEmail:
-                                      cart.customerInfo.customerEmail,
-                                   customerPhone:
-                                      cart.customerInfo.customerPhone,
-                                   customerLastName:
-                                      cart.customerInfo.customerLastName,
-                                   customerFirstName:
-                                      cart.customerInfo.customerFirstName
-                                })
-                          }
+                          dropoffInfo: customerInfo
                        }
                     }
                   : {
@@ -291,29 +329,8 @@ export const take = async (req, res) => {
                              }
                           },
                           dropoffInfo: {
-                             ...(cart.customerInfo &&
-                                Object.keys(cart.customerInfo).length > 0 && {
-                                   customerEmail:
-                                      cart.customerInfo.customerEmail,
-                                   customerPhone:
-                                      cart.customerInfo.customerPhone,
-                                   customerLastName:
-                                      cart.customerInfo.customerLastName,
-                                   customerFirstName:
-                                      cart.customerInfo.customerFirstName,
-                                      customerAddress: {
-                                       line1: cart.address.line1,
-                                       line2: cart.address.line2,
-                                       city: cart.address.city,
-                                       state: cart.address.state,
-                                       zipcode: cart.address.zipcode,
-                                       country: cart.address.country,
-                                       notes: cart.address.notes,
-                                       label: cart.address.label,
-                                       landmark: cart.address.landmark
-                                    }
-                                  
-                                })
+                             ...customerInfo,
+                             customerAddress
                           }
                        }
                     }),
