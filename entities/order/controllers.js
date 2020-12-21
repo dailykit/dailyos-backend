@@ -1,9 +1,11 @@
+import { isEmpty, isNull } from 'lodash'
 import moment from 'moment-timezone'
 import { client } from '../../lib/graphql'
 
 import {
-   FETCH_CART,
    CUSTOMER,
+   FETCH_CART,
+   MILE_RANGE,
    ORDER_STATUS_EMAIL,
    BRAND_ON_DEMAND_SETTING,
    BRAND_SUBSCRIPTION_SETTING
@@ -27,7 +29,7 @@ export const take = async (req, res) => {
       })
 
       if (cart.paymentStatus !== 'SUCCEEDED') {
-         throw Error(`Status[${cart.paymentStatus}]: Payment hasn't succeeded!`)
+         throw `Order has not been paid for yet!`
       }
 
       const orderProducts = await Promise.all(
@@ -57,7 +59,16 @@ export const take = async (req, res) => {
          brand: {
             name: ''
          },
-         address: {},
+         address: {
+            line1: '',
+            line2: '',
+            city: '',
+            state: '',
+            country: '',
+            zipcode: '',
+            latitude: '',
+            longitude: ''
+         },
          contact: {
             phoneNo: '',
             email: ''
@@ -69,47 +80,186 @@ export const take = async (req, res) => {
          }
       }
       if (cart.cartSource === 'a-la-carte') {
-         const { brand = {} } = await client.request(BRAND_ON_DEMAND_SETTING, {
+         const { brand } = await client.request(BRAND_ON_DEMAND_SETTING, {
             id: cart.brandId
          })
-         if ('brand' in brand && brand.brand) {
-            settings.brand = brand.brand.length > 0 ? brand.brand[0].value : {}
-         }
-         if ('contact' in brand && brand.contact) {
-            settings.contact =
-               brand.contact.length > 0 ? brand.contact[0].value : {}
-         }
-         if ('address' in brand && brand.address) {
-            const address =
-               brand.address.length > 0 ? brand.address[0].value : {}
-            settings.address = address
-         }
-         if ('email' in brand && brand.email) {
-            const email = brand.email.length > 0 ? brand.email[0].value : {}
-            settings.email = email
+         if (brand && !isEmpty(brand)) {
+            if (!isEmpty(brand.name)) {
+               settings.brand.name = brand.name[0].name || ''
+            }
+            if (!isEmpty(brand.contact)) {
+               settings.contact.email = brand.contact[0].email || ''
+               settings.contact.phoneNo = brand.contact[0].phoneNo || ''
+            }
+            if (!isEmpty(brand.address)) {
+               settings.address.line1 = brand.address[0].line1 || ''
+               settings.address.line2 = brand.address[0].line2 || ''
+               settings.address.city = brand.address[0].city || ''
+               settings.address.state = brand.address[0].state || ''
+               settings.address.country = brand.address[0].country || ''
+               settings.address.zipcode = brand.address[0].zipcode || ''
+               settings.address.latitude = brand.address[0].latitude || ''
+               settings.address.longitude = brand.address[0].longitude || ''
+            }
+            if (!isEmpty(brand.email)) {
+               settings.email.name = brand.email[0].name || ''
+               settings.email.email = brand.email[0].email || ''
+               settings.email.template = brand.email[0].template || {}
+            }
          }
       } else if (cart.cartSource === 'subscription') {
-         const { brand = {} } = await client.request(
-            BRAND_SUBSCRIPTION_SETTING,
-            {
-               id: cart.brandId
+         const { brand } = await client.request(BRAND_SUBSCRIPTION_SETTING, {
+            id: cart.brandId
+         })
+         if (brand && !isEmpty(brand)) {
+            if (!isEmpty(brand.name)) {
+               settings.brand.name = brand.name[0].name || ''
             }
-         )
-         if ('brand' in brand && brand.brand) {
-            settings.brand = brand.brand.length > 0 ? brand.brand[0].value : {}
+            if (!isEmpty(brand.contact)) {
+               settings.contact.email = brand.contact[0].email || ''
+               settings.contact.phoneNo = brand.contact[0].phoneNo || ''
+            }
+            if (!isEmpty(brand.address)) {
+               settings.address.line1 = brand.address[0].line1 || ''
+               settings.address.line2 = brand.address[0].line2 || ''
+               settings.address.city = brand.address[0].city || ''
+               settings.address.state = brand.address[0].state || ''
+               settings.address.country = brand.address[0].country || ''
+               settings.address.zipcode = brand.address[0].zipcode || ''
+               settings.address.latitude = brand.address[0].latitude || ''
+               settings.address.longitude = brand.address[0].longitude || ''
+            }
+            if (!isEmpty(brand.email)) {
+               settings.email.name = brand.email[0].name || ''
+               settings.email.email = brand.email[0].email || ''
+               settings.email.template = brand.email[0].template || {}
+            }
          }
-         if ('contact' in brand && brand.contact) {
-            settings.contact =
-               brand.contact.length > 0 ? brand.contact[0].value : {}
+      }
+
+      const deliveryInfo = deliveryInfo_template
+
+      if (Array.isArray(orderProducts) && !isEmpty(orderProducts)) {
+         deliveryInfo.orderInfo.products = orderProducts
+      }
+
+      if (isPickup(cart.fulfillmentInfo.type)) {
+         deliveryInfo.pickup.window.approved.startsAt =
+            cart.fulfillmentInfo.slot.from
+         deliveryInfo.pickup.window.approved.endsAt =
+            cart.fulfillmentInfo.slot.to
+      } else {
+         if (cart.fulfillmentInfo.type === 'PREORDER_DELIVERY') {
+            deliveryInfo.dropoff.window.requested.startsAt =
+               cart.fulfillmentInfo.slot.from
+            deliveryInfo.dropoff.window.requested.endsAt =
+               cart.fulfillmentInfo.slot.to
+         } else if (cart.fulfillmentInfo.type === 'ONDEMAND_DELIVERY') {
+            const { mileRange } = await client.request(MILE_RANGE, {
+               id: cart.fulfillmentInfo.slot.mileRangeId
+            })
+            if (
+               !isNull(mileRange) &&
+               'prepTime' in mileRange &&
+               mileRange.prepTime
+            ) {
+               deliveryInfo.dropoff.window.requested.startsAt = moment().toString()
+               deliveryInfo.dropoff.window.requested.endsAt = moment()
+                  .add(mileRange.prepTime, 'm')
+                  .toString()
+            }
          }
-         if ('address' in brand && brand.address) {
-            settings.address =
-               brand.address.length > 0 ? brand.address[0].value : {}
+      }
+
+      deliveryInfo.pickup.pickupInfo = {
+         id: Number(process.env.ORGANIZATION_ID),
+         organizationName: settings.brand.name,
+         organizationPhone: settings.contact.phoneNo,
+         organizationEmail: settings.contact.email,
+         organizationAddress: {
+            line1: settings.address.line1,
+            line2: settings.address.line2,
+            city: settings.address.city,
+            state: settings.address.state,
+            country: settings.address.country,
+            zipcode: settings.address.zipcode,
+            latitude: settings.address.latitude,
+            longitude: settings.address.longitude
          }
-         if ('email' in brand && brand.email) {
-            const email = brand.email.length > 0 ? brand.email[0].value : {}
-            settings.email = email
+      }
+
+      deliveryInfo.return.returnInfo = {
+         id: Number(process.env.ORGANIZATION_ID),
+         organizationName: settings.brand.name,
+         organizationPhone: settings.contact.phoneNo,
+         organizationEmail: settings.contact.email,
+         organizationAddress: {
+            line1: settings.address.line1,
+            line2: settings.address.line2,
+            city: settings.address.city,
+            state: settings.address.state,
+            country: settings.address.country,
+            zipcode: settings.address.zipcode,
+            latitude: settings.address.latitude,
+            longitude: settings.address.longitude
          }
+      }
+
+      let customerInfo = {
+         customerFirstName: '',
+         customerLastName: '',
+         customerEmail: '',
+         customerPhone: ''
+      }
+      if (cart.customerInfo) {
+         customerInfo = cart.customerInfo
+      }
+
+      const customerAddress = {
+         line1: '',
+         line2: '',
+         city: '',
+         state: '',
+         zipcode: '',
+         country: '',
+         notes: '',
+         label: '',
+         landmark: ''
+      }
+
+      if (cart.address) {
+         if ('line1' in cart.address) {
+            customerAddress.line1 = cart.address.line1
+         }
+         if ('line2' in cart.address) {
+            customerAddress.line2 = cart.address.line2
+         }
+         if ('city' in cart.address) {
+            customerAddress.city = cart.address.city
+         }
+         if ('state' in cart.address) {
+            customerAddress.state = cart.address.state
+         }
+         if ('zipcode' in cart.address) {
+            customerAddress.zipcode = cart.address.zipcode
+         }
+         if ('country' in cart.address) {
+            customerAddress.country = cart.address.country
+         }
+         if ('notes' in cart.address) {
+            customerAddress.notes = cart.address.notes
+         }
+         if ('label' in cart.address) {
+            customerAddress.label = cart.address.label
+         }
+         if ('landmark' in cart.address) {
+            customerAddress.landmark = cart.address.landmark
+         }
+      }
+
+      deliveryInfo.dropoff.dropoffInfo = {
+         ...customerInfo,
+         ...(!isPickup(cart.fulfillmentInfo.type) && { customerAddress })
       }
 
       let order = await client.request(CREATE_ORDER, {
@@ -117,6 +267,7 @@ export const take = async (req, res) => {
             cartId: id,
             paymentStatus,
             tax: cart.tax,
+            deliveryInfo,
             brandId: cart.brandId,
             orderStatus: 'PENDING',
             source: cart.cartSource,
@@ -125,256 +276,13 @@ export const take = async (req, res) => {
             keycloakId: customerKeycloakId,
             deliveryPrice: cart.deliveryPrice,
             transactionId: cart.transactionId,
-            fulfillmentType: cart.fulfillmentInfo.type,
-            deliveryInfo: {
-               deliveryId: '',
-               webhookUrl: '',
-               deliveryFee: {
-                  value: '',
-                  unit: ''
-               },
-               tracking: {
-                  location: {
-                     isAvailable: false,
-                     longitude: '',
-                     latitude: ''
-                  },
-                  code: {
-                     isAvailable: false,
-                     value: '',
-                     url: ''
-                  },
-                  sms: {
-                     isAvailable: false
-                  },
-                  eta: ''
-               },
-               orderInfo: {
-                  products: [].concat(...orderProducts)
-               },
-               deliveryRequest: {
-                  status: {
-                     value: 'WAITING',
-                     timeStamp: '',
-                     description: '',
-                     data: {}
-                  },
-                  distance: {
-                     value: 0,
-                     unit: 'mile'
-                  }
-               },
-               assigned: {
-                  status: {
-                     value: 'WAITING',
-                     timeStamp: '',
-                     description: '',
-                     data: {}
-                  },
-                  driverInfo: {
-                     driverFirstName: '',
-                     driverLastName: '',
-                     driverPhone: '',
-                     driverPicture: ''
-                  },
-                  vehicleInfo: {
-                     vehicleType: '',
-                     vehicleMake: '',
-                     vehicleModel: '',
-                     vehicleColor: '',
-                     vehicleLicensePlateNumber: '',
-                     vehicleLicensePlateState: ''
-                  }
-               },
-               pickup: {
-                  window: {
-                     ...(isPickup(cart.fulfillmentInfo.type)
-                        ? {
-                             approved: {
-                                startsAt: moment(
-                                   cart.fulfillmentInfo.slot.from
-                                ),
-                                endsAt: moment(cart.fulfillmentInfo.slot.to)
-                             }
-                          }
-                        : { approved: {} })
-                  },
-                  status: {
-                     value: 'WAITING'
-                  },
-                  confirmation: {
-                     photo: {
-                        data: {},
-                        isRequired: false
-                     },
-                     idProof: {
-                        data: {},
-                        isRequired: false
-                     },
-                     signature: {
-                        data: {},
-                        isRequired: false
-                     }
-                  },
-                  pickupInfo: {
-                     organizationId: process.env.ORGANIZATION_ID,
-                     organizationName: settings.brand.name,
-                     organizationPhone: settings.contact.phoneNo,
-                     organizationEmail: settings.contact.email,
-                     organizationAddress: {
-                        line1: settings.address.line1,
-                        line2: settings.address.line2,
-                        city: settings.address.city,
-                        state: settings.address.state,
-                        country: settings.address.country,
-                        zipcode: settings.address.zip,
-                        latitude: settings.address.lat,
-                        longitude: settings.address.lng
-                     }
-                  }
-               },
-               ...(isPickup(cart.fulfillmentInfo.type)
-                  ? {
-                       dropoff: {
-                          dropoffInfo: {
-                             ...(cart.customerInfo &&
-                                Object.keys(cart.customerInfo).length > 0 && {
-                                   customerEmail:
-                                      cart.customerInfo.customerEmail,
-                                   customerPhone:
-                                      cart.customerInfo.customerPhone,
-                                   customerLastName:
-                                      cart.customerInfo.customerLastName,
-                                   customerFirstName:
-                                      cart.customerInfo.customerFirstName
-                                })
-                          }
-                       }
-                    }
-                  : {
-                       dropoff: {
-                          status: {
-                             value: 'WAITING'
-                          },
-                          window: {
-                             approved: {},
-                             requested: {
-                                startsAt: new Date(
-                                   `${cart.fulfillmentInfo.date} ${cart.fulfillmentInfo.slot.from}`
-                                ),
-                                endsAt: new Date(
-                                   `${cart.fulfillmentInfo.date} ${cart.fulfillmentInfo.slot.to}`
-                                )
-                             }
-                          },
-                          confirmation: {
-                             photo: {
-                                data: {},
-                                isRequired: false
-                             },
-                             idProof: {
-                                data: {},
-                                isRequired: false
-                             },
-                             signature: {
-                                data: {},
-                                isRequired: false
-                             }
-                          },
-                          dropoffInfo: {
-                             ...(cart.customerInfo &&
-                                Object.keys(cart.customerInfo).length > 0 && {
-                                   customerEmail:
-                                      cart.customerInfo.customerEmail,
-                                   customerPhone:
-                                      cart.customerInfo.customerPhone,
-                                   customerLastName:
-                                      cart.customerInfo.customerLastName,
-                                   customerFirstName:
-                                      cart.customerInfo.customerFirstName,
-                                   ...('customerAddress' in cart.customerInfo &&
-                                      cart.customerInfo.customerAddress &&
-                                      Object.keys(
-                                         cart.customerInfo.customerAddress
-                                      ).length > 0 && {
-                                         customerAddress: {
-                                            line1: cart.address.line1,
-                                            line2: cart.address.line2,
-                                            city: cart.address.city,
-                                            state: cart.address.state,
-                                            zipcode: cart.address.zipcode,
-                                            country: cart.address.country,
-                                            notes: cart.address.notes,
-                                            label: cart.address.label,
-                                            landmark: cart.address.landmark
-                                         }
-                                      })
-                                })
-                          }
-                       }
-                    }),
-               return: {
-                  status: {
-                     value: 'WAITING',
-                     timeStamp: '',
-                     description: '',
-                     data: {}
-                  },
-                  window: {
-                     requested: {
-                        id: '',
-                        buffer: '',
-                        startsAt: '',
-                        endsAt: ''
-                     },
-                     approved: {
-                        id: '',
-                        startsAt: '',
-                        endsAt: ''
-                     }
-                  },
-                  confirmation: {
-                     photo: {
-                        isRequired: false,
-                        data: {}
-                     },
-                     signature: {
-                        isRequired: false,
-                        data: {}
-                     },
-                     idProof: {
-                        isRequired: false,
-                        data: {}
-                     }
-                  },
-                  returnInfo: {
-                     organizationId: process.env.ORGANIZATION_ID,
-                     organizationName: settings.brand.name,
-                     organizationPhone: settings.contact.phoneNo,
-                     organizationEmail: settings.contact.email,
-                     organizationAddress: {
-                        line1: settings.address.line1,
-                        line2: settings.address.line2,
-                        city: settings.address.city,
-                        state: settings.address.state,
-                        country: settings.address.country,
-                        zipcode: settings.address.zip,
-                        latitude: settings.address.lat,
-                        longitude: settings.address.lng
-                     }
-                  }
-               }
-            }
+            fulfillmentType: cart.fulfillmentInfo.type
          }
       })
 
       await client.request(UPDATE_ORDER, {
          id: order.createOrder.id,
          _set: {
-            ...(isPickup(cart.fulfillmentInfo.type) && {
-               readyByTimestamp: moment(cart.fulfillmentInfo.slot.from)
-            }),
-            fulfillmentTimestamp: moment(cart.fulfillmentInfo.slot.from),
             deliveryInfo: {
                ...order.createOrder.deliveryInfo,
                orderInfo: {
@@ -404,10 +312,11 @@ export const take = async (req, res) => {
                      orderId: order.createOrder.id
                   })
                default:
-                  throw Error('No such product type exists!')
+                  throw 'No such product type exists!'
             }
          })
       )
+
       await client.request(UPDATE_CART, {
          id,
          status: 'ORDER_PLACED',
@@ -532,13 +441,213 @@ export const handleStatusChange = async (req, res) => {
       })
       return res.status(200).json({ success: true, template, customer, html })
    } catch (error) {
-      console.log(
-         '🚀 ~ file: controllers.js ~ line 945 ~ handleStatusChange ~ error',
-         error
-      )
       return res.status('code' in error && error.code ? error.code : 500).json({
          success: false,
          error
       })
+   }
+}
+
+const deliveryInfo_template = {
+   deliveryId: '',
+   webhookUrl: '',
+   deliveryFee: {
+      value: '',
+      unit: ''
+   },
+   tracking: {
+      location: {
+         isAvailable: false,
+         longitude: '',
+         latitude: ''
+      },
+      code: {
+         isAvailable: false,
+         value: '',
+         url: ''
+      },
+      sms: {
+         isAvailable: false
+      },
+      eta: ''
+   },
+   orderInfo: {
+      products: []
+   },
+   deliveryRequest: {
+      status: {
+         value: 'WAITING',
+         timeStamp: '',
+         description: '',
+         data: {}
+      },
+      distance: {
+         value: 0,
+         unit: 'mile'
+      }
+   },
+   assigned: {
+      status: {
+         value: 'WAITING',
+         timeStamp: '',
+         description: '',
+         data: {}
+      },
+      driverInfo: {
+         driverFirstName: '',
+         driverLastName: '',
+         driverPhone: '',
+         driverPicture: ''
+      },
+      vehicleInfo: {
+         vehicleType: '',
+         vehicleMake: '',
+         vehicleModel: '',
+         vehicleColor: '',
+         vehicleLicensePlateNumber: '',
+         vehicleLicensePlateState: ''
+      }
+   },
+   pickup: {
+      window: {
+         requested: {
+            startsAt: '',
+            endsAt: ''
+         },
+         approved: {
+            startsAt: '',
+            endsAt: ''
+         }
+      },
+      status: {
+         value: 'WAITING'
+      },
+      confirmation: {
+         photo: {
+            data: {},
+            isRequired: false
+         },
+         idProof: {
+            data: {},
+            isRequired: false
+         },
+         signature: {
+            data: {},
+            isRequired: false
+         }
+      },
+      pickupInfo: {
+         organizationId: '',
+         organizationName: '',
+         organizationPhone: '',
+         organizationEmail: '',
+         organizationAddress: {
+            line1: '',
+            line2: '',
+            city: '',
+            state: '',
+            country: '',
+            zipcode: '',
+            latitude: '',
+            longitude: ''
+         }
+      }
+   },
+   dropoff: {
+      status: {
+         value: 'WAITING'
+      },
+      window: {
+         approved: {
+            startsAt: '',
+            endsAt: ''
+         },
+         requested: {
+            startsAt: '',
+            endsAt: ''
+         }
+      },
+      confirmation: {
+         photo: {
+            data: {},
+            isRequired: false
+         },
+         idProof: {
+            data: {},
+            isRequired: false
+         },
+         signature: {
+            data: {},
+            isRequired: false
+         }
+      },
+      dropoffInfo: {
+         customerEmail: '',
+         customerPhone: '',
+         customerLastName: '',
+         customerFirstName: '',
+         customerAddress: {
+            line1: '',
+            line2: '',
+            city: '',
+            state: '',
+            zipcode: '',
+            country: '',
+            notes: '',
+            label: '',
+            landmark: ''
+         }
+      }
+   },
+   return: {
+      status: {
+         value: 'WAITING',
+         timeStamp: '',
+         description: '',
+         data: {}
+      },
+      window: {
+         requested: {
+            id: '',
+            buffer: '',
+            startsAt: '',
+            endsAt: ''
+         },
+         approved: {
+            id: '',
+            startsAt: '',
+            endsAt: ''
+         }
+      },
+      confirmation: {
+         photo: {
+            isRequired: false,
+            data: {}
+         },
+         signature: {
+            isRequired: false,
+            data: {}
+         },
+         idProof: {
+            isRequired: false,
+            data: {}
+         }
+      },
+      returnInfo: {
+         organizationId: process.env.ORGANIZATION_ID,
+         organizationName: '',
+         organizationPhone: '',
+         organizationEmail: '',
+         organizationAddress: {
+            line1: '',
+            line2: '',
+            city: '',
+            state: '',
+            country: '',
+            zipcode: '',
+            latitude: '',
+            longitude: ''
+         }
+      }
    }
 }
