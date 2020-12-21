@@ -131,7 +131,7 @@ const processSimpleRecipeProduct = async ({ data, orderId, modifier }) => {
       cartItem.quantity = data.quantity
       cartItem.discount = data.discount
       cartItem.modifiers = []
-      await hanmethodsdle.simpleRecipe({ product: cartItem, orderId, modifier })
+      await methods.simpleRecipe({ product: cartItem, orderId, modifier })
    } catch (error) {
       throw Error(error)
    }
