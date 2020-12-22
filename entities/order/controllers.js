@@ -338,7 +338,13 @@ export const take = async (req, res) => {
                emailInput: {
                   from: `"${name}" ${email}`,
                   to: cart.customerInfo.customerEmail,
-                  subject: `Order Receipt - ${order.createOrder.id}`,
+                  subject: `Important: You’ve received a new order from ${
+                     customerInfo.customerFirstName
+                  } ${customerInfo.customerLastName}${
+                     customerInfo.customerEmail
+                        ? ` | ${customerInfo.customerEmail}`
+                        : ''
+                  }`,
                   attachments: [],
                   html
                }
