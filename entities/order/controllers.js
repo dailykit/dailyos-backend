@@ -381,7 +381,8 @@ export const handleStatusChange = async (req, res) => {
          type: '',
          name: '',
          email: '',
-         template: {}
+         template: {},
+         subject: ''
       }
 
       if (status === 'DELIVERED') {
@@ -395,6 +396,7 @@ export const handleStatusChange = async (req, res) => {
          template.name = data.name
          template.email = data.email
          template.template = data.template
+         template.subject = `Your order ORD:#${id} from ${data.name} has been delivered`
       } else if (isRejected) {
          if (brand.cancelled_template.length === 0)
             throw {
@@ -407,6 +409,7 @@ export const handleStatusChange = async (req, res) => {
          template.name = data.name
          template.email = data.email
          template.template = data.template
+         template.subject = `Your order ORD:#${id} from ${data.name} has been cancelled`
       }
 
       let html = await fetch_html(template.template, {
@@ -432,11 +435,11 @@ export const handleStatusChange = async (req, res) => {
 
       await client.request(SEND_MAIL, {
          emailInput: {
-            from: `"${template.name}" ${template.email}`,
-            to: customer.email,
-            subject: `Order ${template.type} - ${id}`,
+            html,
+            subject,
             attachments: [],
-            html
+            to: customer.email,
+            from: `"${template.name}" ${template.email}`
          }
       })
       return res.status(200).json({ success: true, template, customer, html })
