@@ -124,23 +124,37 @@ export const FETCH_CART = `
 export const BRAND_ON_DEMAND_SETTING = `
    query brand($id: Int!) {
       brand(id: $id) {
-         brand: onDemandSettings(
+         name: onDemandSettings(
             where: { onDemandSetting: { identifier: { _eq: "Brand Name" } } }
          ) {
-            value
+            name: value(path: "name")
          }
          address: onDemandSettings(
             where: { onDemandSetting: { identifier: { _eq: "Location" } } }
          ) {
-            value
+            line1: value(path: "line1")
+            line2: value(path: "line2")
+            city: value(path: "city")
+            state: value(path: "state")
+            country: value(path: "country")
+            zipcode: value(path: "zipcode")
+            latitude: value(path: "lat")
+            longitude: value(path: "lng")
          }
          contact: onDemandSettings(
             where: { onDemandSetting: { identifier: { _eq: "Contact" } } }
          ) {
-            value
+            email: value(path: "email")
+            phoneNo: value(path: "phoneNo")
          }
-         email: onDemandSettings(where: {onDemandSetting: {identifier: {_eq: "Email Notification"}}}) {
-           value
+         email: onDemandSettings(
+            where: {
+               onDemandSetting: { identifier: { _eq: "Email Notification" } }
+            }
+         ) {
+            name: value(path: "name")
+            email: value(path: "email")
+            template: value(path: "template")
          }
       }
    }
@@ -149,29 +163,45 @@ export const BRAND_ON_DEMAND_SETTING = `
 export const BRAND_SUBSCRIPTION_SETTING = `
    query brand($id: Int!) {
       brand(id: $id) {
-         brand: subscriptionStoreSettings(
+         name: subscriptionStoreSettings(
             where: {
                subscriptionStoreSetting: { identifier: { _eq: "theme-brand" } }
             }
          ) {
-            value
+            name: value(path: "name")
          }
          address: subscriptionStoreSettings(
             where: {
                subscriptionStoreSetting: { identifier: { _eq: "Location" } }
             }
          ) {
-            value
+            line1: value(path: "line1")
+            line2: value(path: "line2")
+            city: value(path: "city")
+            state: value(path: "state")
+            country: value(path: "country")
+            zipcode: value(path: "zipcode")
+            latitude: value(path: "lat")
+            longitude: value(path: "lng")
          }
          contact: subscriptionStoreSettings(
             where: {
                subscriptionStoreSetting: { identifier: { _eq: "Contact" } }
             }
          ) {
-            value
+            email: value(path: "email")
+            phoneNo: value(path: "phoneNo")
          }
-         email: subscriptionStoreSettings(where: {subscriptionStoreSetting: {identifier: {_eq: "Email Notification"}}}) {
-            value
+         email: subscriptionStoreSettings(
+            where: {
+               subscriptionStoreSetting: {
+                  identifier: { _eq: "Email Notification" }
+               }
+            }
+         ) {
+            name: value(path: "name")
+            email: value(path: "email")
+            template: value(path: "template")
          }
       }
    }
@@ -223,6 +253,14 @@ export const CUSTOMER = `
    query customer($keycloakId: String!) {
       customer(keycloakId: $keycloakId) {
          email
+      }
+   }
+`
+export const MILE_RANGE = `
+   query mileRange($id: Int!) {
+      mileRange: mileRangeByPK(id: $id) {
+         id
+         prepTime
       }
    }
 `
