@@ -20,6 +20,8 @@ import {
    NotificationRouter,
    RewardsRouter,
    ModifierRouter,
+   emailParser,
+   ParseurRouter,
    placeAutoComplete,
    placeDetails,
    StoreRouter
@@ -29,7 +31,8 @@ import {
    printKOT,
    getKOTUrls,
    printSachetLabel,
-   printProductLabel
+   printProductLabel,
+   handleThirdPartyOrder
 } from './entities/events'
 
 const app = express()
@@ -68,15 +71,18 @@ app.post('/api/sendmail', sendMail)
 app.use('/api/rewards', RewardsRouter)
 app.get('/api/kot-urls', getKOTUrls)
 app.use('/api/modifier', ModifierRouter)
+app.use('/api/parseur', ParseurRouter)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)
 app.use('/webhook/notification', NotificationRouter)
 app.use('/webhook/occurence', OccurenceRouter)
+app.post('/webhook/parse/email', emailParser)
 
 app.post('/event/print-sachet', printSachetLabel)
 app.post('/event/print-product', printProductLabel)
 app.post('/event/print-kot', printKOT)
+app.post('/event/order/third-party', handleThirdPartyOrder)
 
 app.use('/api/store', StoreRouter)
 
