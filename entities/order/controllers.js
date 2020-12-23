@@ -17,13 +17,15 @@ import {
    UPDATE_ORDER
 } from './graphql/mutations'
 
+import { logger } from '../../utils'
 import { handle, fetch_html } from './functions'
 
 const isPickup = value => ['ONDEMAND_PICKUP', 'PREORDER_PICKUP'].includes(value)
 
 export const take = async (req, res) => {
+   const { id, customerKeycloakId, paymentStatus } = req.body.event.data.new
+   let orderId = ''
    try {
-      const { id, customerKeycloakId, paymentStatus } = req.body.event.data.new
       const { cartByPK: cart } = await client.request(FETCH_CART, {
          id
       })
@@ -262,7 +264,7 @@ export const take = async (req, res) => {
          ...(!isPickup(cart.fulfillmentInfo.type) && { customerAddress })
       }
 
-      let order = await client.request(CREATE_ORDER, {
+      let { createOrder: order } = await client.request(CREATE_ORDER, {
          object: {
             cartId: id,
             paymentStatus,
@@ -280,14 +282,16 @@ export const take = async (req, res) => {
          }
       })
 
+      orderId = order.id
+
       await client.request(UPDATE_ORDER, {
-         id: order.createOrder.id,
+         id: order.id,
          _set: {
             deliveryInfo: {
-               ...order.createOrder.deliveryInfo,
+               ...order.deliveryInfo,
                orderInfo: {
-                  ...order.createOrder.deliveryInfo.orderInfo,
-                  id: order.createOrder.id
+                  ...order.deliveryInfo.orderInfo,
+                  id: order.id
                }
             }
          }
@@ -299,17 +303,17 @@ export const take = async (req, res) => {
                case 'comboProduct':
                   return handle.combo({
                      product,
-                     orderId: order.createOrder.id
+                     orderId: order.id
                   })
                case 'simpleRecipeProduct':
                   return handle.simpleRecipe({
                      product,
-                     orderId: order.createOrder.id
+                     orderId: order.id
                   })
                case 'inventoryProduct':
                   return handle.inventory({
                      product,
-                     orderId: order.createOrder.id
+                     orderId: order.id
                   })
                default:
                   throw 'No such product type exists!'
@@ -320,7 +324,7 @@ export const take = async (req, res) => {
       await client.request(UPDATE_CART, {
          id,
          status: 'ORDER_PLACED',
-         orderId: Number(order.createOrder.id)
+         orderId: Number(order.id)
       })
 
       if (Object.keys(cart.customerInfo).length > 0) {
@@ -331,22 +335,27 @@ export const take = async (req, res) => {
          ) {
             const { name, email, template } = settings.email
             let html = await fetch_html(template, {
-               new: { id: order.createOrder.id }
+               new: { id: order.id }
             })
+
+            let customerFullName =
+               customerInfo.customerFirstName + customerInfo.customerLastName
+                  ? ` ${customerInfo.customerLastName}`
+                  : ''
+
+            let customerEmail = customerInfo.customerEmail
+               ? ` | ${customerInfo.customerEmail}`
+               : ''
+
+            let subject = `Important: You’ve received a new order from ${customerFullName}${customerEmail}`
 
             await client.request(SEND_MAIL, {
                emailInput: {
-                  from: `"${name}" ${email}`,
-                  to: cart.customerInfo.customerEmail,
-                  subject: `Important: You’ve received a new order from ${
-                     customerInfo.customerFirstName
-                  } ${customerInfo.customerLastName}${
-                     customerInfo.customerEmail
-                        ? ` | ${customerInfo.customerEmail}`
-                        : ''
-                  }`,
+                  html,
+                  subject,
                   attachments: [],
-                  html
+                  from: `"${name}" ${email}`,
+                  to: cart.customerInfo.customerEmail
                }
             })
          }
@@ -358,20 +367,27 @@ export const take = async (req, res) => {
       })
    } catch (error) {
       console.log('error', error)
-      return res.status(404).json({ success: false, error: error.message })
+      logger({
+         meta: {
+            cartId: id,
+            order: { id: orderId }
+         },
+         endpoint: '/api/order/take',
+         trace: error
+      })
+      return res.status(404).json({ success: false, error })
    }
 }
 
 export const handleStatusChange = async (req, res) => {
+   const {
+      id = null,
+      brandId = null,
+      keycloakId = '',
+      orderStatus: status = '',
+      isRejected = false
+   } = req.body.event.data.new
    try {
-      const {
-         id = null,
-         brandId = null,
-         keycloakId = '',
-         orderStatus: status = '',
-         isRejected = false
-      } = req.body.event.data.new
-
       if (!id) throw { message: 'Order id is required!', code: 409 }
       if (!status) throw { message: 'Order status is required!', code: 409 }
       if (!brandId) throw { message: 'Brand id is required!', code: 409 }
@@ -450,6 +466,11 @@ export const handleStatusChange = async (req, res) => {
       })
       return res.status(200).json({ success: true, template, customer, html })
    } catch (error) {
+      logger({
+         meta: { order: { id } },
+         endpoint: '/api/order/status',
+         trace: error
+      })
       return res.status('code' in error && error.code ? error.code : 500).json({
          success: false,
          error
