@@ -21,7 +21,10 @@ import {
    RewardsRouter,
    ModifierRouter,
    emailParser,
-   ParseurRouter
+   ParseurRouter,
+   placeAutoComplete,
+   placeDetails,
+   StoreRouter
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -62,6 +65,8 @@ app.use('/api/printer', PrintRouter)
 app.use('/api/rmk-menu', RMKMenuRouter)
 app.use('/api/inventory', WorkOrderRouter)
 app.post('/api/initiate-payment', initiatePayment)
+app.get('/api/place/autocomplete/json', placeAutoComplete)
+app.get('/api/place/details/json', placeDetails)
 app.post('/api/sendmail', sendMail)
 app.use('/api/rewards', RewardsRouter)
 app.get('/api/kot-urls', getKOTUrls)
@@ -78,6 +83,8 @@ app.post('/event/print-sachet', printSachetLabel)
 app.post('/event/print-product', printProductLabel)
 app.post('/event/print-kot', printKOT)
 app.post('/event/order/third-party', handleThirdPartyOrder)
+
+app.use('/api/store', StoreRouter)
 
 app.use((_req, _res, next) => {
    const error = new Error('Not found')
