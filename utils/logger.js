@@ -4,7 +4,7 @@ export const logger = async args => {
    try {
       await axios({
          method: 'POST',
-         url: `http://localhost:5000/api/report/error`,
+         url: `${process.env.PLATFORM_URL}/api/report/error`,
          data: {
             ...args,
             from: {
