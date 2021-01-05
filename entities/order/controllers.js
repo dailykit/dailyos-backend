@@ -1,41 +1,37 @@
-import axios from 'axios'
+import { isEmpty, isNull } from 'lodash'
 import moment from 'moment-timezone'
 import { client } from '../../lib/graphql'
-import { template_compiler } from '../../utils'
 
 import {
-   FETCH_CART,
-   EMAIL_CONFIG,
    CUSTOMER,
+   FETCH_CART,
+   MILE_RANGE,
    ORDER_STATUS_EMAIL,
    BRAND_ON_DEMAND_SETTING,
-   FETCH_INVENTORY_PRODUCT,
-   BRAND_SUBSCRIPTION_SETTING,
-   FETCH_SIMPLE_RECIPE_PRODUCT,
-   FETCH_SIMPLE_RECIPE_PRODUCT_OPTION
+   BRAND_SUBSCRIPTION_SETTING
 } from './graphql/queries'
 import {
    SEND_MAIL,
    UPDATE_CART,
    CREATE_ORDER,
-   UPDATE_ORDER,
-   CREATE_ORDER_SACHET,
-   CREATE_ORDER_MEALKIT_PRODUCT,
-   CREATE_ORDER_INVENTORY_PRODUCT,
-   CREATE_ORDER_READY_TO_EAT_PRODUCT
+   UPDATE_ORDER
 } from './graphql/mutations'
+
+import { logger } from '../../utils'
+import { handle, fetch_html } from './functions'
 
 const isPickup = value => ['ONDEMAND_PICKUP', 'PREORDER_PICKUP'].includes(value)
 
 export const take = async (req, res) => {
+   const { id, customerKeycloakId, paymentStatus } = req.body.event.data.new
+   let orderId = ''
    try {
-      const { id, customerKeycloakId, paymentStatus } = req.body.event.data.new
       const { cartByPK: cart } = await client.request(FETCH_CART, {
          id
       })
 
       if (cart.paymentStatus !== 'SUCCEEDED') {
-         throw Error(`Status[${cart.paymentStatus}]: Payment hasn't succeeded!`)
+         throw `Order has not been paid for yet!`
       }
 
       const orderProducts = await Promise.all(
@@ -65,7 +61,16 @@ export const take = async (req, res) => {
          brand: {
             name: ''
          },
-         address: {},
+         address: {
+            line1: '',
+            line2: '',
+            city: '',
+            state: '',
+            country: '',
+            zipcode: '',
+            latitude: '',
+            longitude: ''
+         },
          contact: {
             phoneNo: '',
             email: ''
@@ -77,46 +82,128 @@ export const take = async (req, res) => {
          }
       }
       if (cart.cartSource === 'a-la-carte') {
-         const { brand = {} } = await client.request(BRAND_ON_DEMAND_SETTING, {
+         const { brand } = await client.request(BRAND_ON_DEMAND_SETTING, {
             id: cart.brandId
          })
-         if ('brand' in brand && brand.brand) {
-            settings.brand = brand.brand.length > 0 ? brand.brand[0].value : {}
-         }
-         if ('contact' in brand && brand.contact) {
-            settings.contact =
-               brand.contact.length > 0 ? brand.contact[0].value : {}
-         }
-         if ('address' in brand && brand.address) {
-            const address =
-               brand.address.length > 0 ? brand.address[0].value : {}
-            settings.address = address
-         }
-         if ('email' in brand && brand.email) {
-            const email = brand.email.length > 0 ? brand.email[0].value : {}
-            settings.email = email
+         if (brand && !isEmpty(brand)) {
+            if (!isEmpty(brand.name)) {
+               settings.brand.name = brand.name[0].name || ''
+            }
+            if (!isEmpty(brand.contact)) {
+               settings.contact.email = brand.contact[0].email || ''
+               settings.contact.phoneNo = brand.contact[0].phoneNo || ''
+            }
+            if (!isEmpty(brand.address)) {
+               settings.address.line1 = brand.address[0].line1 || ''
+               settings.address.line2 = brand.address[0].line2 || ''
+               settings.address.city = brand.address[0].city || ''
+               settings.address.state = brand.address[0].state || ''
+               settings.address.country = brand.address[0].country || ''
+               settings.address.zipcode = brand.address[0].zipcode || ''
+               settings.address.latitude = brand.address[0].latitude || ''
+               settings.address.longitude = brand.address[0].longitude || ''
+            }
+            if (!isEmpty(brand.email)) {
+               settings.email.name = brand.email[0].name || ''
+               settings.email.email = brand.email[0].email || ''
+               settings.email.template = brand.email[0].template || {}
+            }
          }
       } else if (cart.cartSource === 'subscription') {
-         const { brand = {} } = await client.request(
-            BRAND_SUBSCRIPTION_SETTING,
-            {
-               id: cart.brandId
+         const { brand } = await client.request(BRAND_SUBSCRIPTION_SETTING, {
+            id: cart.brandId
+         })
+         if (brand && !isEmpty(brand)) {
+            if (!isEmpty(brand.name)) {
+               settings.brand.name = brand.name[0].name || ''
             }
-         )
-         if ('brand' in brand && brand.brand) {
-            settings.brand = brand.brand.length > 0 ? brand.brand[0].value : {}
+            if (!isEmpty(brand.contact)) {
+               settings.contact.email = brand.contact[0].email || ''
+               settings.contact.phoneNo = brand.contact[0].phoneNo || ''
+            }
+            if (!isEmpty(brand.address)) {
+               settings.address.line1 = brand.address[0].line1 || ''
+               settings.address.line2 = brand.address[0].line2 || ''
+               settings.address.city = brand.address[0].city || ''
+               settings.address.state = brand.address[0].state || ''
+               settings.address.country = brand.address[0].country || ''
+               settings.address.zipcode = brand.address[0].zipcode || ''
+               settings.address.latitude = brand.address[0].latitude || ''
+               settings.address.longitude = brand.address[0].longitude || ''
+            }
+            if (!isEmpty(brand.email)) {
+               settings.email.name = brand.email[0].name || ''
+               settings.email.email = brand.email[0].email || ''
+               settings.email.template = brand.email[0].template || {}
+            }
          }
-         if ('contact' in brand && brand.contact) {
-            settings.contact =
-               brand.contact.length > 0 ? brand.contact[0].value : {}
+      }
+
+      const deliveryInfo = deliveryInfo_template
+
+      if (Array.isArray(orderProducts) && !isEmpty(orderProducts)) {
+         deliveryInfo.orderInfo.products = orderProducts
+      }
+
+      if (isPickup(cart.fulfillmentInfo.type)) {
+         deliveryInfo.pickup.window.approved.startsAt =
+            cart.fulfillmentInfo.slot.from
+         deliveryInfo.pickup.window.approved.endsAt =
+            cart.fulfillmentInfo.slot.to
+      } else {
+         if (cart.fulfillmentInfo.type === 'PREORDER_DELIVERY') {
+            deliveryInfo.dropoff.window.requested.startsAt =
+               cart.fulfillmentInfo.slot.from
+            deliveryInfo.dropoff.window.requested.endsAt =
+               cart.fulfillmentInfo.slot.to
+         } else if (cart.fulfillmentInfo.type === 'ONDEMAND_DELIVERY') {
+            const { mileRange } = await client.request(MILE_RANGE, {
+               id: cart.fulfillmentInfo.slot.mileRangeId
+            })
+            if (
+               !isNull(mileRange) &&
+               'prepTime' in mileRange &&
+               mileRange.prepTime
+            ) {
+               deliveryInfo.dropoff.window.requested.startsAt = moment().toString()
+               deliveryInfo.dropoff.window.requested.endsAt = moment()
+                  .add(mileRange.prepTime, 'm')
+                  .toString()
+            }
          }
-         if ('address' in brand && brand.address) {
-            settings.address =
-               brand.address.length > 0 ? brand.address[0].value : {}
+      }
+
+      deliveryInfo.pickup.pickupInfo = {
+         id: Number(process.env.ORGANIZATION_ID),
+         organizationName: settings.brand.name,
+         organizationPhone: settings.contact.phoneNo,
+         organizationEmail: settings.contact.email,
+         organizationAddress: {
+            line1: settings.address.line1,
+            line2: settings.address.line2,
+            city: settings.address.city,
+            state: settings.address.state,
+            country: settings.address.country,
+            zipcode: settings.address.zipcode,
+            latitude: settings.address.latitude,
+            longitude: settings.address.longitude
          }
-         if ('email' in brand && brand.email) {
-            const email = brand.email.length > 0 ? brand.email[0].value : {}
-            settings.email = email
+      }
+
+      deliveryInfo.return.returnInfo = {
+         id: Number(process.env.ORGANIZATION_ID),
+         organizationName: settings.brand.name,
+         organizationPhone: settings.contact.phoneNo,
+         organizationEmail: settings.contact.email,
+         organizationAddress: {
+            line1: settings.address.line1,
+            line2: settings.address.line2,
+            city: settings.address.city,
+            state: settings.address.state,
+            country: settings.address.country,
+            zipcode: settings.address.zipcode,
+            latitude: settings.address.latitude,
+            longitude: settings.address.longitude
          }
       }
 
@@ -126,55 +213,63 @@ export const take = async (req, res) => {
          customerEmail: '',
          customerPhone: ''
       }
-
       if (cart.customerInfo) {
          customerInfo = cart.customerInfo
       }
 
       const customerAddress = {
-         city: '',
-         label: '',
          line1: '',
          line2: '',
-         notes: '',
+         city: '',
          state: '',
-         country: '',
          zipcode: '',
+         country: '',
+         notes: '',
+         label: '',
          landmark: ''
       }
 
       if (cart.address) {
          if ('line1' in cart.address) {
-            customerAddress.line1 = cart.address.line1 || ''
+            customerAddress.line1 = cart.address.line1
          }
          if ('line2' in cart.address) {
-            customerAddress.line2 = cart.address.line2 || ''
+            customerAddress.line2 = cart.address.line2
          }
          if ('city' in cart.address) {
-            customerAddress.city = cart.address.city || ''
+            customerAddress.city = cart.address.city
          }
          if ('state' in cart.address) {
-            customerAddress.state = cart.address.state || ''
-         }
-         if ('country' in cart.address) {
-            customerAddress.country = cart.address.country || ''
+            customerAddress.state = cart.address.state
          }
          if ('zipcode' in cart.address) {
-            customerAddress.zipcode = cart.address.zipcode || ''
+            customerAddress.zipcode = cart.address.zipcode
+         }
+         if ('country' in cart.address) {
+            customerAddress.country = cart.address.country
+         }
+         if ('notes' in cart.address) {
+            customerAddress.notes = cart.address.notes
          }
          if ('label' in cart.address) {
-            customerAddress.label = cart.address.label || ''
+            customerAddress.label = cart.address.label
          }
          if ('landmark' in cart.address) {
-            customerAddress.landmark = cart.address.landmark || ''
+            customerAddress.landmark = cart.address.landmark
          }
       }
 
-      let order = await client.request(CREATE_ORDER, {
+      deliveryInfo.dropoff.dropoffInfo = {
+         ...customerInfo,
+         ...(!isPickup(cart.fulfillmentInfo.type) && { customerAddress })
+      }
+
+      let { createOrder: order } = await client.request(CREATE_ORDER, {
          object: {
             cartId: id,
             paymentStatus,
             tax: cart.tax,
+            deliveryInfo,
             brandId: cart.brandId,
             orderStatus: 'PENDING',
             source: cart.cartSource,
@@ -185,222 +280,19 @@ export const take = async (req, res) => {
             transactionId: cart.transactionId,
             currency: process.env.CURRENCY || '',
             fulfillmentType: cart.fulfillmentInfo.type,
-            deliveryInfo: {
-               deliveryId: '',
-               webhookUrl: '',
-               deliveryFee: {
-                  value: '',
-                  unit: ''
-               },
-               tracking: {
-                  location: {
-                     isAvailable: false,
-                     longitude: '',
-                     latitude: ''
-                  },
-                  code: {
-                     isAvailable: false,
-                     value: '',
-                     url: ''
-                  },
-                  sms: {
-                     isAvailable: false
-                  },
-                  eta: ''
-               },
-               orderInfo: {
-                  products: [].concat(...orderProducts)
-               },
-               deliveryRequest: {
-                  status: {
-                     value: 'WAITING',
-                     timeStamp: '',
-                     description: '',
-                     data: {}
-                  },
-                  distance: {
-                     value: 0,
-                     unit: 'mile'
-                  }
-               },
-               assigned: {
-                  status: {
-                     value: 'WAITING',
-                     timeStamp: '',
-                     description: '',
-                     data: {}
-                  },
-                  driverInfo: {
-                     driverFirstName: '',
-                     driverLastName: '',
-                     driverPhone: '',
-                     driverPicture: ''
-                  },
-                  vehicleInfo: {
-                     vehicleType: '',
-                     vehicleMake: '',
-                     vehicleModel: '',
-                     vehicleColor: '',
-                     vehicleLicensePlateNumber: '',
-                     vehicleLicensePlateState: ''
-                  }
-               },
-               pickup: {
-                  window: {
-                     ...(isPickup(cart.fulfillmentInfo.type)
-                        ? {
-                             approved: {
-                                startsAt: moment(
-                                   cart.fulfillmentInfo.slot.from
-                                ),
-                                endsAt: moment(cart.fulfillmentInfo.slot.to)
-                             }
-                          }
-                        : { approved: {} })
-                  },
-                  status: {
-                     value: 'WAITING'
-                  },
-                  confirmation: {
-                     photo: {
-                        data: {},
-                        isRequired: false
-                     },
-                     idProof: {
-                        data: {},
-                        isRequired: false
-                     },
-                     signature: {
-                        data: {},
-                        isRequired: false
-                     }
-                  },
-                  pickupInfo: {
-                     organizationId: process.env.ORGANIZATION_ID,
-                     organizationName: settings.brand.name,
-                     organizationPhone: settings.contact.phoneNo,
-                     organizationEmail: settings.contact.email,
-                     organizationAddress: {
-                        line1: settings.address.line1,
-                        line2: settings.address.line2,
-                        city: settings.address.city,
-                        state: settings.address.state,
-                        country: settings.address.country,
-                        zipcode: settings.address.zip,
-                        latitude: settings.address.lat,
-                        longitude: settings.address.lng
-                     }
-                  }
-               },
-               ...(isPickup(cart.fulfillmentInfo.type)
-                  ? {
-                       dropoff: {
-                          dropoffInfo: customerInfo
-                       }
-                    }
-                  : {
-                       dropoff: {
-                          status: {
-                             value: 'WAITING'
-                          },
-                          window: {
-                             approved: {},
-                             requested: {
-                                startsAt: new Date(
-                                   `${cart.fulfillmentInfo.date} ${cart.fulfillmentInfo.slot.from}`
-                                ),
-                                endsAt: new Date(
-                                   `${cart.fulfillmentInfo.date} ${cart.fulfillmentInfo.slot.to}`
-                                )
-                             }
-                          },
-                          confirmation: {
-                             photo: {
-                                data: {},
-                                isRequired: false
-                             },
-                             idProof: {
-                                data: {},
-                                isRequired: false
-                             },
-                             signature: {
-                                data: {},
-                                isRequired: false
-                             }
-                          },
-                          dropoffInfo: {
-                             ...customerInfo,
-                             customerAddress
-                          }
-                       }
-                    }),
-               return: {
-                  status: {
-                     value: 'WAITING',
-                     timeStamp: '',
-                     description: '',
-                     data: {}
-                  },
-                  window: {
-                     requested: {
-                        id: '',
-                        buffer: '',
-                        startsAt: '',
-                        endsAt: ''
-                     },
-                     approved: {
-                        id: '',
-                        startsAt: '',
-                        endsAt: ''
-                     }
-                  },
-                  confirmation: {
-                     photo: {
-                        isRequired: false,
-                        data: {}
-                     },
-                     signature: {
-                        isRequired: false,
-                        data: {}
-                     },
-                     idProof: {
-                        isRequired: false,
-                        data: {}
-                     }
-                  },
-                  returnInfo: {
-                     organizationId: process.env.ORGANIZATION_ID,
-                     organizationName: settings.brand.name,
-                     organizationPhone: settings.contact.phoneNo,
-                     organizationEmail: settings.contact.email,
-                     organizationAddress: {
-                        line1: settings.address.line1,
-                        line2: settings.address.line2,
-                        city: settings.address.city,
-                        state: settings.address.state,
-                        country: settings.address.country,
-                        zipcode: settings.address.zip,
-                        latitude: settings.address.lat,
-                        longitude: settings.address.lng
-                     }
-                  }
-               }
-            }
          }
       })
 
+      orderId = order.id
+
       await client.request(UPDATE_ORDER, {
-         id: order.createOrder.id,
+         id: order.id,
          _set: {
-            ...(isPickup(cart.fulfillmentInfo.type) && {
-               readyByTimestamp: moment(cart.fulfillmentInfo.slot.from)
-            }),
-            fulfillmentTimestamp: moment(cart.fulfillmentInfo.slot.from),
             deliveryInfo: {
-               ...order.createOrder.deliveryInfo,
+               ...order.deliveryInfo,
                orderInfo: {
-                  ...order.createOrder.deliveryInfo.orderInfo,
-                  id: order.createOrder.id
+                  ...order.deliveryInfo.orderInfo,
+                  id: order.id
                }
             }
          }
@@ -410,29 +302,30 @@ export const take = async (req, res) => {
          cart.cartInfo.products.map(product => {
             switch (product.type) {
                case 'comboProduct':
-                  return processCombo({
+                  return handle.combo({
                      product,
-                     orderId: order.createOrder.id
+                     orderId: order.id
                   })
                case 'simpleRecipeProduct':
-                  return processSimpleRecipe({
+                  return handle.simpleRecipe({
                      product,
-                     orderId: order.createOrder.id
+                     orderId: order.id
                   })
                case 'inventoryProduct':
-                  return processInventory({
+                  return handle.inventory({
                      product,
-                     orderId: order.createOrder.id
+                     orderId: order.id
                   })
                default:
-                  throw Error('No such product type exists!')
+                  throw 'No such product type exists!'
             }
          })
       )
+
       await client.request(UPDATE_CART, {
          id,
          status: 'ORDER_PLACED',
-         orderId: Number(order.createOrder.id)
+         orderId: Number(order.id)
       })
 
       if (Object.keys(cart.customerInfo).length > 0) {
@@ -442,17 +335,28 @@ export const take = async (req, res) => {
             Object.keys(settings.email.template).length > 0
          ) {
             const { name, email, template } = settings.email
-            let html = await getHtml(template, {
-               new: { id: order.createOrder.id }
+            let html = await fetch_html(template, {
+               new: { id: order.id }
             })
+
+            let customerFullName =
+               customerInfo.customerFirstName + customerInfo.customerLastName
+                  ? ` ${customerInfo.customerLastName}`
+                  : ''
+
+            let customerEmail = customerInfo.customerEmail
+               ? ` | ${customerInfo.customerEmail}`
+               : ''
+
+            let subject = `Important: You’ve received a new order from ${customerFullName}${customerEmail}`
 
             await client.request(SEND_MAIL, {
                emailInput: {
-                  from: `"${name}" ${email}`,
-                  to: cart.customerInfo.customerEmail,
-                  subject: `Order Receipt - ${order.createOrder.id}`,
+                  html,
+                  subject,
                   attachments: [],
-                  html
+                  from: `"${name}" ${email}`,
+                  to: cart.customerInfo.customerEmail
                }
             })
          }
@@ -464,421 +368,27 @@ export const take = async (req, res) => {
       })
    } catch (error) {
       console.log('error', error)
-      return res.status(404).json({ success: false, error: error.message })
-   }
-}
-
-const processCombo = async ({ product: combo, orderId }) => {
-   try {
-      const repetitions = Array.from({ length: combo.quantity }, (_, v) => v)
-
-      await Promise.all(
-         repetitions.map(async () => {
-            const result = await Promise.all(
-               combo.components.map(product => {
-                  const args = { product, orderId, comboProductId: combo.id }
-                  switch (product.type) {
-                     case 'simpleRecipeProduct':
-                        return processSimpleRecipe(args)
-                     case 'inventoryProduct':
-                        return processInventory(args)
-                     default:
-                        throw Error('No such product type exists!')
-                  }
-               })
-            )
-            return result
-         })
-      )
-
-      return
-   } catch (error) {
-      throw Error(error)
-   }
-}
-
-export const processInventory = async ({
-   product,
-   orderId,
-   modifier = null,
-   comboProductId = null
-}) => {
-   try {
-      const variables = { id: product.id, optionId: { _eq: product.option.id } }
-      const { inventoryProduct } = await client.request(
-         FETCH_INVENTORY_PRODUCT,
-         variables
-      )
-
-      const [productOption] = inventoryProduct.inventoryProductOptions
-
-      const totalQuantity = product.quantity
-         ? product.quantity * productOption.quantity
-         : productOption.quantity
-
-      const operationConfig = {
-         labelTemplateId: null,
-         stationId: null
-      }
-
-      if (productOption.operationConfigId) {
-         if ('labelTemplateId' in productOption.operationConfig) {
-            operationConfig.labelTemplateId =
-               productOption.operationConfig.labelTemplateId
-         }
-         if ('stationId' in productOption.operationConfig) {
-            operationConfig.stationId = productOption.operationConfig.stationId
-         }
-      }
-
-      const { createOrderInventoryProduct } = await client.request(
-         CREATE_ORDER_INVENTORY_PRODUCT,
-         {
-            object: {
-               orderId,
-               quantity: totalQuantity,
-               price: product.totalPrice,
-               assemblyStatus: 'PENDING',
-               inventoryProductId: product.id,
-               ...(productOption.packagingId && {
-                  packagingId: productOption.packagingId
-               }),
-               ...(productOption.instructionCardTemplateId && {
-                  instructionCardTemplateId:
-                     productOption.instructionCardTemplateId
-               }),
-               ...(operationConfig.stationId && {
-                  assemblyStationId: operationConfig.stationId
-               }),
-               ...(operationConfig.labelTemplateId && {
-                  labelTemplateId: operationConfig.labelTemplateId
-               }),
-               ...(comboProductId && { comboProductId }),
-               inventoryProductOptionId: product.option.id,
-               ...(product.customizableProductId && {
-                  customizableProductId: product.customizableProductId
-               }),
-               ...(product.comboProductComponentId && {
-                  comboProductComponentId: product.comboProductComponentId
-               }),
-               ...(product.customizableProductOptionId && {
-                  customizableProductOptionId:
-                     product.customizableProductOptionId
-               }),
-               ...(modifier && modifier.id && { orderModifierId: modifier.id }),
-               ...(Array.isArray(product.modifiers) &&
-                  product.modifiers.length > 0 && {
-                     orderModifiers: {
-                        data: product.modifiers.map(node => ({
-                           data: node
-                        }))
-                     }
-                  })
-            }
-         }
-      )
-
-      let unit = null
-      let processingName = null
-      let ingredientName = null
-
-      if (inventoryProduct.sachetItemId) {
-         unit = inventoryProduct.sachetItem.unit
-         if (inventoryProduct.sachetItem.bulkItemId) {
-            processingName =
-               inventoryProduct.sachetItemId.bulkItem.processingName
-            if (inventoryProduct.sachetItem.bulkItem.supplierItemId) {
-               ingredientName =
-                  inventoryProduct.sachetItem.bulkItem.supplierItem.name
-            }
-         }
-      } else if (inventoryProduct.supplierItemId) {
-         unit = inventoryProduct.supplierItem.unit
-         ingredientName = inventoryProduct.supplierItem.name
-      }
-
-      const count = Array.from({ length: product.quantity }, (_, v) => v)
-      await Promise.all(
-         count.map(async () => {
-            await client.request(CREATE_ORDER_SACHET, {
-               object: {
-                  unit,
-                  processingName,
-                  ingredientName,
-                  status: 'PENDING',
-                  quantity: productOption.quantity,
-                  ...(operationConfig.stationId && {
-                     packingStationId: operationConfig.stationId
-                  }),
-                  sachetItemId: inventoryProduct.sachetItemId,
-                  ...(productOption.packagingId && {
-                     packagingId: productOption.packagingId
-                  }),
-                  ...(operationConfig.labelTemplateId
-                     ? {
-                          labelTemplateId: operationConfig.labelTemplateId
-                       }
-                     : { isLabelled: true }),
-                  orderInventoryProductId: createOrderInventoryProduct.id
-               }
-            })
-         })
-      )
-      return
-   } catch (error) {
-      throw Error(error)
-   }
-}
-
-export const processSimpleRecipe = async ({
-   product,
-   orderId,
-   comboProductId = null,
-   modifier = null
-}) => {
-   try {
-      const variables = { id: product.option.id }
-      const { simpleRecipeProductOption: productOption } = await client.request(
-         FETCH_SIMPLE_RECIPE_PRODUCT,
-         variables
-      )
-
-      const args = {
-         product,
-         orderId,
-         productOption,
-         comboProductId,
-         modifier
-      }
-
-      const count = Array.from({ length: product.quantity }, (_, v) => v)
-      switch (product.option.type) {
-         case 'mealKit': {
-            await Promise.all(count.map(() => processMealKit(args)))
-            return
-         }
-         case 'readyToEat': {
-            await Promise.all(count.map(() => processReadyToEat(args)))
-            return
-         }
-         default:
-            throw Error('No such product type exists!')
-      }
-   } catch (error) {
-      throw Error(error)
-   }
-}
-
-const processMealKit = async data => {
-   const { orderId, product, productOption, comboProductId, modifier } = data
-   try {
-      const { createOrderMealKitProduct } = await client.request(
-         CREATE_ORDER_MEALKIT_PRODUCT,
-         {
-            object: {
-               orderId,
-               assemblyStatus: 'PENDING',
-               price: product.totalPrice,
-               simpleRecipeId: productOption.simpleRecipeProduct.simpleRecipeId,
-               simpleRecipeProductId: product.id,
-               ...(comboProductId && { comboProductId }),
-               simpleRecipeProductOptionId: product.option.id,
-               packagingId: productOption.packagingId,
-               ...(productOption.operationConfigId && {
-                  assemblyStationId: productOption.operationConfig.stationId
-               }),
-               ...(productOption.operationConfigId && {
-                  labelTemplateId: productOption.operationConfig.labelTemplateId
-               }),
-               instructionCardTemplateId:
-                  productOption.instructionCardTemplateId,
-               ...(product.customizableProductId && {
-                  customizableProductId: product.customizableProductId
-               }),
-               ...(product.comboProductComponentId && {
-                  comboProductComponentId: product.comboProductComponentId
-               }),
-               ...(product.customizableProductOptionId && {
-                  customizableProductOptionId:
-                     product.customizableProductOptionId
-               }),
-               ...(modifier && modifier.id && { orderModifierId: modifier.id }),
-               ...(Array.isArray(product.modifiers) &&
-                  product.modifiers.length > 0 && {
-                     orderModifiers: {
-                        data: product.modifiers.map(node => ({
-                           data: node
-                        }))
-                     }
-                  })
-            }
-         }
-      )
-      const variables = { id: product.option.id }
-      const { simpleRecipeProductOption } = await client.request(
-         FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
-         variables
-      )
-
-      const { ingredientSachets } = simpleRecipeProductOption.simpleRecipeYield
-
-      await Promise.all(
-         ingredientSachets.map(async ({ ingredientSachet }) => {
-            try {
-               const {
-                  id,
-                  unit,
-                  quantity,
-                  ingredient,
-                  ingredientProcessing,
-                  liveModeOfFulfillment
-               } = ingredientSachet
-
-               await client.request(CREATE_ORDER_SACHET, {
-                  object: {
-                     unit: unit,
-                     status: 'PENDING',
-                     quantity: quantity,
-                     ingredientSachetId: id,
-                     ingredientName: ingredient.name,
-                     orderMealKitProductId: createOrderMealKitProduct.id,
-                     processingName: ingredientProcessing.processing.name,
-                     ...(liveModeOfFulfillment && {
-                        accuracy: liveModeOfFulfillment.accuracy,
-                        bulkItemId: liveModeOfFulfillment.bulkItemId,
-                        sachetItemId: liveModeOfFulfillment.sachetItemId,
-                        packagingId: liveModeOfFulfillment.packagingId,
-                        packingStationId: liveModeOfFulfillment.stationId,
-                        ...(liveModeOfFulfillment.labelTemplateId
-                           ? {
-                                labelTemplateId:
-                                   liveModeOfFulfillment.labelTemplateId
-                             }
-                           : { isLabelled: true })
-                     })
-                  }
-               })
-            } catch (error) {
-               throw Error(error)
-            }
-         })
-      )
-      return
-   } catch (error) {
-      throw Error(error)
-   }
-}
-
-const processReadyToEat = async data => {
-   const { orderId, product, productOption, comboProductId, modifier } = data
-   try {
-      const { createOrderReadyToEatProduct } = await client.request(
-         CREATE_ORDER_READY_TO_EAT_PRODUCT,
-         {
-            object: {
-               orderId,
-               price: product.totalPrice,
-               simpleRecipeId: productOption.simpleRecipeProduct.simpleRecipeId,
-               simpleRecipeProductId: product.id,
-               ...(comboProductId && { comboProductId }),
-               packagingId: productOption.packagingId,
-               simpleRecipeProductOptionId: product.option.id,
-               ...(productOption.operationConfigId && {
-                  assemblyStationId: productOption.operationConfig.stationId
-               }),
-               ...(productOption.operationConfigId && {
-                  labelTemplateId: productOption.operationConfig.labelTemplateId
-               }),
-               instructionCardTemplateId:
-                  productOption.instructionCardTemplateId,
-               ...(product.customizableProductId && {
-                  customizableProductId: product.customizableProductId
-               }),
-               ...(product.comboProductComponentId && {
-                  comboProductComponentId: product.comboProductComponentId
-               }),
-               ...(product.customizableProductOptionId && {
-                  customizableProductOptionId:
-                     product.customizableProductOptionId
-               }),
-               ...(modifier && modifier.id && { orderModifierId: modifier.id }),
-               ...(Array.isArray(product.modifiers) &&
-                  product.modifiers.length > 0 && {
-                     orderModifiers: {
-                        data: product.modifiers.map(node => ({
-                           data: node
-                        }))
-                     }
-                  })
-            }
-         }
-      )
-
-      const variables = { id: product.option.id }
-      const { simpleRecipeProductOption } = await client.request(
-         FETCH_SIMPLE_RECIPE_PRODUCT_OPTION,
-         variables
-      )
-
-      const { ingredientSachets } = simpleRecipeProductOption.simpleRecipeYield
-
-      await Promise.all(
-         ingredientSachets.map(async ({ ingredientSachet }) => {
-            try {
-               const {
-                  id,
-                  unit,
-                  quantity,
-                  ingredient,
-                  ingredientProcessing,
-                  liveModeOfFulfillment
-               } = ingredientSachet
-
-               await client.request(CREATE_ORDER_SACHET, {
-                  object: {
-                     quantity,
-                     unit: unit,
-                     status: 'PENDING',
-                     ingredientSachetId: id,
-                     ingredientName: ingredient.name,
-                     processingName: ingredientProcessing.processing.name,
-                     orderReadyToEatProductId: createOrderReadyToEatProduct.id,
-                     ...(liveModeOfFulfillment && {
-                        accuracy: liveModeOfFulfillment.accuracy,
-                        bulkItemId: liveModeOfFulfillment.bulkItemId,
-                        sachetItemId: liveModeOfFulfillment.sachetItemId,
-                        packagingId: liveModeOfFulfillment.packagingId,
-                        packingStationId: liveModeOfFulfillment.stationId,
-                        ...(liveModeOfFulfillment.labelTemplateId
-                           ? {
-                                labelTemplateId:
-                                   liveModeOfFulfillment.labelTemplateId
-                             }
-                           : { isLabelled: true })
-                     })
-                  }
-               })
-            } catch (error) {
-               throw Error(error)
-            }
-         })
-      )
-      return
-   } catch (error) {
-      throw Error(error)
+      logger({
+         meta: {
+            cartId: id,
+            order: { id: orderId }
+         },
+         endpoint: '/api/order/take',
+         trace: error
+      })
+      return res.status(404).json({ success: false, error })
    }
 }
 
 export const handleStatusChange = async (req, res) => {
+   const {
+      id = null,
+      brandId = null,
+      keycloakId = '',
+      orderStatus: status = '',
+      isRejected = false
+   } = req.body.event.data.new
    try {
-      const {
-         id = null,
-         brandId = null,
-         keycloakId = '',
-         orderStatus: status = '',
-         isRejected = false
-      } = req.body.event.data.new
-
       if (!id) throw { message: 'Order id is required!', code: 409 }
       if (!status) throw { message: 'Order status is required!', code: 409 }
       if (!brandId) throw { message: 'Brand id is required!', code: 409 }
@@ -894,7 +404,8 @@ export const handleStatusChange = async (req, res) => {
          type: '',
          name: '',
          email: '',
-         template: {}
+         template: {},
+         subject: ''
       }
 
       if (status === 'DELIVERED') {
@@ -908,6 +419,7 @@ export const handleStatusChange = async (req, res) => {
          template.name = data.name
          template.email = data.email
          template.template = data.template
+         template.subject = `Your order ORD:#${id} from ${data.name} has been delivered`
       } else if (isRejected) {
          if (brand.cancelled_template.length === 0)
             throw {
@@ -920,9 +432,10 @@ export const handleStatusChange = async (req, res) => {
          template.name = data.name
          template.email = data.email
          template.template = data.template
+         template.subject = `Your order ORD:#${id} from ${data.name} has been cancelled`
       }
 
-      let html = await getHtml(template.template, {
+      let html = await fetch_html(template.template, {
          new: { id }
       })
 
@@ -945,19 +458,20 @@ export const handleStatusChange = async (req, res) => {
 
       await client.request(SEND_MAIL, {
          emailInput: {
-            from: `"${template.name}" ${template.email}`,
-            to: customer.email,
-            subject: `Order ${template.type} - ${id}`,
+            html,
+            subject,
             attachments: [],
-            html
+            to: customer.email,
+            from: `"${template.name}" ${template.email}`
          }
       })
       return res.status(200).json({ success: true, template, customer, html })
    } catch (error) {
-      console.log(
-         '🚀 ~ file: controllers.js ~ line 945 ~ handleStatusChange ~ error',
-         error
-      )
+      logger({
+         meta: { order: { id } },
+         endpoint: '/api/order/status',
+         trace: error
+      })
       return res.status('code' in error && error.code ? error.code : 500).json({
          success: false,
          error
@@ -965,22 +479,206 @@ export const handleStatusChange = async (req, res) => {
    }
 }
 
-const getHtml = async (template, data) => {
-   try {
-      const parsed = JSON.parse(
-         template_compiler(JSON.stringify(template), data)
-      )
-
-      const { origin } = new URL(process.env.DATA_HUB)
-      const template_data = encodeURI(JSON.stringify(parsed.data))
-      const template_options = encodeURI(JSON.stringify(parsed.template))
-
-      const url = `${origin}/template/?template=${template_options}&data=${template_data}`
-
-      const { data: html } = await axios.get(url)
-      return html
-   } catch (error) {
-      console.log('getHtml -> error', error)
-      throw Error(error.message)
+const deliveryInfo_template = {
+   deliveryId: '',
+   webhookUrl: '',
+   deliveryFee: {
+      value: '',
+      unit: ''
+   },
+   tracking: {
+      location: {
+         isAvailable: false,
+         longitude: '',
+         latitude: ''
+      },
+      code: {
+         isAvailable: false,
+         value: '',
+         url: ''
+      },
+      sms: {
+         isAvailable: false
+      },
+      eta: ''
+   },
+   orderInfo: {
+      products: []
+   },
+   deliveryRequest: {
+      status: {
+         value: 'WAITING',
+         timeStamp: '',
+         description: '',
+         data: {}
+      },
+      distance: {
+         value: 0,
+         unit: 'mile'
+      }
+   },
+   assigned: {
+      status: {
+         value: 'WAITING',
+         timeStamp: '',
+         description: '',
+         data: {}
+      },
+      driverInfo: {
+         driverFirstName: '',
+         driverLastName: '',
+         driverPhone: '',
+         driverPicture: ''
+      },
+      vehicleInfo: {
+         vehicleType: '',
+         vehicleMake: '',
+         vehicleModel: '',
+         vehicleColor: '',
+         vehicleLicensePlateNumber: '',
+         vehicleLicensePlateState: ''
+      }
+   },
+   pickup: {
+      window: {
+         requested: {
+            startsAt: '',
+            endsAt: ''
+         },
+         approved: {
+            startsAt: '',
+            endsAt: ''
+         }
+      },
+      status: {
+         value: 'WAITING'
+      },
+      confirmation: {
+         photo: {
+            data: {},
+            isRequired: false
+         },
+         idProof: {
+            data: {},
+            isRequired: false
+         },
+         signature: {
+            data: {},
+            isRequired: false
+         }
+      },
+      pickupInfo: {
+         organizationId: '',
+         organizationName: '',
+         organizationPhone: '',
+         organizationEmail: '',
+         organizationAddress: {
+            line1: '',
+            line2: '',
+            city: '',
+            state: '',
+            country: '',
+            zipcode: '',
+            latitude: '',
+            longitude: ''
+         }
+      }
+   },
+   dropoff: {
+      status: {
+         value: 'WAITING'
+      },
+      window: {
+         approved: {
+            startsAt: '',
+            endsAt: ''
+         },
+         requested: {
+            startsAt: '',
+            endsAt: ''
+         }
+      },
+      confirmation: {
+         photo: {
+            data: {},
+            isRequired: false
+         },
+         idProof: {
+            data: {},
+            isRequired: false
+         },
+         signature: {
+            data: {},
+            isRequired: false
+         }
+      },
+      dropoffInfo: {
+         customerEmail: '',
+         customerPhone: '',
+         customerLastName: '',
+         customerFirstName: '',
+         customerAddress: {
+            line1: '',
+            line2: '',
+            city: '',
+            state: '',
+            zipcode: '',
+            country: '',
+            notes: '',
+            label: '',
+            landmark: ''
+         }
+      }
+   },
+   return: {
+      status: {
+         value: 'WAITING',
+         timeStamp: '',
+         description: '',
+         data: {}
+      },
+      window: {
+         requested: {
+            id: '',
+            buffer: '',
+            startsAt: '',
+            endsAt: ''
+         },
+         approved: {
+            id: '',
+            startsAt: '',
+            endsAt: ''
+         }
+      },
+      confirmation: {
+         photo: {
+            isRequired: false,
+            data: {}
+         },
+         signature: {
+            isRequired: false,
+            data: {}
+         },
+         idProof: {
+            isRequired: false,
+            data: {}
+         }
+      },
+      returnInfo: {
+         organizationId: process.env.ORGANIZATION_ID,
+         organizationName: '',
+         organizationPhone: '',
+         organizationEmail: '',
+         organizationAddress: {
+            line1: '',
+            line2: '',
+            city: '',
+            state: '',
+            country: '',
+            zipcode: '',
+            latitude: '',
+            longitude: ''
+         }
+      }
    }
 }
