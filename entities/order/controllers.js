@@ -278,7 +278,8 @@ export const take = async (req, res) => {
             keycloakId: customerKeycloakId,
             deliveryPrice: cart.deliveryPrice,
             transactionId: cart.transactionId,
-            fulfillmentType: cart.fulfillmentInfo.type
+            currency: process.env.CURRENCY || '',
+            fulfillmentType: cart.fulfillmentInfo.type,
          }
       })
 
