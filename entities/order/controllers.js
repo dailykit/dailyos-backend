@@ -279,7 +279,7 @@ export const take = async (req, res) => {
             deliveryPrice: cart.deliveryPrice,
             transactionId: cart.transactionId,
             currency: process.env.CURRENCY || '',
-            fulfillmentType: cart.fulfillmentInfo.type,
+            fulfillmentType: cart.fulfillmentInfo.type
          }
       })
 
@@ -325,7 +325,8 @@ export const take = async (req, res) => {
       await client.request(UPDATE_CART, {
          id,
          status: 'ORDER_PLACED',
-         orderId: Number(order.id)
+         orderId: Number(order.id),
+         amount: cart.totalPrice
       })
 
       if (Object.keys(cart.customerInfo).length > 0) {
@@ -339,16 +340,7 @@ export const take = async (req, res) => {
                new: { id: order.id }
             })
 
-            let customerFullName =
-               customerInfo.customerFirstName + customerInfo.customerLastName
-                  ? ` ${customerInfo.customerLastName}`
-                  : ''
-
-            let customerEmail = customerInfo.customerEmail
-               ? ` | ${customerInfo.customerEmail}`
-               : ''
-
-            let subject = `Important: You’ve received a new order from ${customerFullName}${customerEmail}`
+            let subject = `Hey ${customerInfo.customerFirstName}, We've recieved your order.`
 
             await client.request(SEND_MAIL, {
                emailInput: {
