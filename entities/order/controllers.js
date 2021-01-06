@@ -340,16 +340,7 @@ export const take = async (req, res) => {
                new: { id: order.id }
             })
 
-            let customerFullName =
-               customerInfo.customerFirstName + customerInfo.customerLastName
-                  ? ` ${customerInfo.customerLastName}`
-                  : ''
-
-            let customerEmail = customerInfo.customerEmail
-               ? ` | ${customerInfo.customerEmail}`
-               : ''
-
-            let subject = `Important: You’ve received a new order from ${customerFullName}${customerEmail}`
+            let subject = `Hey ${customerInfo.customerFirstName}, We've recieved your order.`
 
             await client.request(SEND_MAIL, {
                emailInput: {
