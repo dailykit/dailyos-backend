@@ -324,9 +324,11 @@ export const take = async (req, res) => {
 
       await client.request(UPDATE_CART, {
          id,
-         status: 'ORDER_PLACED',
-         orderId: Number(order.id),
-         amount: cart.totalPrice
+         _set: {
+            status: 'ORDER_PLACED',
+            orderId: Number(order.id),
+            amount: cart.totalPrice
+         }
       })
 
       if (Object.keys(cart.customerInfo).length > 0) {
