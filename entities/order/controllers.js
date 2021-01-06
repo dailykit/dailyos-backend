@@ -340,7 +340,7 @@ export const take = async (req, res) => {
                new: { id: order.id }
             })
 
-            let subject = `Hey ${customerInfo.customerFirstName}, We've recieved your order.`
+            let subject = `Hey ${customerInfo.customerFirstName}, We've received your order.`
 
             await client.request(SEND_MAIL, {
                emailInput: {
