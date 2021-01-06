@@ -429,6 +429,14 @@ export const handleStatusChange = async (req, res) => {
          template.subject = `Your order ORD:#${id} from ${data.name} has been cancelled`
       }
 
+      if (!template.type)
+         return res
+            .status(200)
+            .json({
+               success: true,
+               message: 'This order status has not been mapped!'
+            })
+
       let html = await fetch_html(template.template, {
          new: { id }
       })
@@ -453,9 +461,9 @@ export const handleStatusChange = async (req, res) => {
       await client.request(SEND_MAIL, {
          emailInput: {
             html,
-            subject,
             attachments: [],
             to: customer.email,
+            subject: template.subject,
             from: `"${template.name}" ${template.email}`
          }
       })
