@@ -31,7 +31,10 @@ export const take = async (req, res) => {
       })
 
       if (cart.paymentStatus !== 'SUCCEEDED') {
-         throw `Order has not been paid for yet!`
+         return res.status(200).json({
+            message: 'Order has not been paid for yet!',
+            success: true
+         })
       }
 
       const orderProducts = await Promise.all(
@@ -430,12 +433,10 @@ export const handleStatusChange = async (req, res) => {
       }
 
       if (!template.type)
-         return res
-            .status(200)
-            .json({
-               success: true,
-               message: 'This order status has not been mapped!'
-            })
+         return res.status(200).json({
+            success: true,
+            message: 'This order status has not been mapped!'
+         })
 
       let html = await fetch_html(template.template, {
          new: { id }
