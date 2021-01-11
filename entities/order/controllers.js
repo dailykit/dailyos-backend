@@ -331,8 +331,7 @@ export const take = async (req, res) => {
          id,
          _set: {
             status: 'ORDER_PLACED',
-            orderId: Number(order.id),
-            amount: cart.totalPrice
+            orderId: Number(order.id)
          }
       })
 
