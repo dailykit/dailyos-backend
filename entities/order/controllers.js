@@ -271,9 +271,11 @@ export const take = async (req, res) => {
          object: {
             cartId: id,
             paymentStatus,
+            tip: cart.tip,
             tax: cart.tax,
             deliveryInfo,
             brandId: cart.brandId,
+            discount: cart.discount,
             orderStatus: 'PENDING',
             source: cart.cartSource,
             amountPaid: cart.totalPrice,
