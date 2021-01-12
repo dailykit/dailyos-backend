@@ -24,7 +24,8 @@ import {
    ParseurRouter,
    placeAutoComplete,
    placeDetails,
-   StoreRouter
+   StoreRouter,
+   getDistance
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -67,6 +68,7 @@ app.use('/api/inventory', WorkOrderRouter)
 app.post('/api/initiate-payment', initiatePayment)
 app.get('/api/place/autocomplete/json', placeAutoComplete)
 app.get('/api/place/details/json', placeDetails)
+app.get('/api/distance-matrix', getDistance)
 app.post('/api/sendmail', sendMail)
 app.use('/api/rewards', RewardsRouter)
 app.get('/api/kot-urls', getKOTUrls)

@@ -203,3 +203,21 @@ export const placeDetails = async (req, res) => {
       })
    }
 }
+
+export const getDistance = async (req, res) => {
+   try {
+      const { key, lat1, lon1, lat2, lon2 } = req.body
+      if (key && lat1 && lon1 && lat2 && lon2) {
+         const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${lat1},${lon1}&destinations=${lat2},${lon2}&key=${key}`
+         const response = await axios.get(url)
+         return res.json(response.data)
+      } else {
+         throw Error('No key or coordinates provided!')
+      }
+   } catch (err) {
+      return res.status(400).json({
+         success: false,
+         message: err.message
+      })
+   }
+}
