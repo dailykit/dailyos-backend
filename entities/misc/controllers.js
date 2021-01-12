@@ -208,7 +208,7 @@ export const getDistance = async (req, res) => {
    try {
       const { key, lat1, lon1, lat2, lon2 } = req.body
       if (key && lat1 && lon1 && lat2 && lon2) {
-         const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${lat1},${lon1}&destinations=${lat2},${lon2}&key=${key}`
+         const url = `https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=${lat1},${lon1}&destinations=${lat2},${lon2}&key=${key}`
          const response = await axios.get(url)
          return res.json(response.data)
       } else {
