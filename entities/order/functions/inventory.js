@@ -46,7 +46,7 @@ export default async function ({
             object: {
                orderId,
                quantity: totalQuantity,
-               price: product.totalPrice,
+               price: product.unitPrice,
                assemblyStatus: 'PENDING',
                inventoryProductId: product.id,
                ...(productOption.packagingId && {

@@ -47,14 +47,14 @@ export const take = async (req, res) => {
                         name,
                         type,
                         quantity,
-                        totalPrice: price
+                        unitPrice: price
                      } = product
                      return { id, name, type, price: price * 100, quantity }
                   })
                )
                return result
             } else {
-               const { id, name, type, totalPrice: price, quantity } = product
+               const { id, name, type, unitPrice: price, quantity } = product
                return { id, name, type, price: price * 100, quantity }
             }
          })

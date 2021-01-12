@@ -14,7 +14,7 @@ export default async function (data) {
          {
             object: {
                orderId,
-               price: product.totalPrice,
+               price: product.unitPrice,
                simpleRecipeId: productOption.simpleRecipeProduct.simpleRecipeId,
                simpleRecipeProductId: product.id,
                ...(comboProductId && { comboProductId }),
