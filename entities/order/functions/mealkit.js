@@ -15,7 +15,7 @@ export default async function (data) {
             object: {
                orderId,
                assemblyStatus: 'PENDING',
-               price: product.totalPrice,
+               price: product.unitPrice,
                simpleRecipeId: productOption.simpleRecipeProduct.simpleRecipeId,
                simpleRecipeProductId: product.id,
                ...(comboProductId && { comboProductId }),

@@ -103,6 +103,7 @@ export const FETCH_CART = `
          cartInfo
          orderId
          isValid
+         discount
          cartSource
          taxPercent
          totalPrice

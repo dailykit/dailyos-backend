@@ -31,7 +31,10 @@ export const take = async (req, res) => {
       })
 
       if (cart.paymentStatus !== 'SUCCEEDED') {
-         throw `Order has not been paid for yet!`
+         return res.status(200).json({
+            message: 'Order has not been paid for yet!',
+            success: true
+         })
       }
 
       const orderProducts = await Promise.all(
@@ -44,14 +47,14 @@ export const take = async (req, res) => {
                         name,
                         type,
                         quantity,
-                        totalPrice: price
+                        unitPrice: price
                      } = product
                      return { id, name, type, price: price * 100, quantity }
                   })
                )
                return result
             } else {
-               const { id, name, type, totalPrice: price, quantity } = product
+               const { id, name, type, unitPrice: price, quantity } = product
                return { id, name, type, price: price * 100, quantity }
             }
          })
@@ -268,9 +271,11 @@ export const take = async (req, res) => {
          object: {
             cartId: id,
             paymentStatus,
+            tip: cart.tip,
             tax: cart.tax,
             deliveryInfo,
             brandId: cart.brandId,
+            discount: cart.discount,
             orderStatus: 'PENDING',
             source: cart.cartSource,
             amountPaid: cart.totalPrice,
@@ -324,9 +329,10 @@ export const take = async (req, res) => {
 
       await client.request(UPDATE_CART, {
          id,
-         status: 'ORDER_PLACED',
-         orderId: Number(order.id),
-         amount: cart.totalPrice
+         _set: {
+            status: 'ORDER_PLACED',
+            orderId: Number(order.id)
+         }
       })
 
       if (Object.keys(cart.customerInfo).length > 0) {
@@ -427,6 +433,12 @@ export const handleStatusChange = async (req, res) => {
          template.subject = `Your order ORD:#${id} from ${data.name} has been cancelled`
       }
 
+      if (!template.type)
+         return res.status(200).json({
+            success: true,
+            message: 'This order status has not been mapped!'
+         })
+
       let html = await fetch_html(template.template, {
          new: { id }
       })
@@ -451,9 +463,9 @@ export const handleStatusChange = async (req, res) => {
       await client.request(SEND_MAIL, {
          emailInput: {
             html,
-            subject,
             attachments: [],
             to: customer.email,
+            subject: template.subject,
             from: `"${template.name}" ${template.email}`
          }
       })
