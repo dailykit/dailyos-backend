@@ -66,3 +66,11 @@ export const UPDATE_OCCURENCE_CUSTOMER = `
       }
    }
 `
+export const SEND_MAIL = `
+   mutation sendEmail($emailInput: EmailInput!) {
+      sendEmail(emailInput: $emailInput) {
+         message
+         success
+      }
+   }
+`

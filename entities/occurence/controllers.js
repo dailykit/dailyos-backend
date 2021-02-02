@@ -1,15 +1,15 @@
 import axios from 'axios'
-import request from 'graphql-request'
 import moment from 'moment'
 import { RRule } from 'rrule'
 import { client } from '../../lib/graphql'
-import { GET_SES_DOMAIN } from '../misc/graphql'
 import {
    UPDATE_CART,
    UPDATE_SUBSCRIPTION,
    INSERT_SUBS_OCCURENCES,
    UPDATE_OCCURENCE_CUSTOMER,
-   GET_REMINDER_SETTINGS
+   GET_REMINDER_SETTINGS,
+   GET_CUSTOMERS_EMAIL,
+   GET_TEMPLATE_SETTINGS
 } from './graphql'
 
 export const create = async (req, res) => {
@@ -141,7 +141,7 @@ export const createScheduledEvent = async (req, res) => {
          }
       })
 
-      const response = await Promise.all(
+      await Promise.all(
          dates.map(item =>
             axios({
                url,
@@ -161,6 +161,8 @@ export const createScheduledEvent = async (req, res) => {
                      schedule_at: item + 'Z',
                      payload: {
                         ...req.body.event.data.new,
+                        ...reminderSettings,
+                        subscriptionOccurenceId: id,
                         reminderTime: item
                      },
                      headers: []
@@ -169,7 +171,6 @@ export const createScheduledEvent = async (req, res) => {
             })
          )
       )
-
       return res.status(200).json({
          success: true,
          message: 'Successfully created scheduled events and reminders!'
@@ -181,5 +182,53 @@ export const createScheduledEvent = async (req, res) => {
 }
 
 export const reminderMail = async (req, res) => {
-   //
+   try {
+      const { subscriptionOccurenceId, template } = req.body.payload
+      const {
+         subscriptionOccurences: [
+            {
+               subscription: { brand_customers }
+            }
+         ]
+      } = await client.request(GET_CUSTOMERS_EMAIL, {
+         subscriptionOccurenceId
+      })
+      const {
+         brands_brand_subscriptionStoreSetting: [{ value }]
+      } = await client.request(GET_TEMPLATE_SETTINGS, {
+         identifier: template
+      })
+
+      // Now we have the array of emails, and template Settings.
+      console.log(brand_customers, value)
+
+      // Get the template from template service using template settings and then the send emails to every person.
+
+      return res.status(200).json({
+         success: true,
+         message: 'Successfully sent the mail'
+      })
+   } catch (error) {
+      console.log('Reminder email -> error', error)
+      return res.status(400).json({ success: false, error: error.message })
+   }
 }
+
+// const getHtml = async (template, data) => {
+//    try {
+//       const parsed = JSON.parse(
+//          template_compiler(JSON.stringify(template), data)
+//       )
+
+//       const { origin } = new URL(process.env.DATA_HUB)
+//       const template_data = encodeURI(JSON.stringify(parsed.data))
+//       const template_options = encodeURI(JSON.stringify(parsed.template))
+
+//       const url = `${origin}/template/?template=${template_options}&data=${template_data}`
+
+//       const { data: html } = await axios.get(url)
+//       return html
+//    } catch (error) {
+//       throw Error(error.message)
+//    }
+// }
