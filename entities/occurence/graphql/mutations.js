@@ -4,7 +4,7 @@ export const INSERT_SUBS_OCCURENCES = `
    ) {
       insertSubscriptionOccurences(
          objects: $objects, 
-         on_conflict: {constraint: subscriptionOccurence_id_key, update_columns: []}
+         on_conflict: {constraint: subscriptionOccurence_pkey, update_columns: []}
       ) {
          affected_rows
       }
