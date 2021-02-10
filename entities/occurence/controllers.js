@@ -43,13 +43,13 @@ export const create = async (req, res) => {
                   .hours(hour)
                   .minutes(minute)
                   .seconds(seconds)
-                  .format('YYYY-MM-DD hh:mm:ss'),
+                  .format('YYYY-MM-DD HH:mm:ss'),
                startTimeStamp: moment(occurence)
                   .subtract(startTime.value, startTime.unit)
                   .hours(hour)
                   .minutes(minute)
                   .seconds(seconds)
-                  .format('YYYY-MM-DD hh:mm:ss')
+                  .format('YYYY-MM-DD HH:mm:ss')
             }
          })
       )
