@@ -30,6 +30,7 @@ export const UPDATE_CART = `
    ) {
       updateCart(
          where: {
+            status: { _eq: "PENDING" }
             subscriptionOccurenceCustomers: {
                isSkipped: { _eq: false }
                subscriptionOccurence: {
