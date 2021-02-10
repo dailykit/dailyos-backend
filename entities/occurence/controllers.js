@@ -71,11 +71,23 @@ export const create = async (req, res) => {
 
 export const manageOccurence = async (req, res) => {
    try {
-      const { id, cutoffTimeStamp } = JSON.parse(req.body.payload)
+      const node = {
+         id: null,
+         cutoffTimeStamp: null
+      }
+      if (typeof req.body.payload === 'string') {
+         const { id, cutoffTimeStamp } = JSON.parse(req.body.payload)
+         node.id = id
+         node.cutoffTimeStamp = cutoffTimeStamp
+      } else {
+         const { id, cutoffTimeStamp } = req.body.payload
+         node.id = id
+         node.cutoffTimeStamp = cutoffTimeStamp
+      }
 
       await client.request(UPDATE_OCCURENCE_CUSTOMER, {
-         subscriptionOccurenceId: { _eq: id },
-         cutoffTimeStamp: { _eq: cutoffTimeStamp },
+         subscriptionOccurenceId: { _eq: node.id },
+         cutoffTimeStamp: { _eq: node.cutoffTimeStamp },
          _set: {
             isSkipped: true
          }
@@ -83,8 +95,8 @@ export const manageOccurence = async (req, res) => {
 
       await client.request(UPDATE_CART, {
          _set: { status: 'PROCESS' },
-         subscriptionOccurenceId: { _eq: id },
-         cutoffTimeStamp: { _eq: cutoffTimeStamp }
+         subscriptionOccurenceId: { _eq: node.id },
+         cutoffTimeStamp: { _eq: node.cutoffTimeStamp }
       })
 
       return res.status(200).json({
