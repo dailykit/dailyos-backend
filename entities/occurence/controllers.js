@@ -21,7 +21,8 @@ export const create = async (req, res) => {
          leadTime,
          startDate,
          startTime,
-         cutOffTime
+         cutOffTime,
+         defaultSubscriptionAutoSelectOption
       } = req.body.event.data.new
 
       const [hour, minute, seconds] = cutOffTime.split(':')
@@ -39,6 +40,9 @@ export const create = async (req, res) => {
          occurences.map(occurence => {
             return {
                subscriptionId: id,
+               ...(Boolean(defaultSubscriptionAutoSelectOption) && {
+                  subscriptionAutoSelectOption: defaultSubscriptionAutoSelectOption
+               }),
                fulfillmentDate: moment(occurence).format('YYYY-MM-DD'),
                cutoffTimeStamp: moment(occurence)
                   .subtract(leadTime.value, leadTime.unit)
