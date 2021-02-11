@@ -12,8 +12,9 @@ export const GET_CUSTOMERS_EMAIL = `
         subscriptionOccurences(where: {id: {_eq: $subscriptionOccurenceId}}) {
             subscription {
                 brand_customers(where: {_not: {subscriptionOccurences: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}}}) {
+                    id
                     customer {
-                    email
+                        email
                     }
                 }
             }

@@ -2,6 +2,7 @@ import axios from 'axios'
 import moment from 'moment'
 import { RRule } from 'rrule'
 import { client } from '../../lib/graphql'
+import { template_compiler } from '../../utils'
 import {
    UPDATE_CART,
    UPDATE_SUBSCRIPTION,
@@ -9,7 +10,8 @@ import {
    UPDATE_OCCURENCE_CUSTOMER,
    GET_REMINDER_SETTINGS,
    GET_CUSTOMERS_EMAIL,
-   GET_TEMPLATE_SETTINGS
+   GET_TEMPLATE_SETTINGS,
+   SEND_MAIL
 } from './graphql'
 
 export const create = async (req, res) => {
@@ -193,16 +195,38 @@ export const reminderMail = async (req, res) => {
       } = await client.request(GET_CUSTOMERS_EMAIL, {
          subscriptionOccurenceId
       })
+
       const {
          brands_brand_subscriptionStoreSetting: [{ value }]
       } = await client.request(GET_TEMPLATE_SETTINGS, {
          identifier: template
       })
 
-      // Now we have the array of emails, and template Settings.
-      console.log(brand_customers, value)
+      await Promise.all(
+         brand_customers.map(async customer => {
+            try {
+               let html = await getHtml(value.template, {
+                  data: {
+                     brand_customerId: customer.id,
+                     subscriptionOccurenceId
+                  }
+               })
 
-      // Get the template from template service using template settings and then the send emails to every person.
+               await client.request(SEND_MAIL, {
+                  emailInput: {
+                     from: value.email,
+                     to: customer.customer.email,
+                     subject:
+                        'REMINDER: Your weekly box is waiting for your meal selection.',
+                     attachments: [],
+                     html
+                  }
+               })
+            } catch (error) {
+               throw Error(error.message)
+            }
+         })
+      )
 
       return res.status(200).json({
          success: true,
@@ -214,21 +238,20 @@ export const reminderMail = async (req, res) => {
    }
 }
 
-// const getHtml = async (template, data) => {
-//    try {
-//       const parsed = JSON.parse(
-//          template_compiler(JSON.stringify(template), data)
-//       )
+const getHtml = async (template, data) => {
+   try {
+      const parsed = JSON.parse(
+         template_compiler(JSON.stringify(template), data)
+      )
+      const { origin } = new URL(process.env.DATA_HUB)
+      const template_data = encodeURI(JSON.stringify(parsed.data))
+      const template_options = encodeURI(JSON.stringify(parsed.template))
 
-//       const { origin } = new URL(process.env.DATA_HUB)
-//       const template_data = encodeURI(JSON.stringify(parsed.data))
-//       const template_options = encodeURI(JSON.stringify(parsed.template))
+      const url = `${origin}/template/?template=${template_options}&data=${template_data}`
 
-//       const url = `${origin}/template/?template=${template_options}&data=${template_data}`
-
-//       const { data: html } = await axios.get(url)
-//       return html
-//    } catch (error) {
-//       throw Error(error.message)
-//    }
-// }
+      const { data: html } = await axios.get(url)
+      return html
+   } catch (error) {
+      throw Error(error.message)
+   }
+}
