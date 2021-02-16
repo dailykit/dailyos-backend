@@ -8,18 +8,26 @@ export const GET_REMINDER_SETTINGS = `
     }
 `
 export const GET_CUSTOMERS_EMAIL = `
-    query customersEmail($subscriptionOccurenceId: Int!) {
-        subscriptionOccurences(where: {id: {_eq: $subscriptionOccurenceId}}) {
-            subscription {
-                brand_customers(where: {_not: {subscriptionOccurences: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}}}) {
-                    id
-                    customer {
-                        email
-                    }
-                }
-            }
+query customersEmail($subscriptionOccurenceId: Int!) {
+  subscriptionOccurences(where: {id: {_eq: $subscriptionOccurenceId}}) {
+    subscription {
+      brand_customers {
+        id
+        isAutoSelectOptOut
+        customer {
+          email
+          subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}) {
+            subscriptionOccurenceId
+            isAuto
+            orderCartId
+            isSkipped
+          }
         }
+      }
     }
+  }
+}
+
 `
 export const GET_TEMPLATE_SETTINGS = `
     query getTemplateSettings($identifier: String! ) {

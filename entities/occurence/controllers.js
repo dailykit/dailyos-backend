@@ -121,10 +121,8 @@ export const createScheduledEvent = async (req, res) => {
       const { id, cutoffTimeStamp } = req.body.event.data.new
       const {
          subscriptionOccurences: [
-            {
-               subscription: { reminderSettings }
-            }
-         ]
+            { subscription: { reminderSettings = {} } = {} }
+         ] = []
       } = await client.request(GET_REMINDER_SETTINGS, {
          id
       })
@@ -201,19 +199,46 @@ export const createScheduledEvent = async (req, res) => {
 
 export const reminderMail = async (req, res) => {
    try {
+      /*
+                  cart exists
+                     true
+                        isAuto
+                           true
+                              // reminder email
+                                 we selected, change as required
+                           false
+                              // reminder email
+                                 payment will be deducted for this cart
+                     false
+                        has customer opted out
+                           true
+                              // reminder email
+                                 you havent selected any product for this week
+                           false
+                              has option
+                                 true
+                                    check auto selection option => products
+                                       fs.readfile
+                                       first 2 from array
+                                    create cart
+                                       isAuto -> true
+                                       // reminder email
+                                          we selected, change as required
+                                 false
+                                    // reminder email
+                                       you havent selected any product for this week
+               */
       const { subscriptionOccurenceId, template } = req.body.payload
       const {
          subscriptionOccurences: [
-            {
-               subscription: { brand_customers }
-            }
-         ]
+            { subscription: { brand_customers = [] } = {} }
+         ] = []
       } = await client.request(GET_CUSTOMERS_EMAIL, {
          subscriptionOccurenceId
       })
 
       const {
-         brands_brand_subscriptionStoreSetting: [{ value }]
+         brands_brand_subscriptionStoreSetting: [{ value = {} }] = []
       } = await client.request(GET_TEMPLATE_SETTINGS, {
          identifier: template
       })
@@ -221,6 +246,19 @@ export const reminderMail = async (req, res) => {
       await Promise.all(
          brand_customers.map(async customer => {
             try {
+               // Change template.name
+               if (customer.customer.subscriptionOccurences.length !== 0) {
+                  // Cart exists
+               } else {
+                  // Cart doesn't exist
+                  if (customer.isAutoSelectOptOut) {
+                     // Has opted out from automatically creating the cart
+                     // reminder email
+                     // you havent selected any product for this week
+                  } else {
+                     // create cart, set isAuto to true, reminder email
+                  }
+               }
                let html = await getHtml(value.template, {
                   data: {
                      brand_customerId: customer.id,
