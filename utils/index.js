@@ -1,5 +1,6 @@
 export * from './createUrl'
 export * from './listS3Files'
 export * from './uploadFile'
-export * from './templateCompiler'
+export * from './template'
 export * from './logger'
+export * from './evalTime'

@@ -2,16 +2,17 @@ import axios from 'axios'
 import moment from 'moment'
 import { RRule } from 'rrule'
 import { client } from '../../lib/graphql'
-import { template_compiler } from '../../utils'
+import { getHtml, evalTime } from '../../utils'
 import {
    UPDATE_CART,
    UPDATE_SUBSCRIPTION,
    INSERT_SUBS_OCCURENCES,
    UPDATE_OCCURENCE_CUSTOMER,
    GET_REMINDER_SETTINGS,
-   GET_CUSTOMERS_EMAIL,
+   GET_CUSTOMERS_DETAILS,
    GET_TEMPLATE_SETTINGS,
-   SEND_MAIL
+   SEND_MAIL,
+   CREATE_CART
 } from './graphql'
 
 export const create = async (req, res) => {
@@ -215,25 +216,21 @@ export const reminderMail = async (req, res) => {
                               // reminder email
                                  you havent selected any product for this week
                            false
-                              has option
-                                 true
-                                    check auto selection option => products
-                                       fs.readfile
-                                       first 2 from array
-                                    create cart
-                                       isAuto -> true
-                                       // reminder email
-                                          we selected, change as required
-                                 false
-                                    // reminder email
-                                       you havent selected any product for this week
+                              check auto selection option => products
+                                 fs.readfile
+                                 first 2 from array
+                              create cart
+                                 isAuto -> true
+                                 // reminder email
+                                    we selected, change as required
+                                 
                */
       const { subscriptionOccurenceId, template } = req.body.payload
       const {
          subscriptionOccurences: [
-            { subscription: { brand_customers = [] } = {} }
+            { subscription: { availableZipcodes, brand_customers = [] } = {} }
          ] = []
-      } = await client.request(GET_CUSTOMERS_EMAIL, {
+      } = await client.request(GET_CUSTOMERS_DETAILS, {
          subscriptionOccurenceId
       })
 
@@ -246,22 +243,41 @@ export const reminderMail = async (req, res) => {
       await Promise.all(
          brand_customers.map(async customer => {
             try {
-               // Change template.name
                if (customer.customer.subscriptionOccurences.length !== 0) {
                   // Cart exists
+                  const {
+                     isAuto,
+                     orderCartId,
+                     isSkipped
+                  } = customer.customer.subscriptionOccurences[0]
+
+                  if (isAuto) {
+                     // Cart is Created by us
+                  } else {
+                     if (isSkipped === false && orderCartId) {
+                        // Cart is Created by them
+                     } else {
+                        // Skipped the week
+                     }
+                  }
                } else {
                   // Cart doesn't exist
                   if (customer.isAutoSelectOptOut) {
-                     // Has opted out from automatically creating the cart
-                     // reminder email
-                     // you havent selected any product for this week
+                     // Doesn't have option to creat cart
                   } else {
                      // create cart, set isAuto to true, reminder email
+                     createCart({
+                        ...availableZipcodes,
+                        ...customer,
+                        subscriptionOccurenceId,
+                        isAuto: true
+                     })
                   }
                }
+
                let html = await getHtml(value.template, {
                   data: {
-                     brand_customerId: customer.id,
+                     brand_customerId: customer.brandCustomerId,
                      subscriptionOccurenceId
                   }
                })
@@ -292,20 +308,72 @@ export const reminderMail = async (req, res) => {
    }
 }
 
-const getHtml = async (template, data) => {
-   try {
-      const parsed = JSON.parse(
-         template_compiler(JSON.stringify(template), data)
+const createCart = async data => {
+   console.log(data)
+   const {
+      isAuto,
+      deliveryTime,
+      deliveryPrice,
+      brandCustomerId,
+      subscriptionAddressId,
+      subscriptionOccurenceId,
+      subscriptionPaymentMethodId,
+      customer: {
+         id,
+         keycloakId,
+         email,
+         platform_customer,
+         subscriptionOccurences
+      }
+   } = data
+
+   const defaultAddress =
+      platform_customer &&
+      platform_customer.customerAddresses.filter(
+         address => address.id === subscriptionAddressId
       )
-      const { origin } = new URL(process.env.DATA_HUB)
-      const template_data = encodeURI(JSON.stringify(parsed.data))
-      const template_options = encodeURI(JSON.stringify(parsed.template))
 
-      const url = `${origin}/template/?template=${template_options}&data=${template_data}`
-
-      const { data: html } = await axios.get(url)
-      return html
-   } catch (error) {
-      throw Error(error.message)
-   }
+   await client.request(CREATE_CART, {
+      object: {
+         status: 'PENDING',
+         customerId: id,
+         paymentStatus: 'PENDING',
+         cartInfo: {},
+         ...(subscriptionPaymentMethodId && {
+            paymentId: subscriptionPaymentMethodId
+         }),
+         cartSource: 'subscription',
+         address: defaultAddress,
+         customerKeycloakId: keycloakId,
+         subscriptionOccurenceId,
+         stripeCustomerId:
+            platform_customer && platform_customer.stripeCustomerId,
+         customerInfo: {
+            customerEmail: platform_customer.email || '',
+            customerPhone: platform_customer.phoneNumber || '',
+            customerLastName: platform_customer.lastName || '',
+            customerFirstName: platform_customer.firstName || ''
+         },
+         fulfillmentInfo: {
+            type: 'PREORDER_DELIVERY',
+            slot: {
+               from: evalTime(
+                  fulfillmentDate,
+                  deliveryTime && deliveryTime.from
+               ),
+               to: evalTime(fulfillmentDate, deliveryTime && deliveryTime.to)
+            }
+         },
+         subscriptionOccurenceCustomers: {
+            data: [
+               {
+                  isSkipped: false,
+                  keycloakId,
+                  subscriptionOccurenceId,
+                  isAuto
+               }
+            ]
+         }
+      }
+   })
 }

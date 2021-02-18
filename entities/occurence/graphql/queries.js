@@ -7,15 +7,42 @@ export const GET_REMINDER_SETTINGS = `
         }
     }
 `
-export const GET_CUSTOMERS_EMAIL = `
+export const GET_CUSTOMERS_DETAILS = `
 query customersEmail($subscriptionOccurenceId: Int!) {
   subscriptionOccurences(where: {id: {_eq: $subscriptionOccurenceId}}) {
     subscription {
+      availableZipcodes {
+         deliveryTime
+         deliveryPrice
+      }
       brand_customers {
-        id
+        brandCustomerId: id
         isAutoSelectOptOut
+        subscriptionAddressId
+        subscriptionPaymentMethodId
         customer {
+          id
+          keycloakId
           email
+          platform_customer {
+            firstName
+            lastName
+            phoneNumber
+            stripeCustomerId
+            customerAddresses {
+              city
+              country
+              created_at
+              landmark
+              lat
+              line1
+              line2
+              lng
+              zipcode
+              state
+              id
+            }
+          }
           subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}) {
             subscriptionOccurenceId
             isAuto
@@ -27,7 +54,6 @@ query customersEmail($subscriptionOccurenceId: Int!) {
     }
   }
 }
-
 `
 export const GET_TEMPLATE_SETTINGS = `
     query getTemplateSettings($identifier: String! ) {
