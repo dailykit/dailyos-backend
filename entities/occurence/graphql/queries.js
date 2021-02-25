@@ -7,6 +7,15 @@ export const GET_REMINDER_SETTINGS = `
         }
     }
 `
+
+export const GET_TEMPLATE_SETTINGS = `
+    query getTemplateSettings($identifier: String! ) {
+        brands_brand_subscriptionStoreSetting(where: {subscriptionStoreSetting: {identifier: {_eq: $identifier} }}) {
+            value
+        }
+    }   
+`
+
 export const GET_CUSTOMERS_DETAILS = `
 query customersEmail($subscriptionOccurenceId: Int!) {
   subscriptionOccurences(where: {id: {_eq: $subscriptionOccurenceId}}) {
@@ -15,6 +24,7 @@ query customersEmail($subscriptionOccurenceId: Int!) {
          deliveryTime
          deliveryPrice
       }
+      identifier: reminderSettings
       brand_customers {
         brandCustomerId: id
         isAutoSelectOptOut
@@ -54,11 +64,4 @@ query customersEmail($subscriptionOccurenceId: Int!) {
     }
   }
 }
-`
-export const GET_TEMPLATE_SETTINGS = `
-    query getTemplateSettings($identifier: String! ) {
-        brands_brand_subscriptionStoreSetting(where: {subscriptionStoreSetting: {identifier: {_eq: $identifier} }}) {
-            value
-        }
-    }   
 `
