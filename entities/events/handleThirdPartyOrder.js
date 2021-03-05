@@ -83,7 +83,7 @@ const createOrder = async data => {
       const { createOrder } = await client.request(CREATE_ORDER, {
          object: {
             source: 'a-la-carte',
-            status: 'PENDING',
+            status: 'ORDER_PENDING',
             paymentStatus: 'SUCCEEDED',
             thirdPartyOrderId: data.new.id,
             ...(discount.trim() && { discount: Number(discount.trim()) }),
