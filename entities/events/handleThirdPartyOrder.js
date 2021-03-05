@@ -83,7 +83,7 @@ const createOrder = async data => {
       const { createOrder } = await client.request(CREATE_ORDER, {
          object: {
             source: 'a-la-carte',
-            orderStatus: 'PENDING',
+            status: 'PENDING',
             paymentStatus: 'SUCCEEDED',
             thirdPartyOrderId: data.new.id,
             ...(discount.trim() && { discount: Number(discount.trim()) }),
@@ -100,11 +100,12 @@ const createOrder = async data => {
 }
 
 const CREATE_ORDER = `
-   mutation createOrder($object: order_order_insert_input!) {
-      createOrder(object: $object) {
+   mutation createCart($object: order_cart_insert_input!) {
+      createCart(object: $object) {
          id
       }
    }
+ 
 `
 
 const deliveryInfo = {
