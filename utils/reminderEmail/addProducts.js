@@ -23,6 +23,8 @@ export const addProducts = async ({
 
       // Get ${validStatus.pendingProductsCount} no of products using the subAutoSelectOption
 
+      // Add the products to cart. How?
+
       sendEmail({ brandCustomerId, subscriptionOccurenceId })
    } catch (error) {
       throw Error(error.message)

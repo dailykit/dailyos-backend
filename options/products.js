@@ -3,18 +3,9 @@
 //    //
 // }
 
-// const QUERY = `query MyQuery($id: Int!) {
-//   subscription_subscriptionOccurence_product(where: {subscriptionOccurenceId: {_eq: $id}}) {
-//     id
+// const QUERY = `query getProducts($subscriptionOccurenceId: Int! $subscriptionId: Int!) {
+//   subscription_subscriptionOccurence_product(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}, _or: {subscriptionId: {_eq: $subscriptionId}}}) {
 //     cartItem
-//     orderCartProducts_aggregate(where: {isAutoAdded: {_eq: false}}) {
-//       aggregate {
-//         count
-//         sum {
-//           quantity
-//         }
-//       }
-//     }
 //   }
 // }
 // `
