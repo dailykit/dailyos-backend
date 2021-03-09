@@ -1,46 +1,42 @@
 import { sendEmail } from '../'
 import { client } from '../../lib/graphql'
 
-export const addProducts = async data => {
-   const { orderCartId } = customer.customer.subscriptionOccurences[0]
-
+export const addProducts = async ({
+   cartId,
+   brandCustomerId,
+   subscriptionOccurenceId
+}) => {
    try {
-      //Check Item count
-      const { products = [] } = await client.request(CART_ITEMS, {
-         orderCartId
-      })
-      //  Is there a better way?
-      let curItemCount = 0
-      for (i = 0; i < products.length; i++) {
-         curItemCount += products[i].quantity
-      }
-
       const {
-         count
-      } = products.subscriptionOccurenceProduct.subscription.itemCount
+         brandCustomers: {
+            customer: {
+               subscriptionOccurence: {
+                  validStatus,
+                  subscriptionOccurence
+               } = {}
+            } = {}
+         } = []
+      } = await client.request(PENDING_PRODUCT_COUNT, {
+         brandCustomerId,
+         subscriptionOccurenceId
+      })
 
-      if (count === curItemCount) {
-         sendEmail()
-      } else if (count > curItemCount) {
-         //Add products
-      } else {
-         //What? Never gonna happen
-      }
+      // Get ${validStatus.pendingProductsCount} no of products using the subAutoSelectOption
+
+      sendEmail({ brandCustomerId, subscriptionOccurenceId })
    } catch (error) {
       throw Error(error.message)
    }
 }
 
-const CART_ITEMS = `
-query cartItems($orderCartId: Int!) {
-  products: crm_orderCartProduct(where: {cartId: {_eq: $orderCartId}}) {
-    cartId
-    quantity
-    name
-    subscriptionOccurenceProduct {
-      subscription {
-        itemCount: subscriptionItemCount {
-          count
+const PENDING_PRODUCT_COUNT = `
+query pendingProductCount($brandCustomerId: Int!, $subscriptionOccurenceId: Int!) {
+  brandCustomers(where: {id: {_eq: $brandCustomerId}}) {
+    customer {
+      subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}) {
+        validStatus
+        subscriptionOccurence {
+          subscriptionAutoSelectOption
         }
       }
     }

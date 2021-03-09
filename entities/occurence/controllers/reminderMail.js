@@ -6,59 +6,56 @@ export const reminderMail = async (req, res) => {
    try {
       const { subscriptionOccurenceId } = req.body.payload
       const {
-         subscriptionOccurences: [{ subscription = {} }] = []
+         subscriptionOccurences: [
+            { subscription: { brand_customers = [] } = {} }
+         ] = []
       } = await client.request(GET_CUSTOMERS_DETAILS, {
          subscriptionOccurenceId
       })
 
-      const {
-         availableZipcodes,
-         identifier: { template } = {},
-         brand_customers = []
-      } = subscription
-
-      const {
-         brands_brand_subscriptionStoreSetting: [{ value = {} }] = []
-      } = await client.request(GET_TEMPLATE_SETTINGS, {
-         identifier: template
-      })
-
       await Promise.all(
-         brand_customers.map(async customer => {
+         brand_customers.map(async brand_customer => {
             try {
-               if (customer.customer.subscriptionOccurences.length !== 0) {
+               const {
+                  brandCustomerId,
+                  isAutoSelectOptOut,
+                  customer
+               } = brand_customer
+               if (customer.subscriptionOccurences.length !== 0) {
                   // Cart exists
                   const {
                      isAuto,
-                     orderCartId,
-                     isSkipped
-                  } = customer.customer.subscriptionOccurences[0]
+                     cartId,
+                     isSkipped,
+                     validStatus
+                  } = customer.subscriptionOccurences[0]
 
                   if (isAuto) {
-                     // Cart is Created by us --> paymentDeductionAuto
-                     sendEmail({ customer, templateSettings: value })
+                     // Cart is Created by us
+                     sendEmail({ brandCustomerId, subscriptionOccurenceId })
                   } else {
-                     if (isSkipped === false && orderCartId) {
-                        // Cart is Created by them --> paymentDeduction
-                        addProducts(customer)
+                     if (isSkipped === false && !validStatus.itemCountValid) {
+                        // Cart is Created by them
+                        addProducts({
+                           cartId,
+                           brandCustomerId,
+                           subscriptionOccurenceId
+                        })
                      } else {
-                        // Skipped the week --> SkipWeek
-                        sendEmail({ customer, templateSettings: value })
+                        // Skipped the week
+                        sendEmail({ brandCustomerId, subscriptionOccurenceId })
                      }
                   }
                } else {
                   // Cart doesn't exist
-                  if (customer.isAutoSelectOptOut) {
-                     // Doesn't have option to creat cart --> SkipWeek
-                     sendEmail({ customer, templateSettings: value })
+                  if (isAutoSelectOptOut) {
+                     // Doesn't have option to creat cart
+                     sendEmail({ brandCustomerId, subscriptionOccurenceId })
                   } else {
                      // create cart
                      autoGenerate({
-                        ...availableZipcodes,
-                        ...customer,
-                        subscriptionOccurenceId,
-                        templateSettings: value,
-                        isAuto: true
+                        brandCustomerId,
+                        subscriptionOccurenceId
                      })
                   }
                }

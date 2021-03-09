@@ -17,47 +17,18 @@ export const GET_TEMPLATE_SETTINGS = `
 `
 
 export const GET_CUSTOMERS_DETAILS = `
-query customersEmail($subscriptionOccurenceId: Int!) {
-  subscriptionOccurences(where: {id: {_eq: $subscriptionOccurenceId}}) {
+query customerDetails($id: Int!) {
+  subscriptionOccurences(where: {id: {_eq: $id}}) {
     subscription {
-      availableZipcodes {
-         deliveryTime
-         deliveryPrice
-      }
-      identifier: reminderSettings
       brand_customers {
         brandCustomerId: id
         isAutoSelectOptOut
-        subscriptionAddressId
-        subscriptionPaymentMethodId
         customer {
-          id
-          keycloakId
-          email
-          platform_customer {
-            firstName
-            lastName
-            phoneNumber
-            stripeCustomerId
-            customerAddresses {
-              city
-              country
-              created_at
-              landmark
-              lat
-              line1
-              line2
-              lng
-              zipcode
-              state
-              id
-            }
-          }
-          subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}) {
-            subscriptionOccurenceId
-            isAuto
-            orderCartId
+          subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $id}}) {
+            validStatus
             isSkipped
+            isAuto
+            cartId
           }
         }
       }

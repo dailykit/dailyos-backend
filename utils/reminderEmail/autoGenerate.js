@@ -1,10 +1,28 @@
-import { evalTime, sendEmail } from '..'
+import { evalTime, sendEmail } from '../'
+import { client } from '../../lib/graphql'
 import { CREATE_CART } from '../../entities/occurence/graphql'
 
-export const autoGenerate = async data => {
+export const autoGenerate = async ({
+   brandCustomerId,
+   subscriptionOccurenceId
+}) => {
    try {
-      // Fetch products
-      createCart(data)
+      const {
+         subscriptionOccurences: [
+            { subscriptionAutoSelectOption, subscription = {} }
+         ] = []
+      } = await client.request(GET_CUSTOMER_ORDER_DETAILS, {
+         subscriptionOccurenceId
+      })
+
+      // Fetch products using $subscriptionAutoSelectOption
+      const { count } = subscription.subscriptionItemCount
+      createCart({
+         ...subscription,
+         subscriptionOccurenceId,
+         isAuto: true
+      })
+      sendEmail({ brandCustomerId, subscriptionOccurenceId })
    } catch (error) {
       throw Error(error.message)
    }
@@ -14,18 +32,19 @@ const createCart = async data => {
    console.log(data)
    const {
       isAuto,
-      deliveryTime,
-      deliveryPrice,
-      brandCustomerId,
-      subscriptionAddressId,
-      subscriptionOccurenceId,
-      subscriptionPaymentMethodId,
-      customer: {
-         id,
-         keycloakId,
-         email,
-         platform_customer,
-         subscriptionOccurences
+      availableZipcodes: { deliveryTime, deliveryPrice },
+      brand_customers: {
+         brandCustomerId,
+         subscriptionAddressId,
+         subscriptionOccurenceId,
+         subscriptionPaymentMethodId,
+         customer: {
+            id,
+            keycloakId,
+            email,
+            platform_customer,
+            subscriptionOccurences
+         }
       }
    } = data
 
@@ -79,3 +98,54 @@ const createCart = async data => {
       }
    })
 }
+
+const GET_CUSTOMER_ORDER_DETAILS = `
+query customerOrder($subscriptionOccurenceId: Int!) {
+  subscriptionOccurences(where: {id: {_eq: $subscriptionOccurenceId}}) {
+    subscriptionAutoSelectOption
+    subscription {
+      availableZipcodes {
+         deliveryTime
+         deliveryPrice
+      }
+      subscriptionItemCount {
+        count
+      }
+      brand_customers(where: {id: {_eq: $brandCustomerId}}) {
+        brandCustomerId: id
+        subscriptionAddressId
+        subscriptionPaymentMethodId
+        customer {
+          id
+          keycloakId
+          email
+          platform_customer {
+            firstName
+            lastName
+            phoneNumber
+            stripeCustomerId
+            customerAddresses {
+              city
+              country
+              created_at
+              landmark
+              lat
+              line1
+              line2
+              lng
+              zipcode
+              state
+              id
+            }
+          }
+          subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}) {
+            subscriptionOccurenceId
+            isAuto
+            orderCartId
+            isSkipped
+          }
+        }
+      }
+    }
+  }
+}`
