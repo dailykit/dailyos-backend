@@ -15,13 +15,35 @@ export const autoGenerate = async ({
          subscriptionOccurenceId
       })
 
-      // Fetch products using $subscriptionAutoSelectOption
-      const { count } = subscription.subscriptionItemCount
-      createCart({
+      const cartId = createCart({
          ...subscription,
          subscriptionOccurenceId,
          isAuto: true
       })
+      const { count } = subscription.subscriptionItemCount
+
+      const method = require(`../../options/${subscriptionAutoSelectOption}`)
+
+      const products = await method.default(
+         {
+            subscriptionOccurenceId,
+            subscriptionId: subscription.id
+         },
+         count
+      )
+
+      await Promise.all(
+         products.map(async item => {
+            try {
+               await client.request(INSERT_CART_ITEM, {
+                  object: { ...item, cartId }
+               })
+            } catch (error) {
+               throw Error(error.message)
+            }
+         })
+      )
+
       sendEmail({ brandCustomerId, subscriptionOccurenceId })
    } catch (error) {
       throw Error(error.message)
@@ -54,16 +76,15 @@ const createCart = async data => {
          address => address.id === subscriptionAddressId
       )
 
-   await client.request(CREATE_CART, {
+   const { id } = await client.request(CREATE_CART, {
       object: {
-         status: 'PENDING',
+         status: 'CART_PENDING',
          customerId: id,
          paymentStatus: 'PENDING',
-         cartInfo: {},
          ...(subscriptionPaymentMethodId && {
             paymentId: subscriptionPaymentMethodId
          }),
-         cartSource: 'subscription',
+         source: 'subscription',
          address: defaultAddress,
          customerKeycloakId: keycloakId,
          subscriptionOccurenceId,
@@ -97,13 +118,23 @@ const createCart = async data => {
          }
       }
    })
+   return id
 }
+
+export const INSERT_CART_ITEM = gql`
+   mutation createCartItem($object: order_cartItem_insert_input!) {
+      createCartItem(object: $object) {
+         id
+      }
+   }
+`
 
 const GET_CUSTOMER_ORDER_DETAILS = `
 query customerOrder($subscriptionOccurenceId: Int!) {
   subscriptionOccurences(where: {id: {_eq: $subscriptionOccurenceId}}) {
     subscriptionAutoSelectOption
     subscription {
+      id
       availableZipcodes {
          deliveryTime
          deliveryPrice
