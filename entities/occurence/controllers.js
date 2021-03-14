@@ -94,7 +94,7 @@ export const manageOccurence = async (req, res) => {
       })
 
       await client.request(UPDATE_CART, {
-         _set: { status: 'PROCESS' },
+         _set: { status: 'CART_PROCESS' },
          subscriptionOccurenceId: { _eq: node.id },
          cutoffTimeStamp: { _eq: node.cutoffTimeStamp }
       })
