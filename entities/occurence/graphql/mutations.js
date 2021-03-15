@@ -24,13 +24,13 @@ export const UPDATE_SUBSCRIPTION = `
 
 export const UPDATE_CART = `
    mutation updateCart(
-      $_set: crm_orderCart_set_input!
+      $_set: order_cart_set_input!
       $cutoffTimeStamp: timestamp_comparison_exp!
       $subscriptionOccurenceId: Int_comparison_exp!
    ) {
       updateCart(
          where: {
-            status: { _eq: "PENDING" }
+            status: { _eq: "CART_PENDING" }
             subscriptionOccurenceCustomers: {
                isSkipped: { _eq: false }
                subscriptionOccurence: {

@@ -59,6 +59,7 @@ export const FETCH_SIMPLE_RECIPE_PRODUCT_OPTION = `
    query simpleRecipeProductOption($id: Int!) {
       simpleRecipeProductOption(id: $id) {
          id
+         simpleRecipeYieldId
          simpleRecipeYield {
             yield
             ingredientSachets {
@@ -224,11 +225,11 @@ export const EMAIL_CONFIG = `
    }
 `
 
-export const ORDER_STATUS_EMAIL = `
+export const EMAIL_SETTINGS = `
    query brand($id: Int!) {
       brand(id: $id) {
          id
-         delivered_template: onDemandSettings(
+         delivered: onDemandSettings(
             where: {
                onDemandSetting: { identifier: { _eq: "Order Delivered" } }
             }
@@ -237,9 +238,18 @@ export const ORDER_STATUS_EMAIL = `
             email: value(path: "email")
             template: value(path: "template")
          }
-         cancelled_template: onDemandSettings(
+         cancelled: onDemandSettings(
             where: {
                onDemandSetting: { identifier: { _eq: "Order Cancelled" } }
+            }
+         ) {
+            name: value(path: "name")
+            email: value(path: "email")
+            template: value(path: "template")
+         }
+         new: onDemandSettings(
+            where: {
+               onDemandSetting: { identifier: { _eq: "Email Notification" } }
             }
          ) {
             name: value(path: "name")
@@ -262,6 +272,15 @@ export const MILE_RANGE = `
       mileRange: mileRangeByPK(id: $id) {
          id
          prepTime
+      }
+   }
+`
+
+export const ORDER_BY_CART = `
+   query order($cartId: Int_comparison_exp!) {
+      orders(where: { cartId: $cartId }) {
+         id
+         isRejected
       }
    }
 `
