@@ -75,3 +75,10 @@ export const SEND_MAIL = `
       }
    }
 `
+export const CREATE_CART = `
+   mutation createCart($object: crm_orderCart_insert_input!) {
+      createCart(object: $object) {
+         id
+      }
+   }
+`
