@@ -76,7 +76,7 @@ const createCart = async data => {
          address => address.id === subscriptionAddressId
       )
 
-   const { id } = await client.request(CREATE_CART, {
+   const cartId = await client.request(CREATE_CART, {
       object: {
          status: 'CART_PENDING',
          customerId: id,
@@ -118,10 +118,10 @@ const createCart = async data => {
          }
       }
    })
-   return id
+   return cartId.id
 }
 
-export const INSERT_CART_ITEM = gql`
+export const INSERT_CART_ITEM = `
    mutation createCartItem($object: order_cartItem_insert_input!) {
       createCartItem(object: $object) {
          id

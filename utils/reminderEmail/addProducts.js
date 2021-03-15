@@ -50,7 +50,7 @@ export const addProducts = async ({
    }
 }
 
-export const INSERT_CART_ITEM = gql`
+export const INSERT_CART_ITEM = `
    mutation createCartItem($object: order_cartItem_insert_input!) {
       createCartItem(object: $object) {
          id
