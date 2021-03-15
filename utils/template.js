@@ -27,3 +27,21 @@ export const template_compiler = (text, data) => {
       throw Error(error.message)
    }
 }
+
+export const getHtml = async (template, data) => {
+   try {
+      const parsed = JSON.parse(
+         template_compiler(JSON.stringify(template), data)
+      )
+      const { origin } = new URL(process.env.DATA_HUB)
+      const template_data = encodeURI(JSON.stringify(parsed.data))
+      const template_options = encodeURI(JSON.stringify(parsed.template))
+
+      const url = `${origin}/template/?template=${template_options}&data=${template_data}`
+
+      const { data: html } = await axios.get(url)
+      return html
+   } catch (error) {
+      throw Error(error.message)
+   }
+}

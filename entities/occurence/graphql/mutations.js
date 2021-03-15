@@ -67,3 +67,18 @@ export const UPDATE_OCCURENCE_CUSTOMER = `
       }
    }
 `
+export const SEND_MAIL = `
+   mutation sendEmail($emailInput: EmailInput!) {
+      sendEmail(emailInput: $emailInput) {
+         message
+         success
+      }
+   }
+`
+export const CREATE_CART = `
+   mutation createCart($object: crm_orderCart_insert_input!) {
+      createCart(object: $object) {
+         id
+      }
+   }
+`
