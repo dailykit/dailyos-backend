@@ -16,7 +16,7 @@ export const initiatePayment = async (req, res) => {
    try {
       const data = req.body.event.data.new
 
-      if (data.status === 'PROCESS') {
+      if (data.status === 'CART_PROCESS') {
          const { paymentSettings } = await client.request(
             GET_PAYMENT_SETTINGS,
             {
