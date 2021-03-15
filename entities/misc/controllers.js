@@ -221,3 +221,26 @@ export const getDistance = async (req, res) => {
       })
    }
 }
+
+export const authorizeRequest = async (req, res) => {
+   try {
+      const keycloakId = req.body.headers['Keycloak-Id']
+      const cartId = req.body.headers['Cart-Id']
+      const brandId = req.body.headers['Brand-Id']
+      const brandCustomerId = req.body.headers['Brand-Customer-Id']
+      const source = req.body.headers['Source']
+
+      return res.status(200).json({
+         'X-Hasura-Role': keycloakId ? 'consumer' : 'guest-consumer',
+         'X-Hasura-Source': source,
+         'X-Hasura-Brand-Id': brandId,
+         ...(keycloakId && { 'X-Hasura-Keycloak-Id': keycloakId }),
+         ...(cartId && { 'X-Hasura-Cart-Id': cartId }),
+         ...(brandCustomerId && {
+            'X-Hasura-Brand-Customer-Id': brandCustomerId
+         })
+      })
+   } catch (error) {
+      return res.status(404).json({ success: false, error: error.message })
+   }
+}
