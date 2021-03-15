@@ -404,7 +404,7 @@ export const handleStatusChange = async (req, res) => {
             cartId: { _eq: id }
          })
 
-         if (paymentStatus === 'SUCCEEDED' && status === 'PENDING') {
+         if (paymentStatus === 'SUCCEEDED' && status === 'ORDER_PENDING') {
             if (brand.delivered.length === 0)
                throw {
                   message: 'Setting for new order template doesnt exists!',
@@ -416,7 +416,7 @@ export const handleStatusChange = async (req, res) => {
             template.email = data.email
             template.template = data.template
             template.subject = `Your order ORD:#${id} from ${data.name} has been placed.`
-         } else if (status === 'DELIVERED') {
+         } else if (status === 'ORDER_DELIVERED') {
             if (brand.delivered.length === 0)
                throw {
                   message:
