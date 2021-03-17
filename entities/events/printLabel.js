@@ -10,7 +10,9 @@ export const printLabel = async (req, res) => {
             message: `Not available for status: ${status}`
          })
 
-      const { cartItem = {} } = await client.request(CART_ITEM, { id })
+      const { cartItems = [] } = await client.request(CART_ITEM, { id })
+
+      const [cartItem] = cartItems
 
       if (['productItem', 'productItemComponent'].includes(cartItem.levelType))
          return res.status(200).json({
@@ -114,8 +116,8 @@ const PRINT_JOB = `
 `
 
 const CART_ITEM = `
-   query cartItem($id: Int_comparison_exp!) {
-      cartItem: order_cartItemView(where: { id: $id }) {
+   query cartItems($id: Int_comparison_exp!) {
+      cartItems: order_cartItemView(where: { id: $id }) {
          id
          status
          levelType
