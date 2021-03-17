@@ -1,6 +1,6 @@
 import { client } from '../../lib/graphql'
 
-export const printProductLabel = async (req, res) => {
+export const printLabel = async (req, res) => {
    try {
       const { id, status } = req.body.event.data.new
 
