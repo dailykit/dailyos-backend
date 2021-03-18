@@ -11,6 +11,7 @@ const getProducts = async (
    if (products.length < noOfItem) {
       // Do Something
    }
+
    let randomProducts = [],
       index = 0
 

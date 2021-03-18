@@ -10,11 +10,12 @@ export const reminderMail = async (req, res) => {
             { subscription: { brand_customers = [] } = {} }
          ] = []
       } = await client.request(GET_CUSTOMERS_DETAILS, {
-         subscriptionOccurenceId
+         id: subscriptionOccurenceId
       })
 
       await Promise.all(
          brand_customers.map(async brand_customer => {
+            // console.log(brand_customer)
             try {
                const {
                   brandCustomerId,

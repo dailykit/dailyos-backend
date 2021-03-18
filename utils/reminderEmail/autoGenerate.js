@@ -12,14 +12,15 @@ export const autoGenerate = async ({
             { subscriptionAutoSelectOption, subscription = {} }
          ] = []
       } = await client.request(GET_CUSTOMER_ORDER_DETAILS, {
-         subscriptionOccurenceId
+         subscriptionOccurenceId,
+         brandCustomerId
       })
 
-      const cartId = createCart({
+      const cartId = await createCart({
          ...subscription,
-         subscriptionOccurenceId,
          isAuto: true
       })
+      console.log(cartId)
       const { count } = subscription.subscriptionItemCount
 
       const method = require(`../../options/${subscriptionAutoSelectOption}`)
@@ -27,7 +28,7 @@ export const autoGenerate = async ({
       const products = await method.default(
          {
             subscriptionOccurenceId,
-            subscriptionId: subscription.id
+            subscriptionId: subscription.subscriptionId
          },
          count
       )
@@ -44,81 +45,86 @@ export const autoGenerate = async ({
          })
       )
 
-      sendEmail({ brandCustomerId, subscriptionOccurenceId })
+      await sendEmail({ brandCustomerId, subscriptionOccurenceId })
    } catch (error) {
       throw Error(error.message)
    }
 }
 
 const createCart = async data => {
-   console.log(data)
-   const {
-      isAuto,
-      availableZipcodes: { deliveryTime, deliveryPrice },
-      brand_customers: {
-         brandCustomerId,
-         subscriptionAddressId,
-         subscriptionOccurenceId,
-         subscriptionPaymentMethodId,
-         customer: {
-            id,
-            keycloakId,
-            email,
-            platform_customer,
-            subscriptionOccurences
-         }
-      }
-   } = data
-
-   const defaultAddress =
-      platform_customer &&
-      platform_customer.customerAddresses.filter(
-         address => address.id === subscriptionAddressId
-      )
-
-   const cartId = await client.request(CREATE_CART, {
-      object: {
-         status: 'CART_PENDING',
-         customerId: id,
-         paymentStatus: 'PENDING',
-         ...(subscriptionPaymentMethodId && {
-            paymentId: subscriptionPaymentMethodId
-         }),
-         source: 'subscription',
-         address: defaultAddress,
-         customerKeycloakId: keycloakId,
-         subscriptionOccurenceId,
-         stripeCustomerId:
-            platform_customer && platform_customer.stripeCustomerId,
-         customerInfo: {
-            customerEmail: platform_customer.email || '',
-            customerPhone: platform_customer.phoneNumber || '',
-            customerLastName: platform_customer.lastName || '',
-            customerFirstName: platform_customer.firstName || ''
-         },
-         fulfillmentInfo: {
-            type: 'PREORDER_DELIVERY',
-            slot: {
-               from: evalTime(
-                  fulfillmentDate,
-                  deliveryTime && deliveryTime.from
-               ),
-               to: evalTime(fulfillmentDate, deliveryTime && deliveryTime.to)
+   try {
+      const {
+         isAuto,
+         subscriptionId,
+         availableZipcodes: { deliveryTime, deliveryPrice },
+         brand_customers: {
+            brandCustomerId,
+            subscriptionAddressId,
+            subscriptionOccurenceId,
+            subscriptionPaymentMethodId,
+            customer: {
+               id,
+               keycloakId,
+               email,
+               platform_customer,
+               subscriptionOccurences
             }
-         },
-         subscriptionOccurenceCustomers: {
-            data: [
-               {
-                  isSkipped: false,
-                  keycloakId,
-                  subscriptionOccurenceId,
-                  isAuto
-               }
-            ]
          }
-      }
-   })
-   return cartId.id
+      } = data
+      console.log(platform_customer)
+      const defaultAddress =
+         platform_customer &&
+         platform_customer.customerAddresses.filter(
+            address => address.id === subscriptionAddressId
+         )
+
+      const cartId = await client.request(CREATE_CART, {
+         object: {
+            status: 'CART_PENDING',
+            customerId: id,
+            paymentStatus: 'PENDING',
+            ...(subscriptionPaymentMethodId && {
+               paymentId: subscriptionPaymentMethodId
+            }),
+            source: 'subscription',
+            address: defaultAddress,
+            customerKeycloakId: keycloakId,
+            subscriptionOccurenceId,
+            stripeCustomerId:
+               platform_customer && platform_customer.stripeCustomerId,
+            customerInfo: {
+               customerEmail: platform_customer.email || '',
+               customerPhone: platform_customer.phoneNumber || '',
+               customerLastName: platform_customer.lastName || '',
+               customerFirstName: platform_customer.firstName || ''
+            },
+            fulfillmentInfo: {
+               type: 'PREORDER_DELIVERY',
+               slot: {
+                  from: evalTime(
+                     fulfillmentDate,
+                     deliveryTime && deliveryTime.from
+                  ),
+                  to: evalTime(fulfillmentDate, deliveryTime && deliveryTime.to)
+               }
+            },
+            subscriptionOccurenceCustomers: {
+               data: [
+                  {
+                     isSkipped: false,
+                     keycloakId,
+                     subscriptionOccurenceId,
+                     isAuto
+                  }
+               ]
+            }
+         }
+      })
+      console.log(cartId)
+      return cartId.id
+   } catch (error) {
+      throw Error(error.message)
+   }
 }
 
 export const INSERT_CART_ITEM = `
@@ -130,11 +136,11 @@ export const INSERT_CART_ITEM = `
 `
 
 const GET_CUSTOMER_ORDER_DETAILS = `
-query customerOrder($subscriptionOccurenceId: Int!) {
+query customerOrder($subscriptionOccurenceId: Int!, $brandCustomerId: Int!) {
   subscriptionOccurences(where: {id: {_eq: $subscriptionOccurenceId}}) {
     subscriptionAutoSelectOption
     subscription {
-      id
+      subscriptionId: id
       availableZipcodes {
          deliveryTime
          deliveryPrice
@@ -172,7 +178,7 @@ query customerOrder($subscriptionOccurenceId: Int!) {
           subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}) {
             subscriptionOccurenceId
             isAuto
-            orderCartId
+            cartId
             isSkipped
           }
         }

@@ -44,7 +44,7 @@ export const addProducts = async ({
          })
       )
 
-      sendEmail({ brandCustomerId, subscriptionOccurenceId })
+      await sendEmail({ brandCustomerId, subscriptionOccurenceId })
    } catch (error) {
       throw Error(error.message)
    }
