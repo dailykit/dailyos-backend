@@ -9,7 +9,7 @@ export const autoGenerate = async ({
    try {
       const {
          subscriptionOccurences: [
-            { subscriptionAutoSelectOption, subscription = {} }
+            { subscriptionAutoSelectOption, fulfillmentDate, subscription = {} }
          ] = []
       } = await client.request(GET_CUSTOMER_ORDER_DETAILS, {
          subscriptionOccurenceId,
@@ -18,7 +18,8 @@ export const autoGenerate = async ({
 
       const cartId = await createCart({
          ...subscription,
-         isAuto: true
+         isAuto: true,
+         fulfillmentDate
       })
       console.log(cartId)
       const { count } = subscription.subscriptionItemCount
@@ -55,8 +56,9 @@ const createCart = async data => {
    try {
       const {
          isAuto,
+         fulfillmentDate,
          subscriptionId,
-         availableZipcodes: { deliveryTime, deliveryPrice } = {},
+         availableZipcodes: [{ deliveryTime, deliveryPrice }] = [],
          brand_customers: {
             brandCustomerId,
             subscriptionAddressId,
@@ -65,7 +67,6 @@ const createCart = async data => {
             customer: {
                id,
                keycloakId,
-               email,
                platform_customer,
                subscriptionOccurences
             } = {}
@@ -76,7 +77,6 @@ const createCart = async data => {
          platform_customer.customerAddresses.filter(
             address => address.id === subscriptionAddressId
          )
-
       const cartId = await client.request(CREATE_CART, {
          object: {
             status: 'CART_PENDING',
@@ -92,10 +92,16 @@ const createCart = async data => {
             stripeCustomerId:
                platform_customer && platform_customer.stripeCustomerId,
             customerInfo: {
-               customerEmail: platform_customer.email || '',
-               customerPhone: platform_customer.phoneNumber || '',
-               customerLastName: platform_customer.lastName || '',
-               customerFirstName: platform_customer.firstName || ''
+               customerEmail: platform_customer ? platform_customer.email : '',
+               customerPhone: platform_customer
+                  ? platform_customer.phoneNumber
+                  : '',
+               customerLastName: platform_customer
+                  ? platform_customer.lastName
+                  : '',
+               customerFirstName: platform_customer
+                  ? platform_customer.firstName
+                  : ''
             },
             fulfillmentInfo: {
                type: 'PREORDER_DELIVERY',
@@ -111,7 +117,7 @@ const createCart = async data => {
                data: [
                   {
                      isSkipped: false,
-                     keycloakId,
+                     keycloakId: keycloakId,
                      subscriptionOccurenceId,
                      isAuto
                   }

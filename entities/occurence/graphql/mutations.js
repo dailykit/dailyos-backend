@@ -76,9 +76,13 @@ export const SEND_MAIL = `
    }
 `
 export const CREATE_CART = `
-   mutation createCart($object: crm_orderCart_insert_input!) {
-      createCart(object: $object) {
-         id
-      }
-   }
+    mutation createCart($object: order_cart_insert_input!) {
+            createCart(object: $object) {
+               id
+               subscriptionOccurenceCustomers {
+                  isSkipped
+                  validStatus
+               }
+            }
+         }
 `
