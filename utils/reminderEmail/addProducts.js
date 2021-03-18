@@ -22,7 +22,11 @@ export const addProducts = async ({
          subscriptionOccurenceId
       })
 
-      const method = require(`../../options/${subscriptionOccurence.subscriptionAutoSelectOption}`)
+      const method = require(`../../options/${
+         subscriptionOccurence.subscriptionAutoSelectOption
+            ? subscriptionOccurence.subscriptionAutoSelectOption
+            : 'products'
+      }`)
 
       const products = await method.default(
          {
@@ -32,19 +36,21 @@ export const addProducts = async ({
          validStatus.pendingProductCount
       )
 
-      await Promise.all(
-         products.map(async item => {
-            try {
-               await client.request(INSERT_CART_ITEM, {
-                  object: { ...item, cartId }
-               })
-            } catch (error) {
-               throw Error(error.message)
-            }
-         })
-      )
+      if (products.status != 400) {
+         await Promise.all(
+            products.randomProducts.map(async item => {
+               try {
+                  await client.request(INSERT_CART_ITEM, {
+                     object: { ...item, cartId }
+                  })
+               } catch (error) {
+                  throw Error(error.message)
+               }
+            })
+         )
 
-      await sendEmail({ brandCustomerId, subscriptionOccurenceId })
+         await sendEmail({ brandCustomerId, subscriptionOccurenceId })
+      }
    } catch (error) {
       throw Error(error.message)
    }

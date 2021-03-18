@@ -9,7 +9,11 @@ export const autoGenerate = async ({
    try {
       const {
          subscriptionOccurences: [
-            { subscriptionAutoSelectOption, fulfillmentDate, subscription = {} }
+            {
+               subscriptionAutoSelectOption = 'products',
+               fulfillmentDate,
+               subscription = {}
+            }
          ] = []
       } = await client.request(GET_CUSTOMER_ORDER_DETAILS, {
          subscriptionOccurenceId,
@@ -18,13 +22,18 @@ export const autoGenerate = async ({
 
       const cartId = await createCart({
          ...subscription,
+         subscriptionOccurenceId,
          isAuto: true,
          fulfillmentDate
       })
       console.log(cartId)
       const { count } = subscription.subscriptionItemCount
 
-      const method = require(`../../options/${subscriptionAutoSelectOption}`)
+      const method = require(`../../options/${
+         subscriptionAutoSelectOption
+            ? subscriptionAutoSelectOption
+            : 'products'
+      }`)
 
       const products = await method.default(
          {
@@ -33,102 +42,114 @@ export const autoGenerate = async ({
          },
          count
       )
+      if (products.status != 400) {
+         await Promise.all(
+            products.randomProducts.map(async item => {
+               try {
+                  await client.request(INSERT_CART_ITEM, {
+                     object: { ...item, cartId }
+                  })
+               } catch (error) {
+                  throw Error(error.message)
+               }
+            })
+         )
 
-      await Promise.all(
-         products.map(async item => {
-            try {
-               await client.request(INSERT_CART_ITEM, {
-                  object: { ...item, cartId }
-               })
-            } catch (error) {
-               throw Error(error.message)
-            }
-         })
-      )
-
-      await sendEmail({ brandCustomerId, subscriptionOccurenceId })
+         await sendEmail({ brandCustomerId, subscriptionOccurenceId })
+      }
    } catch (error) {
-      throw Error(error.message)
+      console.log(error)
+      // throw Error(error.message)
    }
 }
 
 const createCart = async data => {
    try {
+      console.log(data)
       const {
-         isAuto,
+         isAuto = true,
          fulfillmentDate,
-         subscriptionId,
-         availableZipcodes: [{ deliveryTime, deliveryPrice }] = [],
-         brand_customers: {
-            brandCustomerId,
-            subscriptionAddressId,
-            subscriptionOccurenceId,
-            subscriptionPaymentMethodId,
-            customer: {
-               id,
-               keycloakId,
-               platform_customer,
-               subscriptionOccurences
-            } = {}
-         } = {}
+         subscriptionOccurenceId = '',
+         brand_customers,
+         availableZipcodes
       } = data
-      const defaultAddress =
-         platform_customer &&
-         platform_customer.customerAddresses.filter(
-            address => address.id === subscriptionAddressId
-         )
-      const cartId = await client.request(CREATE_CART, {
-         object: {
-            status: 'CART_PENDING',
-            customerId: id,
-            paymentStatus: 'PENDING',
-            ...(subscriptionPaymentMethodId && {
-               paymentId: subscriptionPaymentMethodId
-            }),
-            source: 'subscription',
-            address: defaultAddress,
-            customerKeycloakId: keycloakId,
-            subscriptionOccurenceId,
-            stripeCustomerId:
-               platform_customer && platform_customer.stripeCustomerId,
-            customerInfo: {
-               customerEmail: platform_customer ? platform_customer.email : '',
-               customerPhone: platform_customer
-                  ? platform_customer.phoneNumber
-                  : '',
-               customerLastName: platform_customer
-                  ? platform_customer.lastName
-                  : '',
-               customerFirstName: platform_customer
-                  ? platform_customer.firstName
-                  : ''
-            },
-            fulfillmentInfo: {
-               type: 'PREORDER_DELIVERY',
-               slot: {
-                  from: evalTime(
-                     fulfillmentDate,
-                     deliveryTime && deliveryTime.from
-                  ),
-                  to: evalTime(fulfillmentDate, deliveryTime && deliveryTime.to)
-               }
-            },
-            subscriptionOccurenceCustomers: {
-               data: [
-                  {
-                     isSkipped: false,
-                     keycloakId: keycloakId,
-                     subscriptionOccurenceId,
-                     isAuto
-                  }
-               ]
+      if (brand_customers.length > 0 && availableZipcodes.length > 0) {
+         const [
+            {
+               brandCustomerId,
+               subscriptionAddressId = '',
+               subscriptionPaymentMethodId = ' ',
+               customer = {}
             }
-         }
-      })
-      console.log(cartId)
-      return cartId.id
+         ] = brand_customers
+         const { id = '', keycloakId = '', platform_customer = {} } = customer
+         const [{ deliveryTime = {} }] = availableZipcodes
+         const defaultAddress =
+            platform_customer &&
+            platform_customer.customerAddresses &&
+            platform_customer.customerAddresses.filter(
+               address => address.id === subscriptionAddressId
+            )
+
+         const { createCart } = await client.request(CREATE_CART, {
+            object: {
+               status: 'CART_PENDING',
+               customerId: parseInt(id),
+               paymentStatus: 'PENDING',
+               ...(subscriptionPaymentMethodId && {
+                  paymentMethodId: subscriptionPaymentMethodId
+               }),
+               source: 'subscription',
+               address: defaultAddress,
+               customerKeycloakId: keycloakId,
+               subscriptionOccurenceId,
+               stripeCustomerId:
+                  platform_customer && platform_customer.stripeCustomerId,
+               customerInfo: {
+                  customerEmail: platform_customer
+                     ? platform_customer.email
+                     : '',
+                  customerPhone: platform_customer
+                     ? platform_customer.phoneNumber
+                     : '',
+                  customerLastName: platform_customer
+                     ? platform_customer.lastName
+                     : '',
+                  customerFirstName: platform_customer
+                     ? platform_customer.firstName
+                     : ''
+               },
+               fulfillmentInfo: {
+                  type: 'PREORDER_DELIVERY',
+                  slot: {
+                     from:
+                        fulfillmentDate &&
+                        deliveryTime &&
+                        evalTime(fulfillmentDate, deliveryTime.from),
+                     to:
+                        fulfillmentDate &&
+                        deliveryTime &&
+                        evalTime(fulfillmentDate, deliveryTime.to)
+                  }
+               },
+               subscriptionOccurenceCustomers: {
+                  data: [
+                     {
+                        isSkipped: false,
+                        keycloakId,
+                        subscriptionOccurenceId,
+                        isAuto,
+                        brand_customerId: brandCustomerId
+                     }
+                  ]
+               }
+            }
+         })
+         return createCart.cartId
+      }
    } catch (error) {
-      throw Error(error.message)
+      console.log(error)
+      // throw Error(error.message)
    }
 }
 
@@ -144,6 +165,7 @@ const GET_CUSTOMER_ORDER_DETAILS = `
 query customerOrder($subscriptionOccurenceId: Int!, $brandCustomerId: Int!) {
   subscriptionOccurences(where: {id: {_eq: $subscriptionOccurenceId}}) {
     subscriptionAutoSelectOption
+    fulfillmentDate
     subscription {
       subscriptionId: id
       availableZipcodes {

@@ -78,7 +78,7 @@ export const SEND_MAIL = `
 export const CREATE_CART = `
     mutation createCart($object: order_cart_insert_input!) {
             createCart(object: $object) {
-               id
+               cartId: id
                subscriptionOccurenceCustomers {
                   isSkipped
                   validStatus

@@ -1,28 +1,32 @@
-import { client } from './lib/graphql'
+import { client } from '../lib/graphql'
 const getProducts = async (
    { subscriptionOccurenceId, subscriptionId },
    noOfItem
 ) => {
-   const { products = [] } = await client.request(QUERY, {
-      subscriptionOccurenceId,
-      subscriptionId
-   })
+   try {
+      const { products = [] } = await client.request(QUERY, {
+         subscriptionOccurenceId,
+         subscriptionId
+      })
 
-   if (products.length < noOfItem) {
-      // Do Something
+      if (products.length < noOfItem) {
+         return { status: 400 }
+      }
+
+      let randomProducts = [],
+         index = 0
+
+      while (noOfItem > 0) {
+         index = Math.floor(Math.random() * products.length)
+         randomProducts.push(products[index])
+         products.splice(index, 1)
+         noOfItem--
+      }
+      console.log('randomProducts: ', randomProducts)
+      return { status: 200, randomProducts }
+   } catch (error) {
+      console.log(error)
    }
-
-   let randomProducts = [],
-      index = 0
-
-   while (noOfItem > 0) {
-      index = Math.floor(Math.random() * products.length)
-      randomProducts.push(products[index])
-      products.splice(index, 1)
-      noOfItem--
-   }
-   console.log('randomProducts: ', randomProducts)
-   return randomProducts
 }
 
 const QUERY = `query getProducts($subscriptionOccurenceId: Int! $subscriptionId: Int!) {
