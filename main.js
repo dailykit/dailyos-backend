@@ -25,14 +25,14 @@ import {
    placeAutoComplete,
    placeDetails,
    StoreRouter,
-   getDistance
+   getDistance,
+   authorizeRequest
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
    printKOT,
    getKOTUrls,
-   printSachetLabel,
-   printProductLabel,
+   printLabel,
    handleThirdPartyOrder
 } from './entities/events'
 
@@ -80,9 +80,9 @@ app.use('/webhook/devices', DeviceRouter)
 app.use('/webhook/notification', NotificationRouter)
 app.use('/webhook/occurence', OccurenceRouter)
 app.post('/webhook/parse/email', emailParser)
+app.post('/webhook/authorize-request', authorizeRequest)
 
-app.post('/event/print-sachet', printSachetLabel)
-app.post('/event/print-product', printProductLabel)
+app.post('/event/print-label', printLabel)
 app.post('/event/print-kot', printKOT)
 app.post('/event/order/third-party', handleThirdPartyOrder)
 

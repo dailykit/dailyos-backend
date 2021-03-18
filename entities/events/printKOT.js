@@ -1,13 +1,16 @@
 import axios from 'axios'
+import { uniq, uniqBy } from 'lodash'
 import { client } from '../../lib/graphql'
 
 export const printKOT = async (req, res) => {
    try {
-      const { id = '', orderStatus = '' } = req.body.event.data.new
+      const { id = '', status = '' } = req.body.event.data.new
 
-      if (!id) throw Error('Missing order id!')
-      if (orderStatus !== 'UNDER_PROCESSING')
-         throw Error('Not valid for this order status!')
+      if (status !== 'ORDER_UNDER_PROCESSING')
+         return res.status(200).json({
+            success: true,
+            message: 'Not valid for this order status!'
+         })
 
       const { settings = [] } = await client.request(SETTINGS, {
          type: {
@@ -86,21 +89,34 @@ export const getKOTUrls = async (req, res) => {
          node => node.identifier === 'default kot printer'
       ).value
 
-      const query_args = { orderId: { _eq: id } }
-
-      const { stations: productStations = [] } = await client.request(
-         ORDER_BY_STATIONS,
-         query_args
-      )
-
-      const { stations: sachetStations = [] } = await client.request(
-         SACHET_BY_STATIONS,
-         query_args
-      )
+      const { cartItems = [] } = await client.request(CART_ITEMS)
 
       const data = { order: { id } }
       const { origin } = new URL(process.env.DATA_HUB)
-      const productTypes = ['inventory', 'mealKit', 'readyToEat']
+
+      const productStations = uniqBy(
+         cartItems
+            .filter(node => node.levelType === 'orderItem')
+            .map(node => node.operationConfig),
+         'station.id'
+      )
+         .filter(Boolean)
+         .map(node => node.station)
+      const sachetStations = uniqBy(
+         cartItems
+            .filter(node =>
+               ['orderItemSachet', 'orderItemSachetComponent'].includes(
+                  node.levelType
+               )
+            )
+            .map(node => node.operationConfig),
+         'station.id'
+      )
+         .filter(Boolean)
+         .map(node => node.station)
+      const productTypes = uniq(
+         cartItems.map(node => node.productOptionType)
+      ).filter(Boolean)
 
       const productTemplateOptions = encodeURI(
          JSON.stringify({
@@ -470,6 +486,35 @@ const PRINT_JOB = `
       ) {
          message
          success
+      }
+   }
+`
+
+const CART_ITEMS = `
+   query cartItems {
+      cartItems: order_cartItemView(
+         where: {
+            levelType: {
+               _in: ["orderItem", "orderItemSachet", "orderItemSachetComponent"]
+            }
+            cart: { orderId: { _is_null: false } }
+         }
+      ) {
+         id
+         operationConfigId
+         operationConfig {
+            stationId
+            station {
+               id
+               name
+               defaultKotPrinterId
+               kotPrinters: attachedKotPrinters {
+                  id: printNodeId
+               }
+            }
+         }
+         levelType
+         productOptionType
       }
    }
 `

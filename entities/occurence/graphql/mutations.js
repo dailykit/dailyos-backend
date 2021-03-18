@@ -4,7 +4,7 @@ export const INSERT_SUBS_OCCURENCES = `
    ) {
       insertSubscriptionOccurences(
          objects: $objects, 
-         on_conflict: {constraint: subscriptionOccurence_id_key, update_columns: []}
+         on_conflict: {constraint: subscriptionOccurence_pkey, update_columns: []}
       ) {
          affected_rows
       }
@@ -24,12 +24,13 @@ export const UPDATE_SUBSCRIPTION = `
 
 export const UPDATE_CART = `
    mutation updateCart(
-      $_set: crm_orderCart_set_input!
+      $_set: order_cart_set_input!
       $cutoffTimeStamp: timestamp_comparison_exp!
       $subscriptionOccurenceId: Int_comparison_exp!
    ) {
       updateCart(
          where: {
+            status: { _eq: "CART_PENDING" }
             subscriptionOccurenceCustomers: {
                isSkipped: { _eq: false }
                subscriptionOccurence: {
@@ -63,6 +64,21 @@ export const UPDATE_OCCURENCE_CUSTOMER = `
          _set: $_set
       ) {
          affected_rows
+      }
+   }
+`
+export const SEND_MAIL = `
+   mutation sendEmail($emailInput: EmailInput!) {
+      sendEmail(emailInput: $emailInput) {
+         message
+         success
+      }
+   }
+`
+export const CREATE_CART = `
+   mutation createCart($object: crm_orderCart_insert_input!) {
+      createCart(object: $object) {
+         id
       }
    }
 `

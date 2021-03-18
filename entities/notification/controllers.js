@@ -111,7 +111,7 @@ export const trigger = async (req, res) => {
                   name: event.data.new.table,
                   schema: event.data.new.schema
                },
-               webhook_from_env: event.data.new.webhookEnv,
+               webhook: '{{DAILYOS_SERVER_URL}}/webhook/notification/manage',
                replace: false
             }
          }

@@ -1,23 +1,33 @@
 import { client } from '../../lib/graphql'
 
-export const printSachetLabel = async (req, res) => {
+export const printLabel = async (req, res) => {
    try {
-      const {
-         id,
-         isPortioned,
-         ingredientName,
-         processingName,
-         labelTemplateId,
-         packingStationId
-      } = req.body.event.data.new
+      const { id, status } = req.body.event.data.new
 
-      if (!isPortioned) throw Error('Sachet has not been portioned yet.')
-      if (!labelTemplateId) throw Error('No label template assigned.')
-      if (!packingStationId) throw Error('No station assigned.')
+      if (status !== 'READY')
+         return res.status(200).json({
+            success: true,
+            message: `Not available for status: ${status}`
+         })
 
-      const { station } = await client.request(STATION, {
-         id: packingStationId
-      })
+      const { cartItems = [] } = await client.request(CART_ITEM, { id })
+
+      const [cartItem] = cartItems
+
+      if (['productItem', 'productItemComponent'].includes(cartItem.levelType))
+         return res.status(200).json({
+            success: true,
+            message: `Not available for level: ${cartItem.levelType}`
+         })
+
+      if (!cartItem.operationConfigId)
+         throw Error('No operation config is linked.')
+      if (!cartItem.operationConfig.labelTemplateId)
+         throw Error('No label template is provided.')
+      if (!cartItem.operationConfig.stationId)
+         throw Error('Assembly station Id is missing.')
+
+      const station = cartItem.operationConfig.station
 
       if (
          !station.defaultLabelPrinterId &&
@@ -34,23 +44,12 @@ export const printSachetLabel = async (req, res) => {
       if (settings.length > 0) {
          const [setting] = settings
          if (setting.isActive) {
-            await client.request(UPDATE_ORDER_SACHET, {
-               id,
-               _set: {
-                  status: 'PACKED',
-                  isLabelled: true
-               }
-            })
             return res
                .status(200)
                .json({ success: true, message: 'Print simulation is on!' })
          } else {
-            const { labelTemplate = {} } = await client.request(
-               LABEL_TEMPLATE,
-               {
-                  id: labelTemplateId
-               }
-            )
+            const labelTemplate = cartItem.operationConfig.labelTemplate
+
             const printerId =
                station.defaultLabelPrinterId ||
                station.attachedLabelPrinters[0].printNodeId
@@ -63,20 +62,16 @@ export const printSachetLabel = async (req, res) => {
                source: 'DailyOS',
                contentType: 'pdf_uri',
                url: `${url}?template=${template}&data={"id":${id}}`,
-               title: `Sachet: ${processingName} - ${ingredientName}`
-            })
-
-            await client.request(UPDATE_ORDER_SACHET, {
-               id,
-               _set: {
-                  status: 'PACKED',
-                  isLabelled: true
-               }
+               title: `Order ${
+                  cartItem.levelType === 'orderItem' ? 'Product' : 'Sachet'
+               }: ${cartItem.displayName}`
             })
 
             return res.status(200).json({
                success: true,
-               message: `Printing sachet: ${processingName} - ${ingredientName}.`
+               message: `Printing ${
+                  cartItem.levelType === 'orderItem' ? 'Product' : 'Sachet'
+               }: ${cartItem.displayName} label!`
             })
          }
       }
@@ -120,32 +115,32 @@ const PRINT_JOB = `
    }
 `
 
-const STATION = `
-   query station($id: Int!) {
-      station(id: $id) {
-         defaultLabelPrinter {
-            printNodeId
-         }
-         attachedLabelPrinters {
-            printNodeId
-         }
-      }
-   }
-`
-
-const LABEL_TEMPLATE = `
-   query labelTemplate($id: Int!) {
-      labelTemplate(id: $id) {
+const CART_ITEM = `
+   query cartItems($id: Int_comparison_exp!) {
+      cartItems: order_cartItemView(where: { id: $id }) {
          id
-         name
-      }
-   }
-`
-
-const UPDATE_ORDER_SACHET = `
-   mutation updateOrderSachet($id: Int!, $_set: order_orderSachet_set_input!) {
-      updateOrderSachet(pk_columns: { id: $id }, _set: $_set) {
-         id
+         status
+         levelType
+         displayName
+         processingName
+         operationConfigId
+         operationConfig {
+            stationId
+            station {
+               id
+               defaultLabelPrinter {
+                  printNodeId
+               }
+               attachedLabelPrinters {
+                  printNodeId
+               }
+            }
+            labelTemplateId
+            labelTemplate {
+               id
+               name
+            }
+         }
       }
    }
 `

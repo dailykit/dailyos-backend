@@ -6,7 +6,7 @@ import {
    CUSTOMER,
    FETCH_CART,
    MILE_RANGE,
-   ORDER_STATUS_EMAIL,
+   EMAIL_SETTINGS,
    BRAND_ON_DEMAND_SETTING,
    BRAND_SUBSCRIPTION_SETTING
 } from './graphql/queries'
@@ -379,97 +379,112 @@ export const take = async (req, res) => {
 }
 
 export const handleStatusChange = async (req, res) => {
-   const {
-      id = null,
-      brandId = null,
-      keycloakId = '',
-      orderStatus: status = '',
-      isRejected = false
-   } = req.body.event.data.new
+   const { id = null, status, paymentStatus } = req.body.event.data.new
    try {
-      if (!id) throw { message: 'Order id is required!', code: 409 }
-      if (!status) throw { message: 'Order status is required!', code: 409 }
-      if (!brandId) throw { message: 'Brand id is required!', code: 409 }
-      if (!keycloakId) throw { message: 'Customer id is required!', code: 409 }
+      if (id) {
+         if (!brandId) throw { message: 'Brand id is required!', code: 409 }
+         if (!customerKeycloakId)
+            throw { message: 'Customer id is required!', code: 409 }
 
-      const { brand } = await client.request(ORDER_STATUS_EMAIL, {
-         id: brandId
-      })
-
-      if (!brand) throw { message: 'No such brand id exists!', code: 404 }
-
-      const template = {
-         type: '',
-         name: '',
-         email: '',
-         template: {},
-         subject: ''
-      }
-
-      if (status === 'DELIVERED') {
-         if (brand.delivered_template.length === 0)
-            throw {
-               message: 'Setting for order delivered template doesnt exists!',
-               code: 404
-            }
-         const [data] = brand.delivered_template
-         template.type = 'Delivered'
-         template.name = data.name
-         template.email = data.email
-         template.template = data.template
-         template.subject = `Your order ORD:#${id} from ${data.name} has been delivered`
-      } else if (isRejected) {
-         if (brand.cancelled_template.length === 0)
-            throw {
-               message: 'Setting for order cancelled template doesnt exists!',
-               code: 404
-            }
-
-         const [data] = brand.cancelled_template
-         template.type = 'Cancelled'
-         template.name = data.name
-         template.email = data.email
-         template.template = data.template
-         template.subject = `Your order ORD:#${id} from ${data.name} has been cancelled`
-      }
-
-      if (!template.type)
-         return res.status(200).json({
-            success: true,
-            message: 'This order status has not been mapped!'
+         const { brand } = await client.request(EMAIL_SETTINGS, {
+            id: brandId
          })
 
-      let html = await fetch_html(template.template, {
-         new: { id }
-      })
+         if (!brand) throw { message: 'No such brand id exists!', code: 404 }
 
-      const customer = {
-         email: ''
-      }
-
-      const { customer: consumer } = await client.request(CUSTOMER, {
-         keycloakId
-      })
-
-      if (!consumer) throw { message: 'No such customer exists', code: 404 }
-
-      if ('email' in consumer && consumer.email) {
-         customer.email = consumer.email
-      }
-
-      if (!customer.email)
-         throw { message: 'Customer does not have email linked!', code: 404 }
-
-      await client.request(SEND_MAIL, {
-         emailInput: {
-            html,
-            attachments: [],
-            to: customer.email,
-            subject: template.subject,
-            from: `"${template.name}" ${template.email}`
+         const template = {
+            type: '',
+            name: '',
+            email: '',
+            template: {},
+            subject: ''
          }
-      })
-      return res.status(200).json({ success: true, template, customer, html })
+
+         const { order = {} } = await client.request(ORDER_BY_CART, {
+            cartId: { _eq: id }
+         })
+
+         if (paymentStatus === 'SUCCEEDED' && status === 'ORDER_PENDING') {
+            if (brand.delivered.length === 0)
+               throw {
+                  message: 'Setting for new order template doesnt exists!',
+                  code: 404
+               }
+            const [data] = brand.delivered
+            template.type = 'New'
+            template.name = data.name
+            template.email = data.email
+            template.template = data.template
+            template.subject = `Your order ORD:#${id} from ${data.name} has been placed.`
+         } else if (status === 'ORDER_DELIVERED') {
+            if (brand.delivered.length === 0)
+               throw {
+                  message:
+                     'Setting for order delivered template doesnt exists!',
+                  code: 404
+               }
+            const [data] = brand.delivered
+            template.type = 'Delivered'
+            template.name = data.name
+            template.email = data.email
+            template.template = data.template
+            template.subject = `Your order ORD:#${id} from ${data.name} has been delivered`
+         } else if (order.isRejected) {
+            if (brand.cancelled.length === 0)
+               throw {
+                  message:
+                     'Setting for order cancelled template doesnt exists!',
+                  code: 404
+               }
+
+            const [data] = brand.cancelled
+            template.type = 'Cancelled'
+            template.name = data.name
+            template.email = data.email
+            template.template = data.template
+            template.subject = `Your order ORD:#${id} from ${data.name} has been cancelled`
+         }
+
+         if (!template.type)
+            return res.status(200).json({
+               success: true,
+               message: 'This order status has not been mapped!'
+            })
+
+         let html = await fetch_html(template.template, {
+            new: { id }
+         })
+
+         const customer = {
+            email: ''
+         }
+
+         const { customer: consumer } = await client.request(CUSTOMER, {
+            keycloakId
+         })
+
+         if (!consumer) throw { message: 'No such customer exists', code: 404 }
+
+         if ('email' in consumer && consumer.email) {
+            customer.email = consumer.email
+         }
+
+         if (!customer.email)
+            throw { message: 'Customer does not have email linked!', code: 404 }
+
+         await client.request(SEND_MAIL, {
+            emailInput: {
+               html,
+               attachments: [],
+               to: customer.email,
+               subject: template.subject,
+               from: `"${template.name}" ${template.email}`
+            }
+         })
+         return res
+            .status(200)
+            .json({ success: true, template, customer, html })
+      }
    } catch (error) {
       logger({
          meta: { order: { id } },
