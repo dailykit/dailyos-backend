@@ -56,7 +56,7 @@ const createCart = async data => {
       const {
          isAuto,
          subscriptionId,
-         availableZipcodes: { deliveryTime, deliveryPrice },
+         availableZipcodes: { deliveryTime, deliveryPrice } = {},
          brand_customers: {
             brandCustomerId,
             subscriptionAddressId,
@@ -68,10 +68,9 @@ const createCart = async data => {
                email,
                platform_customer,
                subscriptionOccurences
-            }
-         }
+            } = {}
+         } = {}
       } = data
-      console.log(platform_customer)
       const defaultAddress =
          platform_customer &&
          platform_customer.customerAddresses.filter(
