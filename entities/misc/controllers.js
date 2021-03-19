@@ -239,7 +239,7 @@ export const authorizeRequest = async (req, res) => {
       const brandCustomerId = req.body.headers['Brand-Customer-Id']
       const source = req.body.headers['Source']
 
-      const staffUserExists = false
+      let staffUserExists = false
       if (staffId) {
          const { users = [] } = await client.request(STAFF_USERS, {
             keycloakId: { _eq: staffId }
@@ -262,7 +262,8 @@ export const authorizeRequest = async (req, res) => {
          }),
          ...(staffId &&
             staffUserExists && {
-               'x-hasura-admin-secret': process.env.HASURA_GRAPHQL_ADMIN_SECRET
+               'X-Hasura-Role': 'admin',
+               'X-Hasura-Staff-Id': staffId
             })
       })
    } catch (error) {
