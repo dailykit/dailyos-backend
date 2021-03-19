@@ -223,9 +223,22 @@ export const getDistance = async (req, res) => {
 }
 
 const STAFF_USERS = `
-   query users($keycloakId: String_comparison_exp!) {
-      users: settings_user(where: { keycloakId: $keycloakId }) {
+   query users($email: String_comparison_exp!) {
+      users: settings_user(where: { email: $keycloakId }) {
          id
+         email
+         keycloakId
+      }
+   }
+`
+
+const UPDATE_STAFF_USER = `
+   mutation updateUser(
+      $where: settings_user_bool_exp!
+      $_set: settings_user_set_input!
+   ) {
+      updateUser: update_settings_user(where: $where, _set: $_set) {
+         affected_rows
       }
    }
 `
@@ -233,6 +246,8 @@ const STAFF_USERS = `
 export const authorizeRequest = async (req, res) => {
    try {
       const staffId = req.body.headers['Staff-Id']
+      const staffEmail = req.body.headers['Staff-Email']
+
       const keycloakId = req.body.headers['Keycloak-Id']
       const cartId = req.body.headers['Cart-Id']
       const brandId = req.body.headers['Brand-Id']
@@ -242,10 +257,17 @@ export const authorizeRequest = async (req, res) => {
       let staffUserExists = false
       if (staffId) {
          const { users = [] } = await client.request(STAFF_USERS, {
-            keycloakId: { _eq: staffId }
+            email: { _eq: staffEmail }
          })
          if (users.length > 0) {
             staffUserExists = true
+            const [user] = users
+            if (user.keycloakId !== staffId) {
+               await client.request(UPDATE_STAFF_USER, {
+                  where: { email: { _eq: staffEmail } },
+                  _set: { keycloakId: staffId }
+               })
+            }
          }
       }
 
@@ -263,7 +285,8 @@ export const authorizeRequest = async (req, res) => {
          ...(staffId &&
             staffUserExists && {
                'X-Hasura-Role': 'admin',
-               'X-Hasura-Staff-Id': staffId
+               'X-Hasura-Staff-Id': staffId,
+               'X-Hasura-Email-Id': staffEmail
             })
       })
    } catch (error) {
