@@ -222,23 +222,49 @@ export const getDistance = async (req, res) => {
    }
 }
 
+const STAFF_USERS = `
+   query users($keycloakId: String_comparison_exp!) {
+      users: settings_user(where: { keycloakId: $keycloakId }) {
+         id
+      }
+   }
+`
+
 export const authorizeRequest = async (req, res) => {
    try {
+      const staffId = req.body.headers['Staff-Id']
       const keycloakId = req.body.headers['Keycloak-Id']
       const cartId = req.body.headers['Cart-Id']
       const brandId = req.body.headers['Brand-Id']
       const brandCustomerId = req.body.headers['Brand-Customer-Id']
       const source = req.body.headers['Source']
 
+      let staffUserExists = false
+      if (staffId) {
+         const { users = [] } = await client.request(STAFF_USERS, {
+            keycloakId: { _eq: staffId }
+         })
+         if (users.length > 0) {
+            staffUserExists = true
+         }
+      }
+
       return res.status(200).json({
          'X-Hasura-Role': keycloakId ? 'consumer' : 'guest-consumer',
          'X-Hasura-Source': source,
          'X-Hasura-Brand-Id': brandId,
-         ...(keycloakId && { 'X-Hasura-Keycloak-Id': keycloakId }),
+         ...(keycloakId && {
+            'X-Hasura-Keycloak-Id': keycloakId
+         }),
          ...(cartId && { 'X-Hasura-Cart-Id': cartId }),
          ...(brandCustomerId && {
             'X-Hasura-Brand-Customer-Id': brandCustomerId
-         })
+         }),
+         ...(staffId &&
+            staffUserExists && {
+               'X-Hasura-Role': 'admin',
+               'X-Hasura-Staff-Id': staffId
+            })
       })
    } catch (error) {
       return res.status(404).json({ success: false, error: error.message })
