@@ -224,7 +224,7 @@ export const getDistance = async (req, res) => {
 
 const STAFF_USERS = `
    query users($email: String_comparison_exp!) {
-      users: settings_user(where: { email: $keycloakId }) {
+      users: settings_user(where: { email: $email }) {
          id
          email
          keycloakId
