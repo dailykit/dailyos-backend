@@ -5,7 +5,7 @@ const AWS = require('aws-sdk')
 const nodemailer = require('nodemailer')
 import {
    GET_SES_DOMAIN,
-   GET_PAYMENT_SETTINGS,
+   BRAND_SETTINGS,
    GET_CUSTOMER,
    UPDATE_CART
 } from './graphql'
@@ -17,22 +17,17 @@ export const initiatePayment = async (req, res) => {
       const data = req.body.event.data.new
 
       if (data.status === 'CART_PROCESS') {
-         const { paymentSettings } = await client.request(
-            GET_PAYMENT_SETTINGS,
-            {
-               brandId: data.brandId
-            }
-         )
+         const { storeSettings = [] } = await client.request(BRAND_SETTINGS, {
+            brandId: data.brandId
+         })
          const { customer } = await client.request(GET_CUSTOMER, {
             keycloakId: data.customerKeycloakId
          })
 
-         const isStripeConfigured = paymentSettings[0].brandSettings.length
-            ? paymentSettings[0].brandSettings[0].value.isStripeConfigured
-            : paymentSettings[0].value.isStripeConfigured
-         const isStoreLive = paymentSettings[0].brandSettings.length
-            ? paymentSettings[0].brandSettings[0].value.isStoreLive
-            : paymentSettings[0].value.isStoreLive
+         if (storeSettings.length === 0) return
+
+         const [settings] = storeSettings
+         const { isStoreLive = false, isStripeConfigured = false } = settings
 
          if (!isStripeConfigured || !isStoreLive || customer.isTest) {
             await client.request(UPDATE_CART, {
@@ -53,6 +48,7 @@ export const initiatePayment = async (req, res) => {
             if (data.amount) {
                const body = {
                   organizationId: process.env.ORGANIZATION_ID,
+                  statementDescriptor: data.statementDescriptor || '',
                   cart: {
                      id: data.id,
                      amount: data.amount

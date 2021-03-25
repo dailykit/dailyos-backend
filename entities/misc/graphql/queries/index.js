@@ -15,15 +15,21 @@ query aws_ses($domain: String!) {
 }
 `
 
-export const GET_PAYMENT_SETTINGS = `
-query storeSettings($brandId: Int!) {
-   paymentSettings: storeSettings(where: {type: {_eq: "availability"}, identifier: {_eq: "Store Live"}}) {
-     value
-     brandSettings(where: {brandId: {_eq: $brandId}}) {
-       value
-     }
+export const BRAND_SETTINGS = `
+   query storeSettings($brandId: Int!) {
+      storeSettings: brands_brand_storeSetting(
+         where: {
+            brandId: { _eq: $brandId }
+            onDemandSetting: {
+               type: { _eq: "availability" }
+               identifier: { _eq: "Store Live" }
+            }
+         }
+      ) {
+         isStoreLive: value(path: "isStoreLive")
+         isStripeConfigured: value(path: "isStripeConfigured")
+      }
    }
- }
 `
 
 export const GET_CUSTOMER = `
