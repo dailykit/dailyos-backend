@@ -14,28 +14,3 @@ query aws_ses($domain: String!) {
   }
 }
 `
-
-export const BRAND_SETTINGS = `
-   query storeSettings($brandId: Int!) {
-      storeSettings: brands_brand_storeSetting(
-         where: {
-            brandId: { _eq: $brandId }
-            onDemandSetting: {
-               type: { _eq: "availability" }
-               identifier: { _eq: "Store Live" }
-            }
-         }
-      ) {
-         isStoreLive: value(path: "isStoreLive")
-         isStripeConfigured: value(path: "isStripeConfigured")
-      }
-   }
-`
-
-export const GET_CUSTOMER = `
-query Customer($keycloakId: String!) {
-   customer(keycloakId: $keycloakId) {
-     isTest
-   }
- }
-`

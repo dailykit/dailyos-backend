@@ -3,84 +3,52 @@ import { client } from '../../lib/graphql'
 const fetch = require('node-fetch')
 const AWS = require('aws-sdk')
 const nodemailer = require('nodemailer')
-import {
-   GET_SES_DOMAIN,
-   BRAND_SETTINGS,
-   GET_CUSTOMER,
-   UPDATE_CART
-} from './graphql'
+
+import { GET_SES_DOMAIN, UPDATE_CART } from './graphql'
 
 AWS.config.update({ region: 'us-east-2' })
 
 export const initiatePayment = async (req, res) => {
    try {
-      const data = req.body.event.data.new
+      const cart = req.body.event.data.new
 
-      if (data.status === 'CART_PROCESS') {
-         const { storeSettings = [] } = await client.request(BRAND_SETTINGS, {
-            brandId: data.brandId
-         })
-         const { customer } = await client.request(GET_CUSTOMER, {
-            keycloakId: data.customerKeycloakId
-         })
-
-         if (storeSettings.length === 0) return
-
-         const [settings] = storeSettings
-         const { isStoreLive = false, isStripeConfigured = false } = settings
-
-         if (!isStripeConfigured || !isStoreLive || customer.isTest) {
-            await client.request(UPDATE_CART, {
-               id: data.id,
-               set: {
-                  paymentStatus: 'SUCCEEDED',
-                  isTest: true,
-                  transactionId: 'NA',
-                  transactionRemark: {
-                     id: 'NA',
-                     amount: data.amount * 100,
-                     message: 'payment bypassed',
-                     reason: 'test mode'
-                  }
+      if (cart.isTest) {
+         await client.request(UPDATE_CART, {
+            id: cart.id,
+            set: {
+               paymentStatus: 'SUCCEEDED',
+               isTest: true,
+               transactionId: 'NA',
+               transactionRemark: {
+                  id: 'NA',
+                  amount: cart.amount * 100,
+                  message: 'payment bypassed',
+                  reason: 'test mode'
                }
-            })
-         } else {
-            if (data.amount) {
-               const body = {
-                  organizationId: process.env.ORGANIZATION_ID,
-                  statementDescriptor: data.statementDescriptor || '',
-                  cart: {
-                     id: data.id,
-                     amount: data.amount
-                  },
-                  customer: {
-                     paymentMethod: data.paymentMethodId,
-                     stripeCustomerId: data.stripeCustomerId
-                  }
-               }
-               await fetch(`${process.env.PAYMENTS_API}/api/initiate-payment`, {
-                  method: 'POST',
-                  headers: {
-                     'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify(body)
-               })
-            } else {
-               await client.request(UPDATE_CART, {
-                  id: data.id,
-                  set: {
-                     paymentStatus: 'SUCCEEDED',
-                     transactionId: 'NA',
-                     transactionRemark: {
-                        id: 'NA',
-                        amount: 0,
-                        message: 'payment bypassed',
-                        reason: 'no amount for stripe transaction'
-                     }
-                  }
-               })
+            }
+         })
+         return
+      }
+      if (cart.amount) {
+         const body = {
+            organizationId: process.env.ORGANIZATION_ID,
+            statementDescriptor: cart.statementDescriptor || '',
+            cart: {
+               id: cart.id,
+               amount: cart.amount
+            },
+            customer: {
+               paymentMethod: cart.paymentMethodId,
+               stripeCustomerId: cart.stripeCustomerId
             }
          }
+         await fetch(`${process.env.PAYMENTS_API}/api/initiate-payment`, {
+            method: 'POST',
+            headers: {
+               'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+         })
       }
 
       res.status(200).json({
