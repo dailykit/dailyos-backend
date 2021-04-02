@@ -1,5 +1,5 @@
 import { client } from '../../../lib/graphql'
-import { UPDATE_CART, UPDATE_OCCURENCE_CUSTOMER } from '../graphql'
+import { UPDATE_CARTS, UPDATE_OCCURENCE_CUSTOMER } from '../graphql'
 
 export const manageOccurence = async (req, res) => {
    try {
