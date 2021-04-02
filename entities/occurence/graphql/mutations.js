@@ -22,28 +22,13 @@ export const UPDATE_SUBSCRIPTION = `
    }
 `
 
-export const UPDATE_CART = `
-   mutation updateCart(
-      $_set: order_cart_set_input!
-      $cutoffTimeStamp: timestamp_comparison_exp!
-      $subscriptionOccurenceId: Int_comparison_exp!
-   ) {
-      updateCart(
-         where: {
-            status: { _eq: "CART_PENDING" }
-            subscriptionOccurenceCustomers: {
-               isSkipped: { _eq: false }
-               subscriptionOccurence: {
-                  id: $subscriptionOccurenceId
-                  cutoffTimeStamp: $cutoffTimeStamp
-               }
-            }
-         }
-         _set: $_set
-      ) {
-         affected_rows
-      }
+export const UPDATE_CARTS = `
+mutation updateCarts($subscriptionOccurenceId: Int_comparison_exp!, $cutoffTimeStamp: timestamp_comparison_exp!) {
+   updateCarts(where: {paymentStatus: {_neq: "SUCCEEDED"}, subscriptionOccurenceCustomer: {isSkipped: {_eq: false}, subscriptionOccurence: {id: $subscriptionOccurenceId, cutoffTimeStamp: $cutoffTimeStamp}}}, _inc: {paymentRetryAttempt: 1}) {
+     affected_rows
    }
+ }
+ 
 `
 
 export const UPDATE_OCCURENCE_CUSTOMER = `

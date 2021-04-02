@@ -25,15 +25,14 @@ export const manageOccurence = async (req, res) => {
          }
       })
 
-      await client.request(UPDATE_CART, {
-         _set: { status: 'PROCESS' },
+      await client.request(UPDATE_CARTS, {
          subscriptionOccurenceId: { _eq: node.id },
          cutoffTimeStamp: { _eq: node.cutoffTimeStamp }
       })
 
       return res.status(200).json({
          success: true,
-         message: 'Successfully updated occurence!'
+         message: 'Successfully updated carts!'
       })
    } catch (error) {
       return res.status(400).json({ success: false, error: error.message })
