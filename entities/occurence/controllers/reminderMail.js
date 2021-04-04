@@ -1,6 +1,6 @@
 import { client } from '../../../lib/graphql'
-import { addProductsToCart, sendEmail, autoGenerateCart } from '../../../utils'
-import { GET_CUSTOMERS_DETAILS, GET_TEMPLATE_SETTINGS } from '../graphql'
+import { sendEmail, autoGenerateCart } from '../../../utils'
+import { GET_CUSTOMERS_DETAILS } from '../graphql'
 
 export const reminderMail = async (req, res) => {
    try {
