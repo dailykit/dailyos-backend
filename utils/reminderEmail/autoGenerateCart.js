@@ -1,12 +1,33 @@
-import { evalTime, sendEmail } from '../'
+import { evalTime, sendEmail } from '..'
 import { client } from '../../lib/graphql'
 import { CREATE_CART } from '../../entities/occurence/graphql'
 
-export const autoGenerate = async ({
+export const autoGenerateCart = async ({
    brandCustomerId,
    subscriptionOccurenceId
 }) => {
    try {
+      const { brand_customers } = await client.request(GET_SUB_OCCURENCE, {
+         brandCustomerId,
+         subscriptionOccurenceId
+      })
+
+      if (
+         brand_customers.length > 0 &&
+         brand_customers[0].customer.subscriptionOccurence_customer.length === 0
+      ) {
+         const [{ customer: { keycloakId } = {} }] = brand_customers
+         await client.request(INSERT_SUBS_OCCURENCE, {
+            object: {
+               isAuto: true,
+               isSkipped: false,
+               keycloakId,
+               subscriptionOccurenceId,
+               brand_customerId: brandCustomerId
+            }
+         })
+      }
+
       const {
          subscriptionOccurences: [
             {
@@ -20,19 +41,25 @@ export const autoGenerate = async ({
          brandCustomerId
       })
 
-      const cartId = await createCart({
-         ...subscription,
-         subscriptionOccurenceId,
-         isAuto: true,
-         fulfillmentDate
-      })
-      console.log(cartId)
+      let cartId =
+         subscription.brand_customers[0].customer
+            .subscriptionOccurence_customer[0].cartId
+
+      if (cartId === null) {
+         cartId = await createCart({
+            ...subscription,
+            subscriptionOccurenceId,
+            isAuto: true,
+            fulfillmentDate
+         })
+
+         console.log(cartId)
+      }
+
       const { count } = subscription.subscriptionItemCount
 
       const method = require(`../../options/${
-         subscriptionAutoSelectOption
-            ? subscriptionAutoSelectOption
-            : 'products'
+         subscriptionAutoSelectOption && subscriptionAutoSelectOption
       }`)
 
       const products = await method.default(
@@ -54,7 +81,7 @@ export const autoGenerate = async ({
                }
             })
          )
-
+         // isSkipped
          await sendEmail({ brandCustomerId, subscriptionOccurenceId })
       }
    } catch (error) {
@@ -153,12 +180,20 @@ const createCart = async data => {
    }
 }
 
-export const INSERT_CART_ITEM = `
-   mutation createCartItem($object: order_cartItem_insert_input!) {
-      createCartItem(object: $object) {
-         id
-      }
-   }
+const GET_SUB_OCCURENCE = `
+   query subscriptionOccurences($brandCustomerId: Int!, $subscriptionOccurenceId: Int!) {
+  brandCustomers(where: {id: {_eq: $brandCustomerId}}) {
+    subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}) {
+      isAuto
+      cartId
+      isSkipped
+      keycloakId
+      validStatus
+      subscriptionId
+      brand_customerId
+    }
+  }
+}
 `
 
 const GET_CUSTOMER_ORDER_DETAILS = `
@@ -202,8 +237,9 @@ query customerOrder($subscriptionOccurenceId: Int!, $brandCustomerId: Int!) {
               id
             }
           }
-          subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}) {
-            subscriptionOccurenceId
+          subscriptionOccurence_customer: subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}) {
+            id
+            validStatus
             isAuto
             cartId
             isSkipped
@@ -212,4 +248,24 @@ query customerOrder($subscriptionOccurenceId: Int!, $brandCustomerId: Int!) {
       }
     }
   }
+}`
+
+const INSERT_CART_ITEM = `
+   mutation createCartItem($object: order_cartItem_insert_input!) {
+      createCartItem(object: $object) {
+         id
+      }
+   }
+`
+
+const INSERT_SUBS_OCCURENCE = `
+mutation insertSubscriptionOccurenceCustomer(
+      $object: subscription_subscriptionOccurence_customer_insert_input!
+   ) {
+      insertSubscriptionOccurenceCustomer: insert_subscription_subscriptionOccurence_customer_one(
+         object: $object
+      ) {
+         keycloakId
+         subscriptionOccurenceId
+      }
 }`

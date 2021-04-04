@@ -1,3 +1,3 @@
-export * from './addProducts.js'
+export * from './addProductsToCart.js'
 export * from './sendEmail.js'
-export * from './autoGenerate'
+export * from './autoGenerateCart'

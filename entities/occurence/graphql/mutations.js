@@ -76,7 +76,7 @@ export const SEND_MAIL = `
    }
 `
 export const CREATE_CART = `
-    mutation createCart($object: order_cart_insert_input!) {
+    mutation createCart($object: order_cart_insert_input!, on_conflict: {constraint: subscriptionOccurence_customer_orderCartId_key, update_columns: cartId}) {
             createCart(object: $object) {
                cartId: id
                subscriptionOccurenceCustomers {

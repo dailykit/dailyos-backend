@@ -1,7 +1,7 @@
-import { sendEmail } from '../'
+import { sendEmail } from '..'
 import { client } from '../../lib/graphql'
 
-export const addProducts = async ({
+export const addProductsToCart = async ({
    cartId,
    brandCustomerId,
    subscriptionOccurenceId

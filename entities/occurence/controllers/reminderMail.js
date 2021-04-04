@@ -1,5 +1,5 @@
 import { client } from '../../../lib/graphql'
-import { addProducts, sendEmail, autoGenerate } from '../../../utils'
+import { addProductsToCart, sendEmail, autoGenerateCart } from '../../../utils'
 import { GET_CUSTOMERS_DETAILS, GET_TEMPLATE_SETTINGS } from '../graphql'
 
 export const reminderMail = async (req, res) => {
@@ -15,37 +15,35 @@ export const reminderMail = async (req, res) => {
 
       await Promise.all(
          brand_customers.map(async brand_customer => {
-            // console.log(brand_customer)
             try {
                const {
                   brandCustomerId,
                   isAutoSelectOptOut,
-                  customer
+                  subscriptionOccurence_customer
                } = brand_customer
-               if (customer.subscriptionOccurences.length !== 0) {
-                  // Cart exists
+               if (
+                  subscriptionOccurence_customer.length !== 0 &&
+                  subscriptionOccurence_customer[0].cartId != null &&
+                  subscriptionOccurence_customer[0].validStatus.itemCountValid
+               ) {
                   const {
                      isAuto,
-                     cartId,
-                     isSkipped,
-                     validStatus
-                  } = customer.subscriptionOccurences[0]
+                     isSkipped
+                  } = subscriptionOccurence_customer[0]
 
-                  if (isAuto) {
-                     // Cart is Created by us
-                     sendEmail({ brandCustomerId, subscriptionOccurenceId })
-                  } else {
-                     if (isSkipped === false && !validStatus.itemCountValid) {
-                        // Cart is Created by them
-                        addProducts({
-                           cartId,
-                           brandCustomerId,
-                           subscriptionOccurenceId
-                        })
+                  if (isSkipped === false) {
+                     if (isAuto) {
+                        sendEmail({ brandCustomerId, subscriptionOccurenceId })
                      } else {
-                        // Skipped the week
+                        // Cart is Created by them
                         sendEmail({ brandCustomerId, subscriptionOccurenceId })
                      }
+                  } else {
+                     // Skipped the week
+                     sendEmail({
+                        brandCustomerId,
+                        subscriptionOccurenceId
+                     })
                   }
                } else {
                   // Cart doesn't exist
@@ -53,13 +51,14 @@ export const reminderMail = async (req, res) => {
                      // Doesn't have option to creat cart
                      sendEmail({ brandCustomerId, subscriptionOccurenceId })
                   } else {
-                     // create cart
-                     autoGenerate({
+                     autoGenerateCart({
                         brandCustomerId,
                         subscriptionOccurenceId
                      })
                   }
                }
+
+               // Cart Processing Function
             } catch (error) {
                throw Error(error.message)
             }
@@ -75,3 +74,10 @@ export const reminderMail = async (req, res) => {
       return res.status(400).json({ success: false, error: error.message })
    }
 }
+
+const QUERY = `query getProducts($subscriptionOccurenceId: Int! $subscriptionId: Int!) {
+  products: subscription_subscriptionOccurence_product(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}, _or: {subscriptionId: {_eq: $subscriptionId}}}) {
+    cartItem
+  }
+}
+`

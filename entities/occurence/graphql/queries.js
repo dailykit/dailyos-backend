@@ -23,16 +23,16 @@ query customerDetails($id: Int!) {
       brand_customers {
         brandCustomerId: id
         isAutoSelectOptOut
-        customer {
-          subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $id}}) {
+        subscriptionOccurence_customer: subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $id}}) {
+            id
             validStatus
             isSkipped
             isAuto
             cartId
           }
-        }
       }
     }
   }
 }
 `
+// SubscriptionOcuu
