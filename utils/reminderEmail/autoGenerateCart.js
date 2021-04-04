@@ -1,10 +1,12 @@
 import { evalTime, sendEmail } from '..'
 import { client } from '../../lib/graphql'
 import { CREATE_CART } from '../../entities/occurence/graphql'
+import { addProductsToCart } from './addProductsToCart'
 
 export const autoGenerateCart = async ({
    brandCustomerId,
-   subscriptionOccurenceId
+   subscriptionOccurenceId,
+   products
 }) => {
    try {
       const { brand_customers } = await client.request(GET_SUB_OCCURENCE, {
@@ -29,13 +31,7 @@ export const autoGenerateCart = async ({
       }
 
       const {
-         subscriptionOccurences: [
-            {
-               subscriptionAutoSelectOption = 'products',
-               fulfillmentDate,
-               subscription = {}
-            }
-         ] = []
+         subscriptionOccurences: [{ fulfillmentDate, subscription = {} }] = []
       } = await client.request(GET_CUSTOMER_ORDER_DETAILS, {
          subscriptionOccurenceId,
          brandCustomerId
@@ -56,34 +52,7 @@ export const autoGenerateCart = async ({
          console.log(cartId)
       }
 
-      const { count } = subscription.subscriptionItemCount
-
-      const method = require(`../../options/${
-         subscriptionAutoSelectOption && subscriptionAutoSelectOption
-      }`)
-
-      const products = await method.default(
-         {
-            subscriptionOccurenceId,
-            subscriptionId: subscription.subscriptionId
-         },
-         count
-      )
-      if (products.status != 400) {
-         await Promise.all(
-            products.randomProducts.map(async item => {
-               try {
-                  await client.request(INSERT_CART_ITEM, {
-                     object: { ...item, cartId }
-                  })
-               } catch (error) {
-                  throw Error(error.message)
-               }
-            })
-         )
-         // isSkipped
-         await sendEmail({ brandCustomerId, subscriptionOccurenceId })
-      }
+      addProductsToCart({ brandCustomerId, subscriptionOccurenceId, products })
    } catch (error) {
       console.log(error)
       // throw Error(error.message)
@@ -249,14 +218,6 @@ query customerOrder($subscriptionOccurenceId: Int!, $brandCustomerId: Int!) {
     }
   }
 }`
-
-const INSERT_CART_ITEM = `
-   mutation createCartItem($object: order_cartItem_insert_input!) {
-      createCartItem(object: $object) {
-         id
-      }
-   }
-`
 
 const INSERT_SUBS_OCCURENCE = `
 mutation insertSubscriptionOccurenceCustomer(

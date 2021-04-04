@@ -20,11 +20,11 @@ export const GET_CUSTOMERS_DETAILS = `
 query customerDetails($id: Int!) {
   subscriptionOccurences(where: {id: {_eq: $id}}) {
     subscription {
+      subscriptionId: id
       brand_customers {
         brandCustomerId: id
         isAutoSelectOptOut
         subscriptionOccurence_customer: subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $id}}) {
-            id
             validStatus
             isSkipped
             isAuto

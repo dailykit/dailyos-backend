@@ -7,10 +7,15 @@ export const reminderMail = async (req, res) => {
       const { subscriptionOccurenceId } = req.body.payload
       const {
          subscriptionOccurences: [
-            { subscription: { brand_customers = [] } = {} }
+            { subscription: { subscriptionId, brand_customers = [] } = {} }
          ] = []
       } = await client.request(GET_CUSTOMERS_DETAILS, {
          id: subscriptionOccurenceId
+      })
+
+      const { products = [] } = await client.request(GET_PRODUCTS, {
+         subscriptionOccurenceId,
+         subscriptionId
       })
 
       await Promise.all(
@@ -35,30 +40,25 @@ export const reminderMail = async (req, res) => {
                      if (isAuto) {
                         sendEmail({ brandCustomerId, subscriptionOccurenceId })
                      } else {
-                        // Cart is Created by them
                         sendEmail({ brandCustomerId, subscriptionOccurenceId })
                      }
                   } else {
-                     // Skipped the week
                      sendEmail({
                         brandCustomerId,
                         subscriptionOccurenceId
                      })
                   }
                } else {
-                  // Cart doesn't exist
                   if (isAutoSelectOptOut) {
-                     // Doesn't have option to creat cart
                      sendEmail({ brandCustomerId, subscriptionOccurenceId })
                   } else {
                      autoGenerateCart({
                         brandCustomerId,
-                        subscriptionOccurenceId
+                        subscriptionOccurenceId,
+                        products
                      })
                   }
                }
-
-               // Cart Processing Function
             } catch (error) {
                throw Error(error.message)
             }
@@ -75,7 +75,7 @@ export const reminderMail = async (req, res) => {
    }
 }
 
-const QUERY = `query getProducts($subscriptionOccurenceId: Int! $subscriptionId: Int!) {
+const GET_PRODUCTS = `query getProducts($subscriptionOccurenceId: Int! $subscriptionId: Int!) {
   products: subscription_subscriptionOccurence_product(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}, _or: {subscriptionId: {_eq: $subscriptionId}}}) {
     cartItem
   }

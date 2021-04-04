@@ -1,38 +1,21 @@
-import { client } from '../lib/graphql'
-const getProducts = async (
-   { subscriptionOccurenceId, subscriptionId },
-   noOfItem
-) => {
+const random = async products => {
    try {
-      const { products = [] } = await client.request(QUERY, {
-         subscriptionOccurenceId,
-         subscriptionId
-      })
+      let currentIndex = products.length,
+         temp,
+         randomIndex
 
-      if (products.length < noOfItem) {
-         return { status: 400 }
+      while (currentIndex !== 0) {
+         randomIndex = Math.floor(Math.random() * currentIndex)
+         currentIndex -= 1
+
+         temp = products[currentIndex]
+         products[currentIndex] = products[randomIndex]
+         products[randomIndex] = temp
       }
-
-      let randomProducts = [],
-         index = 0
-
-      while (noOfItem > 0) {
-         index = Math.floor(Math.random() * products.length)
-         randomProducts.push(products[index])
-         products.splice(index, 1)
-         noOfItem--
-      }
-      console.log('randomProducts: ', randomProducts)
-      return { status: 200, randomProducts }
+      return products
    } catch (error) {
       console.log(error)
    }
 }
 
-const QUERY = `query getProducts($subscriptionOccurenceId: Int! $subscriptionId: Int!) {
-  products: subscription_subscriptionOccurence_product(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}, _or: {subscriptionId: {_eq: $subscriptionId}}}) {
-    cartItem
-  }
-}
-`
-export default getProducts
+export default random
