@@ -8,21 +8,22 @@ export const addProductsToCart = async ({
 }) => {
    try {
       const {
-         brandCustomers: {
-            customer: {
-               subscriptionOccurence: {
-                  validStatus = {},
-                  cartId,
-                  isSkipped,
-                  subscriptionOccurence = {}
-               } = {}
-            } = {}
-         } = []
+         brandCustomers: [
+            {
+               subscriptionOccurences: [
+                  {
+                     validStatus = {},
+                     cartId,
+                     isSkipped,
+                     subscriptionOccurence = {}
+                  }
+               ] = []
+            }
+         ] = []
       } = await client.request(PENDING_PRODUCT_COUNT, {
          brandCustomerId,
          subscriptionOccurenceId
       })
-
       const method = require(`../../options/${
          subscriptionOccurence.subscriptionAutoSelectOption &&
          subscriptionOccurence.subscriptionAutoSelectOption
@@ -30,13 +31,15 @@ export const addProductsToCart = async ({
 
       const sortedProducts = await method.default(products)
       let i = 0,
-         count = validStatus.pendingProductCount
+         count = validStatus.pendingProductsCount
 
+      console.log('sortedProducts: ', sortedProducts.length, count)
       if (sortedProducts.length >= count) {
          while (i < count) {
+            console.log(i, { ...sortedProducts[i] })
             try {
                await client.request(INSERT_CART_ITEM, {
-                  object: { ...sortedProducts[i], cartId }
+                  object: { ...sortedProducts[i].cartItem, cartId }
                })
             } catch (error) {
                throw Error(error.message)

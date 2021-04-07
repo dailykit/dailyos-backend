@@ -76,13 +76,19 @@ export const SEND_MAIL = `
    }
 `
 export const CREATE_CART = `
-    mutation createCart($object: order_cart_insert_input!, on_conflict: {constraint: subscriptionOccurence_customer_orderCartId_key, update_columns: cartId}) {
-            createCart(object: $object) {
-               cartId: id
-               subscriptionOccurenceCustomers {
-                  isSkipped
-                  validStatus
-               }
-            }
-         }
+mutation createCart($object: order_cart_insert_input!) {
+   createCart(object: $object) {
+      cartId: id
+   }
+}
+`
+export const UPDATE_SUB_OCCURENCE = `mutation UpdateSubOcc($subscriptionOccurenceId: Int!, $brandCustomerId: Int!, $cartId: Int!, $isAuto: Boolean! ) {
+  update_subscription_subscriptionOccurence_customer(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}, _and: {brand_customerId: {_eq: $brandCustomerId}}}, _set: {cartId: $cartId, isAuto: $isAuto}) {
+    affected_rows
+    returning {
+      cartId
+      isAuto
+    }
+  }
+}
 `

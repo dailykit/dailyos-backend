@@ -17,7 +17,6 @@ export const reminderMail = async (req, res) => {
          subscriptionOccurenceId,
          subscriptionId
       })
-
       await Promise.all(
          brand_customers.map(async brand_customer => {
             try {
@@ -38,19 +37,19 @@ export const reminderMail = async (req, res) => {
 
                   if (isSkipped === false) {
                      if (isAuto) {
-                        sendEmail({ brandCustomerId, subscriptionOccurenceId })
+                        // sendEmail({ brandCustomerId, subscriptionOccurenceId })
                      } else {
-                        sendEmail({ brandCustomerId, subscriptionOccurenceId })
+                        // sendEmail({ brandCustomerId, subscriptionOccurenceId })
                      }
                   } else {
-                     sendEmail({
-                        brandCustomerId,
-                        subscriptionOccurenceId
-                     })
+                     // sendEmail({
+                     //    brandCustomerId,
+                     //    subscriptionOccurenceId
+                     // })
                   }
                } else {
                   if (isAutoSelectOptOut) {
-                     sendEmail({ brandCustomerId, subscriptionOccurenceId })
+                     // sendEmail({ brandCustomerId, subscriptionOccurenceId })
                   } else {
                      autoGenerateCart({
                         brandCustomerId,

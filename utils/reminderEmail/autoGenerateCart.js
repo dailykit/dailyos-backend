@@ -1,6 +1,9 @@
-import { evalTime, sendEmail } from '..'
+import { evalTime } from '..'
 import { client } from '../../lib/graphql'
-import { CREATE_CART } from '../../entities/occurence/graphql'
+import {
+   CREATE_CART,
+   UPDATE_SUB_OCCURENCE
+} from '../../entities/occurence/graphql'
 import { addProductsToCart } from './addProductsToCart'
 
 export const autoGenerateCart = async ({
@@ -9,16 +12,16 @@ export const autoGenerateCart = async ({
    products
 }) => {
    try {
-      const { brand_customers } = await client.request(GET_SUB_OCCURENCE, {
+      const { brandCustomers } = await client.request(GET_SUB_OCCURENCE, {
          brandCustomerId,
          subscriptionOccurenceId
       })
-
       if (
-         brand_customers.length > 0 &&
-         brand_customers[0].customer.subscriptionOccurence_customer.length === 0
+         brandCustomers.length > 0 &&
+         brandCustomers[0].subscriptionOccurences.length === 0
       ) {
-         const [{ customer: { keycloakId } = {} }] = brand_customers
+         const [{ keycloakId }] = brandCustomers
+
          await client.request(INSERT_SUBS_OCCURENCE, {
             object: {
                isAuto: true,
@@ -49,10 +52,21 @@ export const autoGenerateCart = async ({
             fulfillmentDate
          })
 
+         await client.request(UPDATE_SUB_OCCURENCE, {
+            subscriptionOccurenceId,
+            brandCustomerId,
+            isAuto: true,
+            cartId
+         })
+
          console.log(cartId)
       }
 
-      addProductsToCart({ brandCustomerId, subscriptionOccurenceId, products })
+      await addProductsToCart({
+         brandCustomerId,
+         subscriptionOccurenceId,
+         products
+      })
    } catch (error) {
       console.log(error)
       // throw Error(error.message)
@@ -61,7 +75,6 @@ export const autoGenerateCart = async ({
 
 const createCart = async data => {
    try {
-      console.log(data)
       const {
          isAuto = true,
          fulfillmentDate,
@@ -90,6 +103,7 @@ const createCart = async data => {
          const { createCart } = await client.request(CREATE_CART, {
             object: {
                status: 'CART_PENDING',
+               brandId: brandCustomerId,
                customerId: parseInt(id),
                paymentStatus: 'PENDING',
                ...(subscriptionPaymentMethodId && {
@@ -127,17 +141,6 @@ const createCart = async data => {
                         deliveryTime &&
                         evalTime(fulfillmentDate, deliveryTime.to)
                   }
-               },
-               subscriptionOccurenceCustomers: {
-                  data: [
-                     {
-                        isSkipped: false,
-                        keycloakId,
-                        subscriptionOccurenceId,
-                        isAuto,
-                        brand_customerId: brandCustomerId
-                     }
-                  ]
                }
             }
          })
@@ -152,6 +155,7 @@ const createCart = async data => {
 const GET_SUB_OCCURENCE = `
    query subscriptionOccurences($brandCustomerId: Int!, $subscriptionOccurenceId: Int!) {
   brandCustomers(where: {id: {_eq: $brandCustomerId}}) {
+     keycloakId
     subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}) {
       isAuto
       cartId
@@ -207,7 +211,6 @@ query customerOrder($subscriptionOccurenceId: Int!, $brandCustomerId: Int!) {
             }
           }
           subscriptionOccurence_customer: subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}) {
-            id
             validStatus
             isAuto
             cartId
