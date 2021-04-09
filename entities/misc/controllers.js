@@ -27,7 +27,10 @@ export const initiatePayment = async (req, res) => {
                }
             }
          })
-         return
+         return res.status(200).json({
+            success: true,
+            message: 'Payment succeeded!'
+         })
       }
       if (cart.amount) {
          const body = {
