@@ -2,6 +2,7 @@ import { client } from '../../../lib/graphql'
 import {
    CUSTOMERS,
    INSERT_OCCURENCE_CUSTOMER,
+   UDPATE_SUBSCRIPTION_OCCURENCES,
    UDPATE_OCCURENCE_CUSTOMER_CARTS,
    UPDATE_OCCURENCE_CUSTOMER_BY_PK
 } from '../graphql'
@@ -22,7 +23,6 @@ export const manageOccurence = async (req, res) => {
          node.cutoffTimeStamp = cutoffTimeStamp
       }
 
-      // CREATE OCCURENCE CUSTOMER
       const {
          subscription_view_full_occurence_report: pendingCustomers = []
       } = await client.request(CUSTOMERS, {
@@ -40,19 +40,27 @@ export const manageOccurence = async (req, res) => {
                   return {
                      brand_customerId: node.brand_customerId,
                      keycloakId: node.brandCustomer.keycloakId,
-                     subscriptionOccurenceId: node.subscriptionOccurenceId
+                     subscriptionOccurenceId: node.subscriptionOccurenceId,
+                     logs: [{ operation: 'INSERT', timestamp: +new Date() }]
                   }
                })
          )
          await client.request(INSERT_OCCURENCE_CUSTOMER, {
             objects: rows
          })
+
+         await client.request(UDPATE_SUBSCRIPTION_OCCURENCES, {
+            where: { id: { _eq: id } },
+            _prepend: {
+               logs: {
+                  operation: 'UPDATE',
+                  timestamp: +new Date(),
+                  message: 'Creating occurence customers!'
+               }
+            }
+         })
       }
 
-      // MARK OCCURENCE CUSTOMER PAUSED IF CUSTOMER HAS PAUSED
-      /*
-         mark isPaused=true, isSkipped=true
-      */
       const {
          subscription_view_full_occurence_report: pausedCustomers = []
       } = await client.request(CUSTOMERS, {
@@ -79,12 +87,28 @@ export const manageOccurence = async (req, res) => {
                   const {
                      update_subscription_subscriptionOccurence_customer_by_pk = {}
                   } = await client.request(UPDATE_OCCURENCE_CUSTOMER_BY_PK, {
+                     _prepend: {
+                        operation: 'UPDATE',
+                        timestamp: +new Date(),
+                        fields: { isPaused: true, isSkipped: true }
+                     },
                      pk_columns: {
                         keycloakId: row.keycloakId,
                         brand_customerId: row.brand_customerId,
                         subscriptionOccurenceId: row.subscriptionOccurenceId
                      },
                      _set: { isPaused: true, isSkipped: true }
+                  })
+                  await client.request(UDPATE_SUBSCRIPTION_OCCURENCES, {
+                     where: { id: { _eq: id } },
+                     _prepend: {
+                        logs: {
+                           operation: 'UPDATE',
+                           timestamp: +new Date(),
+                           message: 'Paused and skipped occurence customers',
+                           fields: update_subscription_subscriptionOccurence_customer_by_pk
+                        }
+                     }
                   })
                   return update_subscription_subscriptionOccurence_customer_by_pk
                } catch (error) {
@@ -94,11 +118,6 @@ export const manageOccurence = async (req, res) => {
          )
       }
 
-      // UPDATE CART TO ATTEMPT PAYMENT
-
-      /*
-         update subscriptionOccurence & subscriptionOccurence_customer log column at each mutation
-      */
       const {
          subscription_view_full_occurence_report: validCustomers = []
       } = await client.request(CUSTOMERS, {
@@ -112,18 +131,30 @@ export const manageOccurence = async (req, res) => {
       })
 
       if (validCustomers.length > 0) {
-         // PROCESS VALID ITEM COUNT
          const validCarts = validCustomers.filter(node => node.isItemCountValid)
          if (validCarts.length > 0) {
-            await client.request(UDPATE_OCCURENCE_CUSTOMER_CARTS, {
-               where: {
-                  id: { _in: validCarts.map(node => node.cartId) }
-               },
-               _inc: { paymentRetryAttempt: 1 }
+            const { updateCarts = {} } = await client.request(
+               UDPATE_OCCURENCE_CUSTOMER_CARTS,
+               {
+                  where: {
+                     id: { _in: validCarts.map(node => node.cartId) }
+                  },
+                  _inc: { paymentRetryAttempt: 1 }
+               }
+            )
+            await client.request(UDPATE_SUBSCRIPTION_OCCURENCES, {
+               where: { id: { _eq: id } },
+               _prepend: {
+                  logs: {
+                     operation: 'UPDATE',
+                     fields: updateCarts,
+                     timestamp: +new Date(),
+                     message: "Attempted payment on occurence customer's carts"
+                  }
+               }
             })
          }
 
-         // SKIP INVALID ITEM COUNT
          const invalidCarts = validCustomers.filter(
             node => !node.isItemCountValid
          )
@@ -143,12 +174,28 @@ export const manageOccurence = async (req, res) => {
                      const {
                         update_subscription_subscriptionOccurence_customer_by_pk = {}
                      } = await client.request(UPDATE_OCCURENCE_CUSTOMER_BY_PK, {
+                        _prepend: {
+                           operation: 'UPDATE',
+                           timestamp: +new Date(),
+                           fields: { isSkipped: true }
+                        },
                         pk_columns: {
                            keycloakId: row.keycloakId,
                            brand_customerId: row.brand_customerId,
                            subscriptionOccurenceId: row.subscriptionOccurenceId
                         },
                         _set: { isSkipped: true }
+                     })
+                     await client.request(UDPATE_SUBSCRIPTION_OCCURENCES, {
+                        where: { id: { _eq: id } },
+                        _prepend: {
+                           logs: {
+                              operation: 'UPDATE',
+                              timestamp: +new Date(),
+                              message: 'Skipped carts with invalid item counts',
+                              fields: update_subscription_subscriptionOccurence_customer_by_pk
+                           }
+                        }
                      })
                      return update_subscription_subscriptionOccurence_customer_by_pk
                   } catch (error) {

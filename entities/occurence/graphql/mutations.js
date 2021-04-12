@@ -102,10 +102,12 @@ export const UPDATE_OCCURENCE_CUSTOMER_BY_PK = `
    mutation update_subscription_subscriptionOccurence_customer_by_pk(
       $_set: subscription_subscriptionOccurence_customer_set_input!
       $pk_columns: subscription_subscriptionOccurence_customer_pk_columns_input!
+      $_prepend: subscription_subscriptionOccurence_customer_prepend_input!
    ) {
       update_subscription_subscriptionOccurence_customer_by_pk(
          _set: $_set
          pk_columns: $pk_columns
+         _prepend: $_prepend
       ) {
          brand_customerId
          keycloakId
@@ -121,6 +123,17 @@ export const UDPATE_OCCURENCE_CUSTOMER_CARTS = `
       $_set: order_cart_set_input!
    ) {
       updateCarts(where: $where, _inc: $_inc, _set: $_set) {
+         affected_rows
+      }
+   }
+`
+
+export const UDPATE_SUBSCRIPTION_OCCURENCES = `
+   mutation updateSubscriptionOccurences(
+      $where: subscription_subscriptionOccurence_bool_exp!
+      $_prepend: subscription_subscriptionOccurence_prepend_input!
+   ) {
+      updateSubscriptionOccurences(where: $where, _prepend: $_prepend) {
          affected_rows
       }
    }
