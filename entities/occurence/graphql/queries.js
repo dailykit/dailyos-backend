@@ -44,6 +44,7 @@ export const CUSTOMERS = `
       subscription_view_full_occurence_report(where: $where) {
          cartId
          keycloakId
+         betweenPause
          brand_customerId
          isItemCountValid
          subscriptionOccurenceId
