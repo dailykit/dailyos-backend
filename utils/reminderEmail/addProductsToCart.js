@@ -41,10 +41,10 @@ export const addProductsToCart = async ({
       if (sortedProducts.length >= count) {
          while (i < count) {
             try {
+               let node = insertCartId(...sortedProducts[i].cartItem, cartId)
                await client.request(INSERT_CART_ITEM, {
                   object: {
-                     ...sortedProducts[i].cartItem,
-                     cartId,
+                     node,
                      isAutoAdded: true
                   }
                })
@@ -85,6 +85,22 @@ export const addProductsToCart = async ({
    } catch (error) {
       throw Error(error.message)
    }
+}
+
+const insertCartId = (node, cartId) => {
+   if (node.childs.data.length > 0) {
+      node.childs.data = node.childs.data.map(item => {
+         if (item.childs.data.length > 0) {
+            item.childs.data = item.childs.data.map(item => ({
+               ...item,
+               cartId
+            }))
+         }
+         return { ...item, cartId }
+      })
+   }
+   node.cartId = cartId
+   return node
 }
 
 export const statusLogger = async (
