@@ -38,8 +38,7 @@ export const sendEmail = async ({
          emailInput: {
             from: templateSettings.email,
             to: brand_customers.customer.email,
-            subject:
-               'REMINDER: Your weekly box is waiting for your meal selection.',
+            subject: 'REMINDER: Your weekly box status.',
             attachments: [],
             html
          }

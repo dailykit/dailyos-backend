@@ -4,14 +4,18 @@ import {
    CREATE_CART,
    UPDATE_SUB_OCCURENCE
 } from '../../entities/occurence/graphql'
-import { addProductsToCart } from './addProductsToCart'
+import { addProductsToCart, statusLogger } from './'
 
 export const autoGenerateCart = async ({
    brandCustomerId,
    subscriptionOccurenceId,
    products
 }) => {
-   console.log('Attempting autoGenerate Cart')
+   await statusLogger(
+      brandCustomerId,
+      subscriptionOccurenceId,
+      `Attempting autoGenerate ${brandCustomerId}`
+   )
    try {
       const { brandCustomers } = await client.request(GET_SUB_OCCURENCE, {
          brandCustomerId,
@@ -21,7 +25,11 @@ export const autoGenerateCart = async ({
          brandCustomers.length > 0 &&
          brandCustomers[0].subscriptionOccurences.length === 0
       ) {
-         console.log('Creating Subscription Occurence')
+         await statusLogger(
+            brandCustomerId,
+            subscriptionOccurenceId,
+            `Creating Subscription Occurence Customer for ${brandCustomerId}`
+         )
          const [{ keycloakId }] = brandCustomers
 
          await client.request(INSERT_SUBS_OCCURENCE, {
@@ -33,6 +41,11 @@ export const autoGenerateCart = async ({
                brand_customerId: brandCustomerId
             }
          })
+         await statusLogger(
+            brandCustomerId,
+            subscriptionOccurenceId,
+            `Subscriptiion Occurence Customer created.`
+         )
       }
 
       const {
@@ -47,7 +60,11 @@ export const autoGenerateCart = async ({
             .subscriptionOccurence_customer[0].cartId
 
       if (cartId === null) {
-         console.log('Creating cart')
+         await statusLogger(
+            brandCustomerId,
+            subscriptionOccurenceId,
+            `Creating cart for ${brandCustomerId}`
+         )
          cartId = await createCart({
             ...subscription,
             subscriptionOccurenceId,
@@ -62,7 +79,11 @@ export const autoGenerateCart = async ({
             cartId
          })
 
-         console.log('cartId: ', cartId)
+         await statusLogger(
+            brandCustomerId,
+            subscriptionOccurenceId,
+            `Cart ${cartId} is created.`
+         )
       }
 
       await addProductsToCart({
