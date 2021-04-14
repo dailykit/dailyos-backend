@@ -4,7 +4,8 @@ import { SEND_MAIL } from '../../entities/occurence/graphql'
 
 export const sendEmail = async ({
    brandCustomerId,
-   subscriptionOccurenceId
+   subscriptionOccurenceId,
+   fileName
 }) => {
    try {
       const {
@@ -30,7 +31,8 @@ export const sendEmail = async ({
       let html = await getHtml(templateSettings.template, {
          data: {
             brand_customerId: brandCustomerId,
-            subscriptionOccurenceId
+            subscriptionOccurenceId,
+            fileName
          }
       })
 
