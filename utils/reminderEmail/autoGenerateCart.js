@@ -11,6 +11,7 @@ export const autoGenerateCart = async ({
    subscriptionOccurenceId,
    products
 }) => {
+   console.log('Attempting autoGenerate Cart')
    try {
       const { brandCustomers } = await client.request(GET_SUB_OCCURENCE, {
          brandCustomerId,
@@ -20,6 +21,7 @@ export const autoGenerateCart = async ({
          brandCustomers.length > 0 &&
          brandCustomers[0].subscriptionOccurences.length === 0
       ) {
+         console.log('Creating Subscription Occurence')
          const [{ keycloakId }] = brandCustomers
 
          await client.request(INSERT_SUBS_OCCURENCE, {
@@ -45,6 +47,7 @@ export const autoGenerateCart = async ({
             .subscriptionOccurence_customer[0].cartId
 
       if (cartId === null) {
+         console.log('Creating cart')
          cartId = await createCart({
             ...subscription,
             subscriptionOccurenceId,
@@ -59,7 +62,7 @@ export const autoGenerateCart = async ({
             cartId
          })
 
-         console.log(cartId)
+         console.log('cartId: ', cartId)
       }
 
       await addProductsToCart({
@@ -88,6 +91,7 @@ const createCart = async data => {
                brandCustomerId,
                subscriptionAddressId = '',
                subscriptionPaymentMethodId = ' ',
+               brandId,
                customer = {}
             }
          ] = brand_customers
@@ -103,7 +107,7 @@ const createCart = async data => {
          const { createCart } = await client.request(CREATE_CART, {
             object: {
                status: 'CART_PENDING',
-               brandId: brandCustomerId,
+               brandId: brandId,
                customerId: parseInt(id),
                paymentStatus: 'PENDING',
                ...(subscriptionPaymentMethodId && {
@@ -187,6 +191,7 @@ query customerOrder($subscriptionOccurenceId: Int!, $brandCustomerId: Int!) {
         brandCustomerId: id
         subscriptionAddressId
         subscriptionPaymentMethodId
+        brandId
         customer {
           id
           keycloakId

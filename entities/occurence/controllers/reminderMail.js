@@ -13,10 +13,13 @@ export const reminderMail = async (req, res) => {
          id: subscriptionOccurenceId
       })
 
+      console.log(' Brand Customers:  ', brand_customers)
+
       const { products = [] } = await client.request(GET_PRODUCTS, {
          subscriptionOccurenceId,
          subscriptionId
       })
+      console.log('Initial Products: ', products)
       await Promise.all(
          brand_customers.map(async brand_customer => {
             try {
@@ -75,7 +78,13 @@ export const reminderMail = async (req, res) => {
 }
 
 const GET_PRODUCTS = `query getProducts($subscriptionOccurenceId: Int! $subscriptionId: Int!) {
-  products: subscription_subscriptionOccurence_product(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}, _or: {subscriptionId: {_eq: $subscriptionId}}}) {
+  products: subscription_subscriptionOccurence_product(where:  {
+    _or:[
+      {  subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}},
+        {subscriptionId: {_eq: $subscriptionId}}
+      ]
+    }
+  ) {
     cartItem
   }
 }

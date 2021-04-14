@@ -7,6 +7,7 @@ export const addProductsToCart = async ({
    products
 }) => {
    try {
+      console.log('Adding Products To Cart')
       const {
          brandCustomers: [
             {
@@ -36,10 +37,14 @@ export const addProductsToCart = async ({
       console.log('sortedProducts: ', sortedProducts.length, count)
       if (sortedProducts.length >= count) {
          while (i < count) {
-            console.log(i, { ...sortedProducts[i] })
+            console.log('Adding ', i, ' Products')
             try {
                await client.request(INSERT_CART_ITEM, {
-                  object: { ...sortedProducts[i].cartItem, cartId }
+                  object: {
+                     ...sortedProducts[i].cartItem,
+                     cartId,
+                     isAutoAdded: true
+                  }
                })
             } catch (error) {
                throw Error(error.message)
@@ -48,6 +53,7 @@ export const addProductsToCart = async ({
          }
 
          if (isSkipped) {
+            console.log('Cart is skipped for ', brandCustomerId)
             await sendEmail({ brandCustomerId, subscriptionOccurenceId })
          } else {
             await sendEmail({ brandCustomerId, subscriptionOccurenceId })
