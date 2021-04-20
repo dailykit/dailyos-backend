@@ -12,7 +12,8 @@ const download = function (uri, filename, callback) {
 export const handleImage = (req, res) => {
    const { path } = req.params
    const name = path.slice(path.lastIndexOf('/') + 1)
-   download(path, name, async () => {
+   const original = new URL(path)
+   download(original.origin + original.pathname, name, async () => {
       res.sendFile(__dirname + '/' + name, () => {
          fs.unlinkSync(__dirname + '/' + name)
       })
