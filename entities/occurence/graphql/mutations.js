@@ -119,8 +119,8 @@ export const UPDATE_OCCURENCE_CUSTOMER_BY_PK = `
 export const UDPATE_OCCURENCE_CUSTOMER_CARTS = `
    mutation updateCarts(
       $where: order_cart_bool_exp!
-      $_inc: order_cart_inc_input!
-      $_set: order_cart_set_input!
+      $_inc: order_cart_inc_input = {}
+      $_set: order_cart_set_input = {}
    ) {
       updateCarts(where: $where, _inc: $_inc, _set: $_set) {
          affected_rows
