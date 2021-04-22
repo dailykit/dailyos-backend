@@ -26,7 +26,8 @@ import {
    placeDetails,
    StoreRouter,
    getDistance,
-   authorizeRequest
+   authorizeRequest,
+   handleImage
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -87,6 +88,8 @@ app.post('/event/print-kot', printKOT)
 app.post('/event/order/third-party', handleThirdPartyOrder)
 
 app.use('/api/store', StoreRouter)
+
+app.get('/images/:path(*)', handleImage)
 
 app.use((_req, _res, next) => {
    const error = new Error('Not found')
