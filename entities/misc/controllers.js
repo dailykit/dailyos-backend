@@ -12,7 +12,7 @@ export const initiatePayment = async (req, res) => {
    try {
       const cart = req.body.event.data.new
 
-      if (cart.isTest) {
+      if (cart.isTest || cart.amount === 0) {
          await client.request(UPDATE_CART, {
             id: cart.id,
             set: {
@@ -23,7 +23,7 @@ export const initiatePayment = async (req, res) => {
                   id: 'NA',
                   amount: cart.amount * 100,
                   message: 'payment bypassed',
-                  reason: 'test mode'
+                  reason: cart.isTest ? 'test mode' : 'amount 0 - free'
                }
             }
          })
