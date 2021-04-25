@@ -36,3 +36,22 @@ query customerDetails($id: Int!) {
   }
 }
 `
+
+export const CUSTOMERS = `
+   query subscription_view_full_occurence_report(
+      $where: subscription_view_full_occurence_report_bool_exp!
+   ) {
+      subscription_view_full_occurence_report(where: $where) {
+         cartId
+         keycloakId
+         betweenPause
+         brand_customerId
+         isItemCountValid
+         subscriptionOccurenceId
+         brandCustomer {
+            id
+            keycloakId
+         }
+      }
+   }
+`
