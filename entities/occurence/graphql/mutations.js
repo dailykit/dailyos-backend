@@ -54,7 +54,7 @@ export const UPDATE_OCCURENCE_CUSTOMER = `
       update_subscription_subscriptionOccurence_customer(
          where: {
             isSkipped: { _eq: false }
-            orderCartId: { _is_null: true }
+            cartId: { _is_null: true }
             subscriptionOccurence: {
                id: $subscriptionOccurenceId
                cutoffTimeStamp: $cutoffTimeStamp
