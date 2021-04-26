@@ -89,7 +89,7 @@ app.post('/event/order/third-party', handleThirdPartyOrder)
 
 app.use('/api/store', StoreRouter)
 
-app.get('/images/:path(*)', handleImage)
+app.get('/images/:url(*)', handleImage)
 
 app.use((_req, _res, next) => {
    const error = new Error('Not found')

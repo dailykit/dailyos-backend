@@ -1,21 +1,52 @@
 import fs from 'fs'
+import path from 'path'
 import request from 'request'
 
 const download = function (uri, filename, callback) {
-   request.head(uri, function (err, res, body) {
-      request(uri)
-         .pipe(fs.createWriteStream(__dirname + '/' + filename))
-         .on('close', callback)
-   })
+   try {
+      request.head(uri, (err, res, body) => {
+         try {
+            if (err) throw err
+            request(uri)
+               .pipe(fs.createWriteStream(__dirname + '/' + filename))
+               .on('close', callback)
+               .on('error', error => {
+                  throw error
+               })
+         } catch (error) {
+            throw error
+         }
+      })
+   } catch (error) {
+      return error
+   }
 }
 
 export const handleImage = (req, res) => {
-   const { path } = req.params
-   const name = path.slice(path.lastIndexOf('/') + 1)
-   const original = new URL(path)
-   download(original.origin + original.pathname, name, async () => {
-      res.sendFile(__dirname + '/' + name, () => {
-         fs.unlinkSync(__dirname + '/' + name)
+   try {
+      const { url } = req.params
+      const original = new URL(url)
+      const name =
+         path
+            .dirname(url)
+            .replace(original.protocol + '//', '')
+            .replace(/\./g, '-')
+            .replace(/\//g, '-') +
+         '-' +
+         path.basename(url).replace(path.extname(url), '').replace(/ /g, '-') +
+         path.extname(url)
+
+      const basePath = __dirname + '/' + name
+
+      if (fs.existsSync(basePath)) {
+         return res.sendFile(basePath)
+      }
+
+      download(original.origin + original.pathname, name, async () => {
+         res.sendFile(basePath)
       })
-   })
+   } catch (error) {
+      console.log(error)
+      return res.json({ success: false })
+   }
 }
