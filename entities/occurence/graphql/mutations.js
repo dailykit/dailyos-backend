@@ -138,3 +138,29 @@ export const UDPATE_SUBSCRIPTION_OCCURENCES = `
       }
    }
 `
+
+export const DELETE_OCCURENCE_CUSTOMER = `
+   mutation deleteOccurenceCustomer(
+      $brand_customerId: Int!
+      $keycloakId: String!
+      $subscriptionOccurenceId: Int!
+   ) {
+      deleteOccurenceCustomer: delete_subscription_subscriptionOccurence_customer_by_pk(
+         brand_customerId: $brand_customerId
+         keycloakId: $keycloakId
+         subscriptionOccurenceId: $subscriptionOccurenceId
+      ) {
+         keycloakId
+         brand_customerId
+         subscriptionOccurenceId
+      }
+   }
+`
+
+export const DELETE_CART = `
+   mutation deleteCart($id: Int!) {
+      deleteCart(id: $id) {
+         id
+      }
+   }
+`
