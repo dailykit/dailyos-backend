@@ -83,10 +83,10 @@ export const CREATE_CART = `
 `
 
 export const INSERT_OCCURENCE_CUSTOMER = `
-   mutation insertSubscriptionOccurence(
+   mutation insertSubscriptionOccurenceCustomers(
       $objects: [subscription_subscriptionOccurence_customer_insert_input!]!
    ) {
-      insertSubscriptionOccurence: insert_subscription_subscriptionOccurence_customer(
+      insertSubscriptionOccurenceCustomers: insert_subscription_subscriptionOccurence_customer(
          objects: $objects
          on_conflict: {
             constraint: subscriptionOccurence_customer_pkey
@@ -94,6 +94,11 @@ export const INSERT_OCCURENCE_CUSTOMER = `
          }
       ) {
          affected_rows
+         returning {
+            keycloakId
+            subscriptionOccurenceId
+            brand_customerId
+         }
       }
    }
 `
@@ -109,6 +114,7 @@ export const UPDATE_OCCURENCE_CUSTOMER_BY_PK = `
          pk_columns: $pk_columns
          _prepend: $_prepend
       ) {
+         cartId
          brand_customerId
          keycloakId
          subscriptionOccurenceId
@@ -124,6 +130,10 @@ export const UDPATE_OCCURENCE_CUSTOMER_CARTS = `
    ) {
       updateCarts(where: $where, _inc: $_inc, _set: $_set) {
          affected_rows
+         returning {
+            keycloakId: customerKeycloakId
+            subscriptionOccurenceId
+         }
       }
    }
 `
@@ -161,6 +171,16 @@ export const DELETE_CART = `
    mutation deleteCart($id: Int!) {
       deleteCart(id: $id) {
          id
+      }
+   }
+`
+
+export const INSERT_ACTIVITY_LOGS = `
+   mutation insertActivityLogs(
+      $objects: [settings_activityLogs_insert_input!]!
+   ) {
+      insertActivityLogs: insert_settings_activityLogs(objects: $objects) {
+         affected_rows
       }
    }
 `

@@ -6,75 +6,127 @@ import {
    UDPATE_OCCURENCE_CUSTOMER_CARTS,
    UPDATE_OCCURENCE_CUSTOMER_BY_PK,
    DELETE_OCCURENCE_CUSTOMER,
-   DELETE_CART
+   DELETE_CART,
+   INSERT_ACTIVITY_LOGS
 } from '../graphql'
 
 export const manageOccurence = async (req, res) => {
    try {
-      const node = {
+      const occurence = {
          id: null,
          cutoffTimeStamp: null
       }
       if (typeof req.body.payload === 'string') {
          const { id, cutoffTimeStamp } = JSON.parse(req.body.payload)
-         node.id = id
-         node.cutoffTimeStamp = cutoffTimeStamp
+         occurence.id = id
+         occurence.cutoffTimeStamp = cutoffTimeStamp
       } else {
          const { id, cutoffTimeStamp } = req.body.payload
-         node.id = id
-         node.cutoffTimeStamp = cutoffTimeStamp
+         occurence.id = id
+         occurence.cutoffTimeStamp = cutoffTimeStamp
       }
 
-      // FETCH ALL CUSTOMERS WITH NO OCCURENCE_CUSTOMER ENTRY
+      // HANDLE NO OCCURENCE CUSTOMERS
+      await handle_no_occurence_customers(occurence)
+
+      // HANDLE PAUSED OCCURENCE CUSTOMERS
+      await handle_paused_occurence_customers(occurence)
+
+      // HANDLE NO CART OCCURENCE CUSTOMERS
+      await handle_no_cart_occurence_customers(occurence)
+
+      // HANDLE CANCELLED SUBSCRIPTION OCCURENCE CUSTOMERS
+      await handle_cancelled_subscription_occurence_customers(occurence)
+
+      // HANDLE NON SUBSCRIBER OCCURENCE CUSTOMERS
+      await handle_non_subscriber_occurence_customers(occurence)
+
+      // HANDLE OCCURENCE CUSTOMERS THAT HAVE CHANGED PLAN
+      await handle_changed_plan_occurence_customers(occurence)
+
+      // HANDLE OCCURENCE CUSTOMERS WITH VALID CART
+      await handle_valid_cart_occurence_customers(occurence)
+
+      // HANDLE OCCURENCE CUSTOMERS WITH INVALID CART
+      await handle_invalid_cart_occurence_customers(occurence)
+
+      return res.status(200).json({
+         success: true,
+         message: 'Successfully updated carts!'
+      })
+   } catch (error) {
+      return res.status(400).json({ success: false, error: error.message })
+   }
+}
+
+// HANDLE NO OCCURENCE CUSTOMERS
+const handle_no_occurence_customers = async occurence => {
+   try {
       const {
-         subscription_view_full_occurence_report: pendingCustomers = []
+         subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
          where: {
             keycloakId: { _is_null: true },
-            subscriptionOccurenceId: { _eq: node.id }
+            subscriptionOccurenceId: { _eq: occurence.id }
          }
       })
 
-      if (pendingCustomers.length > 0) {
+      if (customers.length > 0) {
          const rows = await Promise.all(
-            pendingCustomers.map(node => {
+            customers.map(node => {
                return {
+                  keycloakId: node.keycloakId,
                   brand_customerId: node.brand_customerId,
-                  keycloakId: node.brandCustomer.keycloakId,
-                  subscriptionOccurenceId: node.subscriptionOccurenceId,
-                  logs: [{ operation: 'INSERT', timestamp: +new Date() }]
+                  subscriptionOccurenceId: node.subscriptionOccurenceId
                }
             })
          )
          // CREATE ENTRY FOR PENDING CUSTOMERS IN OCCURENCE_CUSTOMER
-         await client.request(INSERT_OCCURENCE_CUSTOMER, {
+         const {
+            insertSubscriptionOccurenceCustomers = {}
+         } = await client.request(INSERT_OCCURENCE_CUSTOMER, {
             objects: rows
          })
-
-         await client.request(UDPATE_SUBSCRIPTION_OCCURENCES, {
-            where: { id: { _eq: node.id } },
-            _prepend: {
-               logs: {
-                  operation: 'UPDATE',
-                  timestamp: +new Date(),
-                  message: 'Creating occurence customers!'
+         await client.request(INSERT_ACTIVITY_LOGS, {
+            objects: insertSubscriptionOccurenceCustomers.returning.map(
+               node => {
+                  return {
+                     type: 'Manage Occurence',
+                     keycloakId: node.keycloakId,
+                     brand_customerId: node.brand_customerId,
+                     subscriptionOccurenceId: node.subscriptionOccurenceId,
+                     log: {
+                        operation: 'UPDATE',
+                        timestamp: +new Dateoccurence(),
+                        message:
+                           'Creating occurence customer due to no action being taken by customer.'
+                     }
+                  }
                }
-            }
+            )
          })
       }
 
-      // FETCH ALL OCCURENCE_CUSTOMERS
+      return customers
+   } catch (error) {
+      throw error
+   }
+}
+
+// HANDLE PAUSED OCCURENCE CUSTOMERS
+const handle_paused_occurence_customers = async occurence => {
+   try {
       const {
-         subscription_view_full_occurence_report: pausedCustomers = []
+         subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
          where: {
-            subscriptionOccurenceId: { _eq: node.id }
+            subscriptionOccurenceId: { _eq: occurence.id }
          }
       })
 
-      if (pausedCustomers.length > 0) {
+      if (customers.length > 0) {
          const rows = await Promise.all(
-            pausedCustomers
+            customers
                .filter(node => node.isPaused === null)
                .map(node => {
                   return {
@@ -86,7 +138,7 @@ export const manageOccurence = async (req, res) => {
                })
          )
 
-         // MARK OCCURENCE_CUSTOMER PAUSED/SKIPPED BASED ON BETWEEN_PASUSE
+         // MARK OCCURENCE_CUSTOMER PAUSED/SKIPPED BASED ON BETWEEN_PAUSE
          await Promise.all(
             rows.map(async row => {
                try {
@@ -99,13 +151,6 @@ export const manageOccurence = async (req, res) => {
                      update_subscription_subscriptionOccurence_customer_by_pk = {}
                   } = await client.request(UPDATE_OCCURENCE_CUSTOMER_BY_PK, {
                      _set,
-                     _prepend: {
-                        logs: {
-                           fields: { ..._set, ...row },
-                           operation: 'UPDATE',
-                           timestamp: +new Date()
-                        }
-                     },
                      pk_columns: {
                         keycloakId: row.keycloakId,
                         brand_customerId: row.brand_customerId,
@@ -113,16 +158,29 @@ export const manageOccurence = async (req, res) => {
                      }
                   })
                   if (_set.isPaused) {
-                     await client.request(UDPATE_SUBSCRIPTION_OCCURENCES, {
-                        where: { id: { _eq: node.id } },
-                        _prepend: {
-                           logs: {
-                              operation: 'UPDATE',
-                              timestamp: +new Date(),
-                              message: 'Paused and skipped occurence customers',
-                              fields: update_subscription_subscriptionOccurence_customer_by_pk
+                     const {
+                        cartId = null,
+                        keycloakId = null,
+                        brand_customerId = null,
+                        subscriptionOccurenceId = null
+                     } = update_subscription_subscriptionOccurence_customer_by_pk
+                     await client.request(INSERT_ACTIVITY_LOGS, {
+                        objects: [
+                           {
+                              keycloakId,
+                              brand_customerId,
+                              subscriptionOccurenceId,
+                              type: 'Manage Occurence',
+                              ...(cartId && { cartId }),
+                              log: {
+                                 fields: _set,
+                                 operation: 'UPDATE',
+                                 timestamp: +new Date(),
+                                 message:
+                                    'Occurence customer has been paused and skipped due to paused subscription.'
+                              }
                            }
-                        }
+                        ]
                      })
                   }
                   return update_subscription_subscriptionOccurence_customer_by_pk
@@ -133,21 +191,29 @@ export const manageOccurence = async (req, res) => {
          )
       }
 
-      // FETCH ALL OCCURENCE_CUSTOMERS WITH NO CART
+      return customers
+   } catch (error) {
+      throw error
+   }
+}
+
+// HANDLE NO CART OCCURENCE CUSTOMERS
+const handle_no_cart_occurence_customers = async occurence => {
+   try {
       const {
-         subscription_view_full_occurence_report: noCartCustomers = []
+         subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
          where: {
             isPaused: { _eq: false },
             isSkipped: { _eq: false },
             cartId: { _is_null: true },
-            subscriptionOccurenceId: { _eq: node.id }
+            subscriptionOccurenceId: { _eq: occurence.id }
          }
       })
 
-      if (noCartCustomers.length > 0) {
+      if (customers.length > 0) {
          const rows = await Promise.all(
-            noCartCustomers.map(node => {
+            customers.map(node => {
                return {
                   keycloakId: node.keycloakId,
                   brand_customerId: node.brand_customerId,
@@ -163,31 +229,37 @@ export const manageOccurence = async (req, res) => {
                   const {
                      update_subscription_subscriptionOccurence_customer_by_pk = {}
                   } = await client.request(UPDATE_OCCURENCE_CUSTOMER_BY_PK, {
-                     _prepend: {
-                        logs: {
-                           operation: 'UPDATE',
-                           timestamp: +new Date(),
-                           fields: { isSkipped: true }
-                        }
-                     },
+                     _set: { isSkipped: true },
                      pk_columns: {
                         keycloakId: row.keycloakId,
                         brand_customerId: row.brand_customerId,
                         subscriptionOccurenceId: row.subscriptionOccurenceId
-                     },
-                     _set: { isSkipped: true }
-                  })
-                  await client.request(UDPATE_SUBSCRIPTION_OCCURENCES, {
-                     where: { id: { _eq: node.id } },
-                     _prepend: {
-                        logs: {
-                           operation: 'UPDATE',
-                           timestamp: +new Date(),
-                           message: 'Skipped occurence customer.',
-                           fields: update_subscription_subscriptionOccurence_customer_by_pk
-                        }
                      }
                   })
+
+                  const {
+                     keycloakId = null,
+                     brand_customerId = null,
+                     subscriptionOccurenceId = null
+                  } = update_subscription_subscriptionOccurence_customer_by_pk
+                  await client.request(INSERT_ACTIVITY_LOGS, {
+                     objects: [
+                        {
+                           keycloakId,
+                           brand_customerId,
+                           subscriptionOccurenceId,
+                           type: 'Manage Occurence',
+                           log: {
+                              operation: 'UPDATE',
+                              timestamp: +new Date(),
+                              fields: { isSkipped: true },
+                              message:
+                                 'Skipping occurence customer since there is no cart.'
+                           }
+                        }
+                     ]
+                  })
+
                   return update_subscription_subscriptionOccurence_customer_by_pk
                } catch (error) {
                   return error
@@ -196,19 +268,27 @@ export const manageOccurence = async (req, res) => {
          )
       }
 
-      // DELETE OCCURENCE_CUSTOMER/CART IF SUBSCRIPTION CANCELLED
+      return customers
+   } catch (error) {
+      throw error
+   }
+}
+
+// HANDLE CANCELLED SUBSCRIPTION OCCURENCE CUSTOMERS
+const handle_cancelled_subscription_occurence_customers = async occurence => {
+   try {
       const {
-         subscription_view_full_occurence_report: cancelledSubscriptionCustomers = []
+         subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
          where: {
-            subscriptionOccurenceId: { _eq: node.id },
+            subscriptionOccurenceId: { _eq: occurence.id },
             brandCustomer: { isSubscriptionCancelled: { _eq: true } }
          }
       })
 
-      if (cancelledSubscriptionCustomers.length > 0) {
+      if (customers.length > 0) {
          const rows = await Promise.all(
-            cancelledSubscriptionCustomers
+            customers
                .filter(node => node.paymentStatus !== 'SUCCEEDED')
                .map(node => {
                   return {
@@ -235,17 +315,26 @@ export const manageOccurence = async (req, res) => {
                         id: row.cartId
                      })
                   }
-                  await client.request(UDPATE_SUBSCRIPTION_OCCURENCES, {
-                     where: { id: { _eq: node.id } },
-                     _prepend: {
-                        logs: {
-                           operation: 'DELETE',
-                           timestamp: +new Date(),
-                           message:
-                              'Deleted occurence customer due to cancelled subscription',
-                           fields: deleteOccurenceCustomer
+                  const {
+                     keycloakId = null,
+                     brand_customerId = null,
+                     subscriptionOccurenceId = null
+                  } = deleteOccurenceCustomer
+                  await client.request(INSERT_ACTIVITY_LOGS, {
+                     objects: [
+                        {
+                           keycloakId,
+                           brand_customerId,
+                           subscriptionOccurenceId,
+                           type: 'Manage Occurence',
+                           log: {
+                              operation: 'DELETE',
+                              timestamp: +new Date(),
+                              message:
+                                 'Deleted occurence customer due to cancelled subscription'
+                           }
                         }
-                     }
+                     ]
                   })
                   return deleteOccurenceCustomer
                } catch (error) {
@@ -255,19 +344,28 @@ export const manageOccurence = async (req, res) => {
          )
       }
 
+      return customers
+   } catch (error) {
+      throw error
+   }
+}
+
+// HANDLE NON SUBSCRIBER OCCURENCE CUSTOMERS
+const handle_non_subscriber_occurence_customers = async occurence => {
+   try {
       // DELETE OCCURENCE_CUSTOMER/CART IF NOT SUBSCRIBER
       const {
-         subscription_view_full_occurence_report: nonSubscriberCustomers = []
+         subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
          where: {
-            subscriptionOccurenceId: { _eq: node.id },
+            subscriptionOccurenceId: { _eq: occurence.id },
             brandCustomer: { isSubscriber: { _eq: false } }
          }
       })
 
-      if (nonSubscriberCustomers.length > 0) {
+      if (customers.length > 0) {
          const rows = await Promise.all(
-            nonSubscriberCustomers.map(node => {
+            customers.map(node => {
                return {
                   cartId: node.cartId,
                   keycloakId: node.keycloakId,
@@ -292,17 +390,27 @@ export const manageOccurence = async (req, res) => {
                         id: row.cartId
                      })
                   }
-                  await client.request(UDPATE_SUBSCRIPTION_OCCURENCES, {
-                     where: { id: { _eq: node.id } },
-                     _prepend: {
-                        logs: {
-                           operation: 'DELETE',
-                           timestamp: +new Date(),
-                           message:
-                              'Deleted occurence customer due since customer is not a subscriber yet.',
-                           fields: deleteOccurenceCustomer
+
+                  const {
+                     keycloakId = null,
+                     brand_customerId = null,
+                     subscriptionOccurenceId = null
+                  } = deleteOccurenceCustomer
+                  await client.request(INSERT_ACTIVITY_LOGS, {
+                     objects: [
+                        {
+                           keycloakId,
+                           brand_customerId,
+                           subscriptionOccurenceId,
+                           type: 'Manage Occurence',
+                           log: {
+                              operation: 'DELETE',
+                              timestamp: +new Date(),
+                              message:
+                                 'Deleted occurence customer since customer is not a subscriber yet.'
+                           }
                         }
-                     }
+                     ]
                   })
                   return deleteOccurenceCustomer
                } catch (error) {
@@ -312,16 +420,24 @@ export const manageOccurence = async (req, res) => {
          )
       }
 
-      // DELETE OCCURENCE_CUSTOMER/CART IF SUBSCRIPTION_ID IS NOT SAME AS OCCURENCE.SUBSCRIPTION_ID
+      return customers
+   } catch (error) {
+      throw error
+   }
+}
+
+// HANDLE OCCURENCE CUSTOMERS THAT HAVE CHANGED PLAN
+const handle_changed_plan_occurence_customers = async occurence => {
+   try {
       const {
-         subscription_view_full_occurence_report: allCustomers = []
+         subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
-         where: { subscriptionOccurenceId: { _eq: node.id } }
+         where: { subscriptionOccurenceId: { _eq: occurence.id } }
       })
 
-      if (allCustomers.length > 0) {
+      if (customers.length > 0) {
          const rows = await Promise.all(
-            allCustomers
+            customers
                .filter(
                   node =>
                      node.subscriptionId !== node.brandCustomer.subscriptionId
@@ -351,17 +467,27 @@ export const manageOccurence = async (req, res) => {
                         id: row.cartId
                      })
                   }
-                  await client.request(UDPATE_SUBSCRIPTION_OCCURENCES, {
-                     where: { id: { _eq: node.id } },
-                     _prepend: {
-                        logs: {
-                           operation: 'DELETE',
-                           timestamp: +new Date(),
-                           message:
-                              'Deleted occurence customer due to changed subscription plan.',
-                           fields: deleteOccurenceCustomer
+
+                  const {
+                     keycloakId = null,
+                     brand_customerId = null,
+                     subscriptionOccurenceId = null
+                  } = deleteOccurenceCustomer
+                  await client.request(INSERT_ACTIVITY_LOGS, {
+                     objects: [
+                        {
+                           keycloakId,
+                           brand_customerId,
+                           subscriptionOccurenceId,
+                           type: 'Manage Occurence',
+                           log: {
+                              operation: 'DELETE',
+                              timestamp: +new Date(),
+                              message:
+                                 'Deleted occurence customer due to changed subscription plan.'
+                           }
                         }
-                     }
+                     ]
                   })
                   return deleteOccurenceCustomer
                } catch (error) {
@@ -371,104 +497,134 @@ export const manageOccurence = async (req, res) => {
          )
       }
 
-      // FETCH ALL OCCURENCE_CUSTOMERS WITH CART
+      return customers
+   } catch (error) {
+      throw error
+   }
+}
+
+// HANDLE OCCURENCE CUSTOMERS WITH VALID CART
+const handle_valid_cart_occurence_customers = async occurence => {
+   try {
       const {
-         subscription_view_full_occurence_report: validCustomers = []
+         subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
          where: {
             isPaused: { _eq: false },
             isSkipped: { _eq: false },
             cartId: { _is_null: false },
+            isItemCountValid: { _eq: true },
             paymentStatus: { _neq: 'SUCCEEDED' },
-            subscriptionOccurenceId: { _eq: node.id }
+            subscriptionOccurenceId: { _eq: occurence.id }
          }
       })
 
-      if (validCustomers.length > 0) {
-         const validCarts = validCustomers.filter(node => node.isItemCountValid)
-         // ATTEMPT PAYMENT ON OCCURENCE_CUSTOMERS THAT HAVE VALID CART
-         if (validCarts.length > 0) {
-            const { updateCarts = {} } = await client.request(
-               UDPATE_OCCURENCE_CUSTOMER_CARTS,
-               {
-                  where: {
-                     id: { _in: validCarts.map(node => node.cartId) }
-                  },
-                  _inc: { paymentRetryAttempt: 1 }
-               }
-            )
-            await client.request(UDPATE_SUBSCRIPTION_OCCURENCES, {
-               where: { id: { _eq: node.id } },
-               _prepend: {
-                  logs: {
-                     operation: 'UPDATE',
-                     fields: updateCarts,
-                     timestamp: +new Date(),
-                     message: "Attempted payment on occurence customer's carts"
-                  }
+      if (customers.length > 0) {
+         const rows = await Promise.all(
+            customers.map(node => {
+               return {
+                  keycloakId: node.keycloakId,
+                  brand_customerId: node.brand_customerId,
+                  subscriptionOccurenceId: node.subscriptionOccurenceId
                }
             })
-         }
-
-         const invalidCarts = validCustomers.filter(
-            node => !node.isItemCountValid
          )
-         // SKIP OCCURENCE_CUSTOMERS WITH INVALID CART
-         if (invalidCarts.length > 0) {
-            const rows = await Promise.all(
-               invalidCarts.map(node => {
-                  return {
-                     keycloakId: node.keycloakId,
-                     brand_customerId: node.brand_customerId,
-                     subscriptionOccurenceId: node.subscriptionOccurenceId
-                  }
-               })
-            )
-            await Promise.all(
-               rows.map(async row => {
-                  try {
-                     const {
-                        update_subscription_subscriptionOccurence_customer_by_pk = {}
-                     } = await client.request(UPDATE_OCCURENCE_CUSTOMER_BY_PK, {
-                        _prepend: {
-                           logs: {
+         await Promise.all(
+            rows.map(async row => {
+               try {
+                  const {
+                     update_subscription_subscriptionOccurence_customer_by_pk = {}
+                  } = await client.request(UPDATE_OCCURENCE_CUSTOMER_BY_PK, {
+                     _set: { isSkipped: true },
+                     pk_columns: {
+                        keycloakId: row.keycloakId,
+                        brand_customerId: row.brand_customerId,
+                        subscriptionOccurenceId: row.subscriptionOccurenceId
+                     }
+                  })
+                  const {
+                     cartId = null,
+                     keycloakId = null,
+                     brand_customerId = null,
+                     subscriptionOccurenceId = null
+                  } = update_subscription_subscriptionOccurence_customer_by_pk
+                  await client.request(INSERT_ACTIVITY_LOGS, {
+                     objects: [
+                        {
+                           cartId,
+                           keycloakId,
+                           brand_customerId,
+                           subscriptionOccurenceId,
+                           type: 'Manage Occurence',
+                           log: {
                               operation: 'UPDATE',
                               timestamp: +new Date(),
-                              fields: { isSkipped: true }
-                           }
-                        },
-                        pk_columns: {
-                           keycloakId: row.keycloakId,
-                           brand_customerId: row.brand_customerId,
-                           subscriptionOccurenceId: row.subscriptionOccurenceId
-                        },
-                        _set: { isSkipped: true }
-                     })
-                     await client.request(UDPATE_SUBSCRIPTION_OCCURENCES, {
-                        where: { id: { _eq: id } },
-                        _prepend: {
-                           logs: {
-                              operation: 'UPDATE',
-                              timestamp: +new Date(),
-                              message: 'Skipped carts with invalid item counts',
-                              fields: update_subscription_subscriptionOccurence_customer_by_pk
+                              fields: { isSkipped: true },
+                              message:
+                                 'Skipped occurence customer since cart is not full yet.'
                            }
                         }
-                     })
-                     return update_subscription_subscriptionOccurence_customer_by_pk
-                  } catch (error) {
-                     return error
+                     ]
+                  })
+                  return update_subscription_subscriptionOccurence_customer_by_pk
+               } catch (error) {
+                  return error
+               }
+            })
+         )
+      }
+
+      return customers
+   } catch (error) {
+      throw error
+   }
+}
+
+// HANDLE OCCURENCE CUSTOMERS WITH INVALID CART
+const handle_invalid_cart_occurence_customers = async occurence => {
+   try {
+      const {
+         subscription_view_full_occurence_report: customers = []
+      } = await client.request(CUSTOMERS, {
+         where: {
+            isPaused: { _eq: false },
+            isSkipped: { _eq: false },
+            cartId: { _is_null: false },
+            isItemCountValid: { _eq: false },
+            paymentStatus: { _neq: 'SUCCEEDED' },
+            subscriptionOccurenceId: { _eq: occurence.id }
+         }
+      })
+
+      if (customers.length > 0) {
+         // ATTEMPT PAYMENT ON OCCURENCE_CUSTOMERS THAT HAVE VALID CART
+         if (customers.length > 0) {
+            await client.request(UDPATE_OCCURENCE_CUSTOMER_CARTS, {
+               where: { id: { _in: customers.map(node => node.cartId) } },
+               _inc: { paymentRetryAttempt: 1 }
+            })
+            await client.request(INSERT_ACTIVITY_LOGS, {
+               objects: customers.map(node => {
+                  return {
+                     cartId: node.cartId,
+                     keycloakId: node.keycloakId,
+                     brand_customerId: node.brand_customerId,
+                     subscriptionOccurenceId: node.subscriptionOccurenceId,
+                     type: 'Manage Occurence',
+                     log: {
+                        operation: 'UPDATE',
+                        timestamp: +new Date(),
+                        message:
+                           "Attempted payment on occurence customer's cart"
+                     }
                   }
                })
-            )
+            })
          }
       }
 
-      return res.status(200).json({
-         success: true,
-         message: 'Successfully updated carts!'
-      })
+      return customers
    } catch (error) {
-      return res.status(400).json({ success: false, error: error.message })
+      throw error
    }
 }
