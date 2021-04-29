@@ -22,16 +22,15 @@ export const UPDATE_SUBSCRIPTION = `
    }
 `
 
-export const UPDATE_CART = `
-   mutation updateCart(
-      $_set: crm_orderCart_set_input!
-      $cutoffTimeStamp: timestamp_comparison_exp!
+export const UPDATE_CARTS = `
+   mutation updateCarts(
       $subscriptionOccurenceId: Int_comparison_exp!
+      $cutoffTimeStamp: timestamp_comparison_exp!
    ) {
-      updateCart(
+      updateCarts(
          where: {
-            status: { _eq: "PENDING" }
-            subscriptionOccurenceCustomers: {
+            paymentStatus: { _neq: "SUCCEEDED" }
+            subscriptionOccurenceCustomer: {
                isSkipped: { _eq: false }
                subscriptionOccurence: {
                   id: $subscriptionOccurenceId
@@ -39,7 +38,7 @@ export const UPDATE_CART = `
                }
             }
          }
-         _set: $_set
+         _inc: { paymentRetryAttempt: 1 }
       ) {
          affected_rows
       }
@@ -55,7 +54,7 @@ export const UPDATE_OCCURENCE_CUSTOMER = `
       update_subscription_subscriptionOccurence_customer(
          where: {
             isSkipped: { _eq: false }
-            orderCartId: { _is_null: true }
+            cartId: { _is_null: true }
             subscriptionOccurence: {
                id: $subscriptionOccurenceId
                cutoffTimeStamp: $cutoffTimeStamp
@@ -91,4 +90,107 @@ export const UPDATE_SUB_OCCURENCE = `mutation UpdateSubOcc($subscriptionOccurenc
     }
   }
 }
+`
+
+export const INSERT_OCCURENCE_CUSTOMER = `
+   mutation insertSubscriptionOccurenceCustomers(
+      $objects: [subscription_subscriptionOccurence_customer_insert_input!]!
+   ) {
+      insertSubscriptionOccurenceCustomers: insert_subscription_subscriptionOccurence_customer(
+         objects: $objects
+         on_conflict: {
+            constraint: subscriptionOccurence_customer_pkey
+            update_columns: []
+         }
+      ) {
+         affected_rows
+         returning {
+            keycloakId
+            subscriptionOccurenceId
+            brand_customerId
+         }
+      }
+   }
+`
+
+export const UPDATE_OCCURENCE_CUSTOMER_BY_PK = `
+   mutation update_subscription_subscriptionOccurence_customer_by_pk(
+      $_set: subscription_subscriptionOccurence_customer_set_input!
+      $pk_columns: subscription_subscriptionOccurence_customer_pk_columns_input!
+      $_prepend: subscription_subscriptionOccurence_customer_prepend_input!
+   ) {
+      update_subscription_subscriptionOccurence_customer_by_pk(
+         _set: $_set
+         pk_columns: $pk_columns
+         _prepend: $_prepend
+      ) {
+         cartId
+         brand_customerId
+         keycloakId
+         subscriptionOccurenceId
+      }
+   }
+`
+
+export const UDPATE_OCCURENCE_CUSTOMER_CARTS = `
+   mutation updateCarts(
+      $where: order_cart_bool_exp!
+      $_inc: order_cart_inc_input = {}
+      $_set: order_cart_set_input = {}
+   ) {
+      updateCarts(where: $where, _inc: $_inc, _set: $_set) {
+         affected_rows
+         returning {
+            keycloakId: customerKeycloakId
+            subscriptionOccurenceId
+         }
+      }
+   }
+`
+
+export const UDPATE_SUBSCRIPTION_OCCURENCES = `
+   mutation updateSubscriptionOccurences(
+      $where: subscription_subscriptionOccurence_bool_exp!
+      $_prepend: subscription_subscriptionOccurence_prepend_input!
+   ) {
+      updateSubscriptionOccurences(where: $where, _prepend: $_prepend) {
+         affected_rows
+      }
+   }
+`
+
+export const DELETE_OCCURENCE_CUSTOMER = `
+   mutation deleteOccurenceCustomer(
+      $brand_customerId: Int!
+      $keycloakId: String!
+      $subscriptionOccurenceId: Int!
+   ) {
+      deleteOccurenceCustomer: delete_subscription_subscriptionOccurence_customer_by_pk(
+         brand_customerId: $brand_customerId
+         keycloakId: $keycloakId
+         subscriptionOccurenceId: $subscriptionOccurenceId
+      ) {
+         keycloakId
+         brand_customerId
+         subscriptionOccurenceId
+      }
+   }
+`
+
+export const DELETE_CART = `
+   mutation deleteCart($id: Int!) {
+      deleteCart(id: $id) {
+         id
+      }
+   }
+`
+
+export const INSERT_ACTIVITY_LOGS = `
+   mutation insertActivityLogs(
+      $objects: [settings_activityLogs_insert_input!]!
+   ) {
+      insertActivityLogs: insert_settings_activityLogs(objects: $objects) {
+         affected_rows
+      }
+   }
 `

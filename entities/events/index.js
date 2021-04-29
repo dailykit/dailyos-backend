@@ -1,4 +1,3 @@
 export * from './printKOT'
-export * from './printSachetLabel'
-export * from './printProductLabel'
+export * from './printLabel'
 export * from './handleThirdPartyOrder'

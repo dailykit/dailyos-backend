@@ -18,8 +18,11 @@ export const createScheduledEvent = async (req, res) => {
       const dates = reminderSettings.hoursBefore.map(item =>
          moment(cutoffTimeStamp)
             .subtract(item, 'hours')
-            .format('YYYY-MM-DD hh:mm:ss')
+            .format('YYYY-MM-DD HH:mm:ss')
       )
+
+      const timezone = moment().tz(process.env.TIMEZONE).toString().slice(-5)
+
       await axios({
          url,
          method: 'POST',
@@ -34,7 +37,7 @@ export const createScheduledEvent = async (req, res) => {
                webhook:
                   new URL(process.env.DATA_HUB).origin +
                   '/server/webhook/occurence/manage',
-               schedule_at: cutoffTimeStamp + 'Z',
+               schedule_at: cutoffTimeStamp + timezone,
                payload: {
                   cutoffTimeStamp,
                   occurenceId: id
@@ -61,7 +64,7 @@ export const createScheduledEvent = async (req, res) => {
                      webhook:
                         new URL(process.env.DATA_HUB).origin +
                         '/server/webhook/occurence/reminder',
-                     schedule_at: item + 'Z',
+                     schedule_at: item + timezone,
                      payload: {
                         ...req.body.event.data.new,
                         ...reminderSettings,
