@@ -19,10 +19,11 @@ export const autoGenerateCart = async ({
       message: `Attempting autoGenerate ${brandCustomerId}`
    })
    try {
-      const { brandCustomers } = await client.request(GET_SUB_OCCURENCE, {
+      const { brandCustomers = [] } = await client.request(GET_SUB_OCCURENCE, {
          brand_customerId,
          subscriptionOccurenceId
       })
+
       if (
          brandCustomers.length > 0 &&
          brandCustomers[0].subscriptionOccurences.length === 0
@@ -33,15 +34,15 @@ export const autoGenerateCart = async ({
             subscriptionOccurenceId,
             message: `Creating Subscription Occurence Customer for ${brandCustomerId}`
          })
-         const [{ keycloakId }] = brandCustomers
+         const { keycloakId } = brandCustomers[0]
 
          await client.request(INSERT_SUBS_OCCURENCE, {
             object: {
                isAuto: true,
                isSkipped: false,
                keycloakId,
-               subscriptionOccurenceId,
-               brand_customerId: brandCustomerId
+               brand_customerId,
+               subscriptionOccurenceId
             }
          })
          await statusLogger({
@@ -52,16 +53,27 @@ export const autoGenerateCart = async ({
          })
       }
 
-      const {
-         subscriptionOccurences: [{ fulfillmentDate, subscription = {} }] = []
-      } = await client.request(GET_CUSTOMER_ORDER_DETAILS, {
-         subscriptionOccurenceId,
-         brandCustomerId
-      })
+      const { subscriptionOccurences = [] } = await client.request(
+         GET_CUSTOMER_ORDER_DETAILS,
+         {
+            subscriptionOccurenceId,
+            brandCustomerId
+         }
+      )
 
-      let cartId =
-         subscription.brand_customers[0].customer
-            .subscriptionOccurence_customer[0].cartId
+      if (subscriptionOccurences.length === 0) return
+      const { fulfillmentDate, subscription = {} } = subscriptionOccurences[0]
+
+      let cartId
+      if (subscription.brand_customers.length > 0) {
+         const { subscriptionOccurences = [] } = subscription.brand_customers[0]
+         if (
+            subscriptionOccurences.length > 0 &&
+            subscriptionOccurences[0].cartId
+         ) {
+            cartId = subscriptionOccurences[0].cartId
+         }
+      }
 
       if (cartId === null) {
          await statusLogger({
@@ -116,7 +128,6 @@ const createCart = async data => {
       if (brand_customers.length > 0 && availableZipcodes.length > 0) {
          const [
             {
-               brandCustomerId,
                subscriptionAddressId = '',
                subscriptionPaymentMethodId = ' ',
                brandId,
@@ -124,7 +135,11 @@ const createCart = async data => {
             }
          ] = brand_customers
          const { id = '', keycloakId = '', platform_customer = {} } = customer
-         const [{ deliveryTime = {} }] = availableZipcodes
+         let deliveryTime = null
+         if (availableZipcodes.length > 0) {
+            deliveryTime = availableZipcodes[0].deliveryTime
+         }
+
          const defaultAddress =
             platform_customer &&
             platform_customer.customerAddresses &&
@@ -132,48 +147,75 @@ const createCart = async data => {
                address => address.id === subscriptionAddressId
             )
 
+         let customerInfo = {
+            customerEmail: '',
+            customerPhone: '',
+            customerLastName: '',
+            customerFirstName: ''
+         }
+
+         if ('email' in platform_customer && platform_customer.email) {
+            customerInfo.customerEmail = platform_customer.email
+         }
+         if (
+            'phoneNumber' in platform_customer &&
+            platform_customer.phoneNumber
+         ) {
+            customerInfo.customerPhone = platform_customer.phoneNumber
+         }
+         if ('firstName' in platform_customer && platform_customer.firstName) {
+            customerInfo.customerFirstName = platform_customer.firstName
+         }
+         if ('lastName' in platform_customer && platform_customer.lastName) {
+            customerInfo.customerLastName = platform_customer.lastName
+         }
+
+         let fulfillmentInfo = {
+            type: 'PREORDER_DELIVERY',
+            slot: {
+               from: '',
+               to: ''
+            }
+         }
+
+         if (
+            fulfillmentDate &&
+            deliveryTime &&
+            Object.keys(deliveryTime || {}).length > 0
+         ) {
+            if (deliveryTime.from) {
+               fulfillmentInfo.slot.from = evalTime(
+                  fulfillmentDate,
+                  deliveryTime.from
+               )
+            }
+            if (deliveryTime.to) {
+               fulfillmentInfo.slot.to = evalTime(
+                  fulfillmentDate,
+                  deliveryTime.to
+               )
+            }
+         }
+
          const { createCart } = await client.request(CREATE_CART, {
             object: {
+               brandId,
                status: 'CART_PENDING',
-               brandId: brandId,
                customerId: parseInt(id),
                paymentStatus: 'PENDING',
-               ...(subscriptionPaymentMethodId && {
-                  paymentMethodId: subscriptionPaymentMethodId
-               }),
+               customerInfo,
+               fulfillmentInfo,
                source: 'subscription',
                address: defaultAddress,
                customerKeycloakId: keycloakId,
                subscriptionOccurenceId,
-               stripeCustomerId:
-                  platform_customer && platform_customer.stripeCustomerId,
-               customerInfo: {
-                  customerEmail: platform_customer
-                     ? platform_customer.email
-                     : '',
-                  customerPhone: platform_customer
-                     ? platform_customer.phoneNumber
-                     : '',
-                  customerLastName: platform_customer
-                     ? platform_customer.lastName
-                     : '',
-                  customerFirstName: platform_customer
-                     ? platform_customer.firstName
-                     : ''
-               },
-               fulfillmentInfo: {
-                  type: 'PREORDER_DELIVERY',
-                  slot: {
-                     from:
-                        fulfillmentDate &&
-                        deliveryTime &&
-                        evalTime(fulfillmentDate, deliveryTime.from),
-                     to:
-                        fulfillmentDate &&
-                        deliveryTime &&
-                        evalTime(fulfillmentDate, deliveryTime.to)
-                  }
-               }
+               ...(platform_customer &&
+                  platform_customer.stripeCustomerId && {
+                     stripeCustomerId: platform_customer.stripeCustomerId
+                  }),
+               ...(subscriptionPaymentMethodId && {
+                  paymentMethodId: subscriptionPaymentMethodId
+               })
             }
          })
          return createCart.cartId
@@ -185,75 +227,88 @@ const createCart = async data => {
 }
 
 const GET_SUB_OCCURENCE = `
-   query subscriptionOccurences($brandCustomerId: Int!, $subscriptionOccurenceId: Int!) {
-  brandCustomers(where: {id: {_eq: $brandCustomerId}}) {
-     keycloakId
-    subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}) {
-      isAuto
-      cartId
-      isSkipped
-      keycloakId
-      validStatus
-      subscriptionId
-      brand_customerId
-    }
-  }
-}
-`
-
-const GET_CUSTOMER_ORDER_DETAILS = `
-query customerOrder($subscriptionOccurenceId: Int!, $brandCustomerId: Int!) {
-  subscriptionOccurences(where: {id: {_eq: $subscriptionOccurenceId}}) {
-    subscriptionAutoSelectOption
-    fulfillmentDate
-    subscription {
-      subscriptionId: id
-      availableZipcodes {
-         deliveryTime
-         deliveryPrice
-      }
-      subscriptionItemCount {
-        count
-      }
-      brand_customers(where: {id: {_eq: $brandCustomerId}}) {
-        brandCustomerId: id
-        subscriptionAddressId
-        subscriptionPaymentMethodId
-        brandId
-        customer {
-          id
-          keycloakId
-          email
-          platform_customer {
-            firstName
-            lastName
-            phoneNumber
-            stripeCustomerId
-            customerAddresses {
-              city
-              country
-              created_at
-              landmark
-              lat
-              line1
-              line2
-              lng
-              zipcode
-              state
-              id
+   query subscriptionOccurences(
+      $brandCustomerId: Int!
+      $subscriptionOccurenceId: Int!
+   ) {
+      brandCustomers(where: { id: { _eq: $brandCustomerId } }) {
+         keycloakId
+         subscriptionOccurences(
+            where: {
+               subscriptionOccurenceId: { _eq: $subscriptionOccurenceId }
             }
-          }
-          subscriptionOccurence_customer: subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}}) {
-            validStatus
+         ) {
             isAuto
             cartId
             isSkipped
-          }
-        }
+            keycloakId
+            validStatus
+            subscriptionId
+            brand_customerId
+         }
       }
-    }
-  }
-}`
+   }
+`
+
+const GET_CUSTOMER_ORDER_DETAILS = `
+   query customerOrder($subscriptionOccurenceId: Int!, $brandCustomerId: Int!) {
+      subscriptionOccurences(where: { id: { _eq: $subscriptionOccurenceId } }) {
+         id
+         subscriptionAutoSelectOption
+         fulfillmentDate
+         subscription {
+            subscriptionId: id
+            availableZipcodes {
+               deliveryTime
+               deliveryPrice
+            }
+            subscriptionItemCount {
+               count
+            }
+            brand_customers(where: { id: { _eq: $brandCustomerId } }) {
+               brandCustomerId: id
+               subscriptionAddressId
+               subscriptionPaymentMethodId
+               brandId
+               subscriptionOccurences(
+                  where: {
+                     subscriptionOccurenceId: { _eq: $subscriptionOccurenceId }
+                  }
+               ) {
+                  validStatus
+                  isAuto
+                  cartId
+                  isSkipped
+               }
+               customer {
+                  id
+                  keycloakId
+                  email
+                  platform_customer {
+                     firstName
+                     lastName
+                     phoneNumber
+                     stripeCustomerId
+                     customerAddresses {
+                        city
+                        country
+                        created_at
+                        landmark
+                        lat
+                        line1
+                        line2
+                        lng
+                        zipcode
+                        state
+                        id
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+`
 
 const INSERT_SUBS_OCCURENCE = `
 mutation insertSubscriptionOccurenceCustomer(
