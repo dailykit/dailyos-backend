@@ -17,23 +17,28 @@ export const GET_TEMPLATE_SETTINGS = `
 `
 
 export const GET_CUSTOMERS_DETAILS = `
-query customerDetails($id: Int!) {
-  subscriptionOccurences(where: {id: {_eq: $id}}) {
-    subscription {
-      subscriptionId: id
-      brand_customers {
-        brandCustomerId: id
-        isAutoSelectOptOut
-        subscriptionOccurence_customer: subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $id}}) {
-            validStatus
-            isSkipped
-            isAuto
-            cartId
-          }
+   query subscriptionOccurences($id: Int!) {
+      subscriptionOccurences(where: { id: { _eq: $id } }) {
+         id
+         subscriptionId
+         subscription {
+            id
+            brand_customers {
+               id
+               keycloakId
+               isAutoSelectOptOut
+               subscriptionOccurences(
+                  where: { subscriptionOccurenceId: { _eq: $id } }
+               ) {
+                  validStatus
+                  isSkipped
+                  isAuto
+                  cartId
+               }
+            }
+         }
       }
-    }
-  }
-}
+   }
 `
 
 export const CUSTOMERS = `
