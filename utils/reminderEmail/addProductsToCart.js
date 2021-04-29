@@ -2,16 +2,18 @@ import { sendEmail } from '..'
 import { client } from '../../lib/graphql'
 
 export const addProductsToCart = async ({
-   brandCustomerId,
+   keycloakId,
+   brand_customerId,
    subscriptionOccurenceId,
    products
 }) => {
    try {
-      await statusLogger(
-         brandCustomerId,
+      await statusLogger({
+         keycloakId,
+         brand_customerId,
          subscriptionOccurenceId,
-         'Adding Products To Cart'
-      )
+         message: 'Adding Products To Cart'
+      })
       const {
          brandCustomers: [
             {
@@ -55,22 +57,24 @@ export const addProductsToCart = async ({
          }
 
          if (isSkipped) {
-            await statusLogger(
-               brandCustomerId,
+            await statusLogger({
+               keycloakId,
+               brand_customerId,
                subscriptionOccurenceId,
-               `Brand Customer ${brandCustomerId} has skipped the week. Sending Email`
-            )
+               message: `Brand Customer ${brandCustomerId} has skipped the week. Sending Email`
+            })
             await sendEmail({
                brandCustomerId,
                subscriptionOccurenceId,
                fileName: 'weekSkipped'
             })
          } else {
-            await statusLogger(
-               brandCustomerId,
+            await statusLogger({
+               keycloakId,
+               brand_customerId,
                subscriptionOccurenceId,
-               `Products have been added for ${brandCustomerId} and ${subscriptionOccurenceId}. Sending Email`
-            )
+               message: `Products have been added for ${brandCustomerId} and ${subscriptionOccurenceId}. Sending Email`
+            })
             await sendEmail({
                brandCustomerId,
                subscriptionOccurenceId,
@@ -78,8 +82,13 @@ export const addProductsToCart = async ({
             })
          }
       } else {
-         await statusLogger(brandCustomerId, subscriptionOccurenceId, {
-            error: `Not enought products in ${subscriptionOccurenceId} `
+         await statusLogger({
+            keycloakId,
+            brand_customerId,
+            subscriptionOccurenceId,
+            message: {
+               error: `Not enought products in ${subscriptionOccurenceId} `
+            }
          })
       }
    } catch (error) {
@@ -103,29 +112,23 @@ const insertCartId = (node, cartId) => {
    return node
 }
 
-export const statusLogger = async (
-   brandCustomerId,
+export const statusLogger = async ({
+   keycloakId,
+   brand_customerId,
    subscriptionOccurenceId,
-   log
-) => {
-   await client.request(UPDATE_CUSTOMER_LOGS, {
-      brandCustomerId,
-      subscriptionOccurenceId,
-      object: {
-         logs: log
-      }
+   message
+}) => {
+   await client.request(INSERT_CART_ITEM, {
+      objects: [
+         {
+            keycloakId,
+            brand_customerId,
+            subscriptionOccurenceId,
+            log: { message }
+         }
+      ]
    })
 }
-
-export const UPDATE_CUSTOMER_LOGS = `mutation StatusLogger($object: subscription_subscriptionOccurence_customer_prepend_input!, $brandCustomerId: Int!, $subscriptionOccurenceId: Int!) {
-  update_subscription_subscriptionOccurence_customer(where: {brand_customerId: {_eq: $brandCustomerId}, subscriptionOccurenceId: {_eq: $subscriptionOccurenceId }}, _prepend: $object) {
-    returning {
-      logs
-    }
-  }
-}
-
-`
 
 export const INSERT_CART_ITEM = `
    mutation createCartItem($object: order_cartItem_insert_input!) {

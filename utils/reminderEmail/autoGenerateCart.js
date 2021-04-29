@@ -7,29 +7,32 @@ import {
 import { addProductsToCart, statusLogger } from './'
 
 export const autoGenerateCart = async ({
-   brandCustomerId,
+   keycloakId,
+   brand_customerId,
    subscriptionOccurenceId,
    products
 }) => {
-   await statusLogger(
-      brandCustomerId,
+   await statusLogger({
+      keycloakId,
+      brand_customerId,
       subscriptionOccurenceId,
-      `Attempting autoGenerate ${brandCustomerId}`
-   )
+      message: `Attempting autoGenerate ${brandCustomerId}`
+   })
    try {
       const { brandCustomers } = await client.request(GET_SUB_OCCURENCE, {
-         brandCustomerId,
+         brand_customerId,
          subscriptionOccurenceId
       })
       if (
          brandCustomers.length > 0 &&
          brandCustomers[0].subscriptionOccurences.length === 0
       ) {
-         await statusLogger(
-            brandCustomerId,
+         await statusLogger({
+            keycloakId,
+            brand_customerId,
             subscriptionOccurenceId,
-            `Creating Subscription Occurence Customer for ${brandCustomerId}`
-         )
+            message: `Creating Subscription Occurence Customer for ${brandCustomerId}`
+         })
          const [{ keycloakId }] = brandCustomers
 
          await client.request(INSERT_SUBS_OCCURENCE, {
@@ -41,11 +44,12 @@ export const autoGenerateCart = async ({
                brand_customerId: brandCustomerId
             }
          })
-         await statusLogger(
-            brandCustomerId,
+         await statusLogger({
+            keycloakId,
+            brand_customerId,
             subscriptionOccurenceId,
-            `Subscriptiion Occurence Customer created.`
-         )
+            message: `Subscriptiion Occurence Customer created.`
+         })
       }
 
       const {
@@ -60,11 +64,12 @@ export const autoGenerateCart = async ({
             .subscriptionOccurence_customer[0].cartId
 
       if (cartId === null) {
-         await statusLogger(
-            brandCustomerId,
+         await statusLogger({
+            keycloakId,
+            brand_customerId,
             subscriptionOccurenceId,
-            `Creating cart for ${brandCustomerId}`
-         )
+            message: `Creating cart for ${brandCustomerId}`
+         })
          cartId = await createCart({
             ...subscription,
             subscriptionOccurenceId,
@@ -79,15 +84,17 @@ export const autoGenerateCart = async ({
             cartId
          })
 
-         await statusLogger(
-            brandCustomerId,
+         await statusLogger({
+            keycloakId,
+            brand_customerId,
             subscriptionOccurenceId,
-            `Cart ${cartId} is created.`
-         )
+            message: `Cart ${cartId} is created.`
+         })
       }
 
       await addProductsToCart({
-         brandCustomerId,
+         keycloakId,
+         brand_customerId,
          subscriptionOccurenceId,
          products
       })
