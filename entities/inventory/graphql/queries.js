@@ -1,10 +1,14 @@
 export const GET_BULK_ITEM = `
-   query BulkItem($id: Int!) {
+   query BulkItem($id: Int!, $from: String!, $quantity: numeric!) {
       bulkItem(id: $id) {
+         unit
          onHand
          awaiting
          committed
          consumed
+         unit_conversions(args : { from_unit : $from, to_unit : "", from_unit_bulk_density : -1, to_unit_bulk_density : -1, quantity : $quantity }) {
+            data
+         }
       }
    }
 `
