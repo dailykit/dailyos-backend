@@ -25,3 +25,33 @@ export const updatePackaging = (packagingId, set) => {
       set
    })
 }
+
+export const getCalculatedValue = (sourceUnit, targetUnit, conversions) => {
+   try {
+      const directCustomConversions = conversions.custom
+      const otherCustomConversions = conversions.others.custom
+      const otherStandardConversions = conversions.others.standard
+
+      const allConversions = [
+         ...Object.values(directCustomConversions),
+         ...Object.values(otherCustomConversions),
+         ...Object.values(otherStandardConversions)
+      ]
+
+      console.log(sourceUnit, targetUnit)
+      console.log(allConversions)
+
+      const result = allConversions.find(
+         ({ toUnitName, fromUnitName }) =>
+            toUnitName === targetUnit && fromUnitName === sourceUnit
+      )
+
+      if (result) {
+         return { error: null, value: result.equivalentValue }
+      }
+
+      return { error: 'Not found!', value: null }
+   } catch (error) {
+      return { error: error.message, value: null }
+   }
+}

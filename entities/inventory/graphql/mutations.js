@@ -93,6 +93,17 @@ export const UPDATE_BULK_ITEM_HISTORY = `
    }
 `
 
+export const UPDATE_BULK_ITEM_HISTORY_WITH_ID = `
+   mutation UpdateBulkItemHistory($id: Int!, $set: inventory_bulkItemHistory_set_input) {
+      updateBulkItemHistory(where: {id :{_eq: $id}}, _set: $set) {
+         affected_rows
+         returning {
+            id
+         }
+      }
+   }
+`
+
 export const UPDATE_BULK_ITEM_HISTORIES_WITH_BULK_WORK_ORDER_ID = `
    mutation UpdateBulkItemHistory ($bulkWorkOrderId: Int!, $set: inventory_bulkItemHistory_set_input) {
       updateBulkItemHistory(
