@@ -14,11 +14,14 @@ export const handleBulkItemHistory = async (req, res, next) => {
       const { bulkItemId, quantity, status, unit, id } = req.body.event.data.new
       const oldBulkItem = req.body.event.data.old
 
+      const isReducing = quantity < 0
+
       // fetch the bulkItem (with id === bulkItemId)
       const bulkItemData = await client.request(GET_BULK_ITEM, {
          id: bulkItemId,
          from: unit,
-         quantity: quantity
+         to: 'kg', // temporary
+         quantity: Math.abs(quantity)
       })
 
       console.log(bulkItemData)
@@ -58,7 +61,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
          oldBulkItem &&
          oldBulkItem.status === 'PENDING'
       ) {
-         if (calculatedQuantity < 0) {
+         if (isReducing) {
             // set bulkItem's committed -> - |quantity|
             await client.request(UPDATE_BULK_ITEM, {
                where: { id: { _eq: bulkItemId } },
@@ -75,7 +78,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
             return
          }
 
-         if (calculatedQuantity > 0) {
+         if (!isReducing) {
             // set bulkItem's awaiting -> - |quantity|
             await client.request(UPDATE_BULK_ITEM, {
                where: { id: { _eq: bulkItemId } },
@@ -98,7 +101,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
          oldBulkItem &&
          oldBulkItem.status === 'COMPLETED'
       ) {
-         if (calculatedQuantity < 0) {
+         if (isReducing) {
             // set bulkItem's committed -> - |quantity|
             await client.request(UPDATE_BULK_ITEM, {
                where: { id: { _eq: bulkItemId } },
@@ -118,7 +121,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
             return
          }
 
-         if (calculatedQuantity > 0) {
+         if (!isReducing) {
             await client.request(UPDATE_BULK_ITEM, {
                where: { id: { _eq: bulkItemId } },
                set: {
@@ -139,7 +142,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
          oldBulkItem &&
          oldBulkItem.status === 'COMPLETED'
       ) {
-         if (calculatedQuantity > 0) {
+         if (!isReducing) {
             await client.request(UPDATE_BULK_ITEM, {
                where: { id: { _eq: bulkItemId } },
                set: {
@@ -158,7 +161,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
             return
          }
 
-         if (calculatedQuantity < 0) {
+         if (isReducing) {
             await client.request(UPDATE_BULK_ITEM, {
                where: { id: { _eq: bulkItemId } },
                set: {
@@ -181,7 +184,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
          }
       }
 
-      if (status === 'PENDING' && calculatedQuantity < 0) {
+      if (status === 'PENDING' && isReducing) {
          // update bulkItem's commited field -> +|quantity|
          await client.request(UPDATE_BULK_ITEM, {
             where: { id: { _eq: bulkItemId } },
@@ -197,7 +200,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
          return
       }
 
-      if (status === 'COMPLETED' && calculatedQuantity < 0) {
+      if (status === 'COMPLETED' && isReducing) {
          // set bulkItem' commited -> - |quantity|
          //               on-hand -> - |quantity|
          //               consumed -> + |quantity|
@@ -222,7 +225,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
          return
       }
 
-      if (status === 'PENDING' && calculatedQuantity > 0) {
+      if (status === 'PENDING' && !isReducing) {
          // set bulkItem's awaiting -> + |quantity|
          await client.request(UPDATE_BULK_ITEM, {
             where: { id: { _eq: bulkItemId } },
@@ -238,7 +241,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
          return
       }
 
-      if (status === 'COMPLETED' && calculatedQuantity > 0) {
+      if (status === 'COMPLETED' && !isReducing) {
          // set bulkItem's onHand -> + |quantity|
          // set bulkItem's awaiting -> - |awaiting|
 

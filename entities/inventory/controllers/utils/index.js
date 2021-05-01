@@ -28,15 +28,41 @@ export const updatePackaging = (packagingId, set) => {
 
 export const getCalculatedValue = (sourceUnit, targetUnit, conversions) => {
    try {
-      const directCustomConversions = conversions.custom
-      const otherCustomConversions = conversions.others.custom
-      const otherStandardConversions = conversions.others.standard
+      let allConversions = []
 
-      const allConversions = [
-         ...Object.values(directCustomConversions),
-         ...Object.values(otherCustomConversions),
-         ...Object.values(otherStandardConversions)
-      ]
+      const directCustomConversions = conversions.custom
+      const directStandardConversions = conversions.standard
+      const otherCustomConversions = conversions.others
+         ? conversions.others.custom
+         : null
+      const otherStandardConversions = conversions.others
+         ? conversions.others.standard
+         : null
+
+      if (directCustomConversions) {
+         allConversions = [
+            ...allConversions,
+            ...Object.values(directCustomConversions)
+         ]
+      }
+      if (directStandardConversions) {
+         allConversions = [
+            ...allConversions,
+            ...Object.values(directStandardConversions)
+         ]
+      }
+      if (otherCustomConversions) {
+         allConversions = [
+            ...allConversions,
+            ...Object.values(otherCustomConversions)
+         ]
+      }
+      if (otherStandardConversions) {
+         allConversions = [
+            ...allConversions,
+            ...Object.values(otherStandardConversions)
+         ]
+      }
 
       console.log(sourceUnit, targetUnit)
       console.log(allConversions)
