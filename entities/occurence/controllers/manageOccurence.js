@@ -307,7 +307,7 @@ const handle_cancelled_subscription_occurence_customers = async occurence => {
       if (customers.length > 0) {
          const rows = await Promise.all(
             customers
-               .filter(node => node.paymentStatus !== 'SUCCEEDED')
+               .filter(node => node.paymentStatus !== 'PENDING')
                .map(node => {
                   return {
                      cartId: node.cartId,
