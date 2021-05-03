@@ -4,7 +4,10 @@ import {
    UPDATE_BULK_ITEM,
    UPDATE_BULK_ITEM_HISTORY_WITH_ID
 } from '../graphql/mutations'
-import { GET_BULK_ITEM } from '../graphql/queries'
+import {
+   GET_BULK_ITEM,
+   GET_BULK_ITEM_WITH_CONVERSIONS
+} from '../graphql/queries'
 import { getCalculatedValue } from './utils'
 
 // Done
@@ -18,16 +21,23 @@ export const handleBulkItemHistory = async (req, res, next) => {
 
       // fetch the bulkItem (with id === bulkItemId)
       const bulkItemData = await client.request(GET_BULK_ITEM, {
-         id: bulkItemId,
-         from: unit,
-         to: '', // temporary
-         quantity: Math.abs(quantity)
+         id: bulkItemId
       })
 
-      console.log(bulkItemData)
+      const { bulkItem: bulkItemWithConversions } = await client.request(
+         GET_BULK_ITEM_WITH_CONVERSIONS,
+         {
+            id: bulkItemId,
+            from: unit,
+            to: bulkItemData.bulkItem.unit,
+            quantity: Math.abs(quantity)
+         }
+      )
+
+      console.log(bulkItemWithConversions)
 
       // handle unit conversion
-      const [conversions] = bulkItemData.bulkItem.unit_conversions
+      const [conversions] = bulkItemWithConversions.unit_conversions
 
       const { error, value: calculatedQuantity } = getCalculatedValue(
          unit,

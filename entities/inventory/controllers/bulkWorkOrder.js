@@ -5,7 +5,6 @@ import {
    UPDATE_BULK_ITEM_HISTORIES_WITH_BULK_WORK_ORDER_ID
 } from '../graphql/mutations'
 import {
-   GET_BULK_ITEM_WITH_ID,
    GET_BULK_ITEM_HISTORIES_WITH_BULK_WORK_ORDER_ID,
    GET_BULK_ITEM
 } from '../graphql/queries'
@@ -60,14 +59,14 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res, next) => {
          })
       } else {
          const { bulkItem: inputBulkItem } = await client.request(
-            GET_BULK_ITEM_WITH_ID,
+            GET_BULK_ITEM,
             {
                id: inputBulkItemId
             }
          )
 
          const { bulkItem: outputBulkItem } = await client.request(
-            GET_BULK_ITEM_WITH_ID,
+            GET_BULK_ITEM,
             {
                id: outputBulkItemId
             }
