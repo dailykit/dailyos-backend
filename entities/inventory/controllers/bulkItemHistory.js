@@ -20,7 +20,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
       const bulkItemData = await client.request(GET_BULK_ITEM, {
          id: bulkItemId,
          from: unit,
-         to: 'kg', // temporary
+         to: '', // temporary
          quantity: Math.abs(quantity)
       })
 
@@ -28,13 +28,16 @@ export const handleBulkItemHistory = async (req, res, next) => {
 
       // handle unit conversion
       const [conversions] = bulkItemData.bulkItem.unit_conversions
+
       const { error, value: calculatedQuantity } = getCalculatedValue(
          unit,
          bulkItemData.bulkItem.unit,
-         conversions.data.result
+         conversions.data.result,
+         Math.abs(quantity)
       )
 
       if (error) {
+         console.log(error)
          await client.request(UPDATE_BULK_ITEM_HISTORY_WITH_ID, {
             id,
             set: {

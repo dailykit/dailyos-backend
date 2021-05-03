@@ -67,28 +67,11 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res, next) => {
          )
 
          const { bulkItem: outputBulkItem } = await client.request(
-            GET_BULK_ITEM,
+            GET_BULK_ITEM_WITH_ID,
             {
-               id: outputBulkItemId,
-               from: inputBulkItem.unit,
-               to: 'kg', // temporary
-               quantity: inputQuantity
+               id: outputBulkItemId
             }
          )
-
-         const [conversions] = outputBulkItem.unit_conversions
-         const { error, value } = getCalculatedValue(
-            inputBulkItem.unit,
-            outputBulkItem.unit,
-            conversions.data.result
-         )
-
-         if (error) {
-            return res.status(StatusCodes.OK).json({
-               ok: true,
-               message: 'cannot resolve units'
-            })
-         }
 
          // create 2 bulkItemHistory for input and for output
          await client.request(CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER, {
@@ -101,7 +84,7 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res, next) => {
 
          await client.request(CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER, {
             bulkItemId: inputBulkItemId,
-            quantity: -value, // this should be calculated
+            quantity: -inputQuantity, // this should be calculated
             unit: inputBulkItem.unit,
             status: 'PENDING',
             bulkWorkOrderId: bulkWorkOrderId

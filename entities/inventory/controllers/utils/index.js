@@ -26,8 +26,17 @@ export const updatePackaging = (packagingId, set) => {
    })
 }
 
-export const getCalculatedValue = (sourceUnit, targetUnit, conversions) => {
+export const getCalculatedValue = (
+   sourceUnit,
+   targetUnit,
+   conversions,
+   qty
+) => {
    try {
+      if (sourceUnit === targetUnit) {
+         return { error: null, value: qty }
+      }
+
       let allConversions = []
 
       const directCustomConversions = conversions.custom
@@ -67,7 +76,11 @@ export const getCalculatedValue = (sourceUnit, targetUnit, conversions) => {
       console.log(sourceUnit, targetUnit)
       console.log(allConversions)
 
-      const result = allConversions.find(
+      const cleanedResults = allConversions.map(conv => {
+         if (conv.result) return conv.result
+         return conv
+      })
+      const result = cleanedResults.find(
          ({ toUnitName, fromUnitName }) =>
             toUnitName === targetUnit && fromUnitName === sourceUnit
       )
