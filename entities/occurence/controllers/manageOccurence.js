@@ -97,7 +97,6 @@ const handle_no_occurence_customers = async occurence => {
                      subscriptionOccurenceId: node.subscriptionOccurenceId,
                      log: {
                         operation: 'UPDATE',
-                        timestamp: +new Dateoccurence(),
                         message:
                            'Creating occurence customer due to no action being taken by customer.'
                      }
@@ -175,7 +174,6 @@ const handle_paused_occurence_customers = async occurence => {
                               log: {
                                  fields: _set,
                                  operation: 'UPDATE',
-                                 timestamp: +new Date(),
                                  message:
                                     'Occurence customer has been paused and skipped due to paused subscription.'
                               }
@@ -251,7 +249,6 @@ const handle_no_cart_occurence_customers = async occurence => {
                            type: 'Manage Occurence',
                            log: {
                               operation: 'UPDATE',
-                              timestamp: +new Date(),
                               fields: { isSkipped: true },
                               message:
                                  'Skipping occurence customer since there is no cart.'
@@ -329,7 +326,6 @@ const handle_cancelled_subscription_occurence_customers = async occurence => {
                            type: 'Manage Occurence',
                            log: {
                               operation: 'DELETE',
-                              timestamp: +new Date(),
                               message:
                                  'Deleted occurence customer due to cancelled subscription'
                            }
@@ -405,7 +401,6 @@ const handle_non_subscriber_occurence_customers = async occurence => {
                            type: 'Manage Occurence',
                            log: {
                               operation: 'DELETE',
-                              timestamp: +new Date(),
                               message:
                                  'Deleted occurence customer since customer is not a subscriber yet.'
                            }
@@ -482,7 +477,6 @@ const handle_changed_plan_occurence_customers = async occurence => {
                            type: 'Manage Occurence',
                            log: {
                               operation: 'DELETE',
-                              timestamp: +new Date(),
                               message:
                                  'Deleted occurence customer due to changed subscription plan.'
                            }
@@ -558,7 +552,6 @@ const handle_valid_cart_occurence_customers = async occurence => {
                            type: 'Manage Occurence',
                            log: {
                               operation: 'UPDATE',
-                              timestamp: +new Date(),
                               fields: { isSkipped: true },
                               message:
                                  'Skipped occurence customer since cart is not full yet.'
@@ -613,7 +606,6 @@ const handle_invalid_cart_occurence_customers = async occurence => {
                      type: 'Manage Occurence',
                      log: {
                         operation: 'UPDATE',
-                        timestamp: +new Date(),
                         message:
                            "Attempted payment on occurence customer's cart"
                      }
