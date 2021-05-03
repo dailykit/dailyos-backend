@@ -2,7 +2,6 @@ import { client } from '../../../lib/graphql'
 import {
    CUSTOMERS,
    INSERT_OCCURENCE_CUSTOMER,
-   UDPATE_SUBSCRIPTION_OCCURENCES,
    UDPATE_OCCURENCE_CUSTOMER_CARTS,
    UPDATE_OCCURENCE_CUSTOMER_BY_PK,
    DELETE_OCCURENCE_CUSTOMER,
@@ -17,14 +16,20 @@ export const manageOccurence = async (req, res) => {
          cutoffTimeStamp: null
       }
       if (typeof req.body.payload === 'string') {
-         const { id, cutoffTimeStamp } = JSON.parse(req.body.payload)
-         occurence.id = id
+         const { occurenceId, cutoffTimeStamp } = JSON.parse(req.body.payload)
+         occurence.id = occurenceId
          occurence.cutoffTimeStamp = cutoffTimeStamp
       } else {
-         const { id, cutoffTimeStamp } = req.body.payload
-         occurence.id = id
+         const { occurenceId, cutoffTimeStamp } = req.body.payload
+         occurence.id = occurenceId
          occurence.cutoffTimeStamp = cutoffTimeStamp
       }
+
+      if (!occurence.id)
+         return res.status(200).json({
+            success: false,
+            message: 'Occurence id is required!'
+         })
 
       // HANDLE NO OCCURENCE CUSTOMERS
       await handle_no_occurence_customers(occurence)
