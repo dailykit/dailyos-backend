@@ -47,6 +47,9 @@ export const manageOccurence = async (req, res) => {
                "Cutoff timestamp does not match the given occurence id's cutoff timestamp"
          })
 
+      // HANDLE OCCURENCE CUSTOMERS THAT HAVE CHANGED PLAN
+      await handle_changed_plan_occurence_customers(occurence)
+
       // HANDLE NO OCCURENCE CUSTOMERS
       await handle_no_occurence_customers(occurence)
 
@@ -61,9 +64,6 @@ export const manageOccurence = async (req, res) => {
 
       // HANDLE NON SUBSCRIBER OCCURENCE CUSTOMERS
       await handle_non_subscriber_occurence_customers(occurence)
-
-      // HANDLE OCCURENCE CUSTOMERS THAT HAVE CHANGED PLAN
-      await handle_changed_plan_occurence_customers(occurence)
 
       // HANDLE OCCURENCE CUSTOMERS WITH VALID CART
       await handle_valid_cart_occurence_customers(occurence)
@@ -541,6 +541,51 @@ const handle_valid_cart_occurence_customers = async occurence => {
       })
 
       if (customers.length > 0) {
+         await client.request(UDPATE_OCCURENCE_CUSTOMER_CARTS, {
+            where: { id: { _in: customers.map(node => node.cartId) } },
+            _inc: { paymentRetryAttempt: 1 }
+         })
+         await client.request(INSERT_ACTIVITY_LOGS, {
+            objects: customers.map(node => {
+               return {
+                  cartId: node.cartId,
+                  keycloakId: node.keycloakId,
+                  brand_customerId: node.brand_customerId,
+                  subscriptionOccurenceId: node.subscriptionOccurenceId,
+                  type: 'Manage Occurence',
+                  log: {
+                     operation: 'UPDATE',
+                     message: "Attempted payment on occurence customer's cart"
+                  }
+               }
+            })
+         })
+      }
+
+      return customers
+   } catch (error) {
+      throw error
+   }
+}
+
+// HANDLE OCCURENCE CUSTOMERS WITH INVALID CART
+const handle_invalid_cart_occurence_customers = async occurence => {
+   try {
+      if (!occurence.id) return
+      const {
+         subscription_view_full_occurence_report: customers = []
+      } = await client.request(CUSTOMERS, {
+         where: {
+            isPaused: { _eq: false },
+            isSkipped: { _eq: false },
+            cartId: { _is_null: false },
+            isItemCountValid: { _eq: false },
+            paymentStatus: { _neq: 'SUCCEEDED' },
+            subscriptionOccurenceId: { _eq: occurence.id }
+         }
+      })
+
+      if (customers.length > 0) {
          const rows = await Promise.all(
             customers.map(node => {
                return {
@@ -592,55 +637,6 @@ const handle_valid_cart_occurence_customers = async occurence => {
                }
             })
          )
-      }
-
-      return customers
-   } catch (error) {
-      throw error
-   }
-}
-
-// HANDLE OCCURENCE CUSTOMERS WITH INVALID CART
-const handle_invalid_cart_occurence_customers = async occurence => {
-   try {
-      if (!occurence.id) return
-      const {
-         subscription_view_full_occurence_report: customers = []
-      } = await client.request(CUSTOMERS, {
-         where: {
-            isPaused: { _eq: false },
-            isSkipped: { _eq: false },
-            cartId: { _is_null: false },
-            isItemCountValid: { _eq: false },
-            paymentStatus: { _neq: 'SUCCEEDED' },
-            subscriptionOccurenceId: { _eq: occurence.id }
-         }
-      })
-
-      if (customers.length > 0) {
-         // ATTEMPT PAYMENT ON OCCURENCE_CUSTOMERS THAT HAVE VALID CART
-         if (customers.length > 0) {
-            await client.request(UDPATE_OCCURENCE_CUSTOMER_CARTS, {
-               where: { id: { _in: customers.map(node => node.cartId) } },
-               _inc: { paymentRetryAttempt: 1 }
-            })
-            await client.request(INSERT_ACTIVITY_LOGS, {
-               objects: customers.map(node => {
-                  return {
-                     cartId: node.cartId,
-                     keycloakId: node.keycloakId,
-                     brand_customerId: node.brand_customerId,
-                     subscriptionOccurenceId: node.subscriptionOccurenceId,
-                     type: 'Manage Occurence',
-                     log: {
-                        operation: 'UPDATE',
-                        message:
-                           "Attempted payment on occurence customer's cart"
-                     }
-                  }
-               })
-            })
-         }
       }
 
       return customers
