@@ -83,6 +83,7 @@ export const manageOccurence = async (req, res) => {
 // HANDLE NO OCCURENCE CUSTOMERS
 const handle_no_occurence_customers = async occurence => {
    try {
+      if (!occurence.id) return
       const {
          subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
@@ -136,6 +137,7 @@ const handle_no_occurence_customers = async occurence => {
 // HANDLE PAUSED OCCURENCE CUSTOMERS
 const handle_paused_occurence_customers = async occurence => {
    try {
+      if (!occurence.id) return
       const {
          subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
@@ -219,6 +221,7 @@ const handle_paused_occurence_customers = async occurence => {
 // HANDLE NO CART OCCURENCE CUSTOMERS
 const handle_no_cart_occurence_customers = async occurence => {
    try {
+      if (!occurence.id) return
       const {
          subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
@@ -295,6 +298,7 @@ const handle_no_cart_occurence_customers = async occurence => {
 // HANDLE CANCELLED SUBSCRIPTION OCCURENCE CUSTOMERS
 const handle_cancelled_subscription_occurence_customers = async occurence => {
    try {
+      if (!occurence.id) return
       const {
          subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
@@ -370,7 +374,7 @@ const handle_cancelled_subscription_occurence_customers = async occurence => {
 // HANDLE NON SUBSCRIBER OCCURENCE CUSTOMERS
 const handle_non_subscriber_occurence_customers = async occurence => {
    try {
-      // DELETE OCCURENCE_CUSTOMER/CART IF NOT SUBSCRIBER
+      if (!occurence.id) return
       const {
          subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
@@ -445,6 +449,7 @@ const handle_non_subscriber_occurence_customers = async occurence => {
 // HANDLE OCCURENCE CUSTOMERS THAT HAVE CHANGED PLAN
 const handle_changed_plan_occurence_customers = async occurence => {
    try {
+      if (!occurence.id) return
       const {
          subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
@@ -521,6 +526,7 @@ const handle_changed_plan_occurence_customers = async occurence => {
 // HANDLE OCCURENCE CUSTOMERS WITH VALID CART
 const handle_valid_cart_occurence_customers = async occurence => {
    try {
+      if (!occurence.id) return
       const {
          subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
@@ -597,6 +603,7 @@ const handle_valid_cart_occurence_customers = async occurence => {
 // HANDLE OCCURENCE CUSTOMERS WITH INVALID CART
 const handle_invalid_cart_occurence_customers = async occurence => {
    try {
+      if (!occurence.id) return
       const {
          subscription_view_full_occurence_report: customers = []
       } = await client.request(CUSTOMERS, {
