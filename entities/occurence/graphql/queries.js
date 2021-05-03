@@ -24,6 +24,9 @@ query customerDetails($id: Int!) {
       brand_customers {
         brandCustomerId: id
         isAutoSelectOptOut
+         customer {
+          email
+        }
         subscriptionOccurence_customer: subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $id}}) {
             validStatus
             isSkipped
@@ -35,4 +38,3 @@ query customerDetails($id: Int!) {
   }
 }
 `
-// SubscriptionOcuu
