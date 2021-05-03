@@ -3,88 +3,76 @@ import { client } from '../../lib/graphql'
 const fetch = require('node-fetch')
 const AWS = require('aws-sdk')
 const nodemailer = require('nodemailer')
-import {
-   GET_SES_DOMAIN,
-   GET_PAYMENT_SETTINGS,
-   GET_CUSTOMER,
-   UPDATE_CART
-} from './graphql'
+
+import { GET_SES_DOMAIN, UPDATE_CART } from './graphql'
 
 AWS.config.update({ region: 'us-east-2' })
 
+const CART = `
+   query cart($id: Int!) {
+      cart(id: $id) {
+         id
+         isTest
+         amount
+         totalPrice
+         paymentMethodId
+         stripeCustomerId
+         statementDescriptor
+      }
+   }
+`
+
 export const initiatePayment = async (req, res) => {
    try {
-      const data = req.body.event.data.new
+      const payload = req.body.event.data.new
 
-      if (data.status === 'PROCESS') {
-         const { paymentSettings } = await client.request(
-            GET_PAYMENT_SETTINGS,
-            {
-               brandId: data.brandId
+      const { cart = {} } = await client.request(CART, { id: payload.id })
+
+      await client.request(UPDATE_CART, {
+         id: cart.id,
+         set: { amount: cart.totalPrice }
+      })
+
+      if (cart.isTest || cart.totalPrice === 0) {
+         await client.request(UPDATE_CART, {
+            id: cart.id,
+            set: {
+               paymentStatus: 'SUCCEEDED',
+               isTest: true,
+               transactionId: 'NA',
+               transactionRemark: {
+                  id: 'NA',
+                  amount: cart.totalPrice * 100,
+                  message: 'payment bypassed',
+                  reason: cart.isTest ? 'test mode' : 'amount 0 - free'
+               }
             }
-         )
-         const { customer } = await client.request(GET_CUSTOMER, {
-            keycloakId: data.customerKeycloakId
          })
-
-         const isStripeConfigured = paymentSettings[0].brandSettings.length
-            ? paymentSettings[0].brandSettings[0].value.isStripeConfigured
-            : paymentSettings[0].value.isStripeConfigured
-         const isStoreLive = paymentSettings[0].brandSettings.length
-            ? paymentSettings[0].brandSettings[0].value.isStoreLive
-            : paymentSettings[0].value.isStoreLive
-
-         if (!isStripeConfigured || !isStoreLive || customer.isTest) {
-            await client.request(UPDATE_CART, {
-               id: data.id,
-               set: {
-                  paymentStatus: 'SUCCEEDED',
-                  isTest: true,
-                  transactionId: 'NA',
-                  transactionRemark: {
-                     id: 'NA',
-                     amount: data.amount * 100,
-                     message: 'payment bypassed',
-                     reason: 'test mode'
-                  }
-               }
-            })
-         } else {
-            if (data.amount) {
-               const body = {
-                  organizationId: process.env.ORGANIZATION_ID,
-                  cart: {
-                     id: data.id,
-                     amount: data.amount
-                  },
-                  customer: {
-                     paymentMethod: data.paymentMethodId,
-                     stripeCustomerId: data.stripeCustomerId
-                  }
-               }
-               await fetch(`${process.env.PAYMENTS_API}/api/initiate-payment`, {
-                  method: 'POST',
-                  headers: {
-                     'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify(body)
-               })
-            } else {
-               await client.request(UPDATE_CART, {
-                  id: data.id,
-                  set: {
-                     paymentStatus: 'SUCCEEDED',
-                     transactionId: 'NA',
-                     transactionRemark: {
-                        id: 'NA',
-                        amount: 0,
-                        message: 'payment bypassed',
-                        reason: 'no amount for stripe transaction'
-                     }
-                  }
-               })
+         return res.status(200).json({
+            success: true,
+            message: 'Payment succeeded!'
+         })
+      }
+      if (cart.totalPrice > 0) {
+         const body = {
+            organizationId: process.env.ORGANIZATION_ID,
+            statementDescriptor: cart.statementDescriptor || '',
+            cart: {
+               id: cart.id,
+               amount: cart.totalPrice
+            },
+            customer: {
+               paymentMethod: cart.paymentMethodId,
+               stripeCustomerId: cart.stripeCustomerId
             }
          }
+         await fetch(`${process.env.PAYMENTS_API}/api/initiate-payment`, {
+            method: 'POST',
+            headers: {
+               'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+         })
       }
 
       res.status(200).json({
@@ -219,5 +207,77 @@ export const getDistance = async (req, res) => {
          success: false,
          message: err.message
       })
+   }
+}
+
+const STAFF_USERS = `
+   query users($email: String_comparison_exp!) {
+      users: settings_user(where: { email: $email }) {
+         id
+         email
+         keycloakId
+      }
+   }
+`
+
+const UPDATE_STAFF_USER = `
+   mutation updateUser(
+      $where: settings_user_bool_exp!
+      $_set: settings_user_set_input!
+   ) {
+      updateUser: update_settings_user(where: $where, _set: $_set) {
+         affected_rows
+      }
+   }
+`
+
+export const authorizeRequest = async (req, res) => {
+   try {
+      const staffId = req.body.headers['Staff-Id']
+      const staffEmail = req.body.headers['Staff-Email']
+
+      const keycloakId = req.body.headers['Keycloak-Id']
+      const cartId = req.body.headers['Cart-Id']
+      const brandId = req.body.headers['Brand-Id']
+      const brandCustomerId = req.body.headers['Brand-Customer-Id']
+      const source = req.body.headers['Source']
+
+      let staffUserExists = false
+      if (staffId) {
+         const { users = [] } = await client.request(STAFF_USERS, {
+            email: { _eq: staffEmail }
+         })
+         if (users.length > 0) {
+            staffUserExists = true
+            const [user] = users
+            if (user.keycloakId !== staffId) {
+               await client.request(UPDATE_STAFF_USER, {
+                  where: { email: { _eq: staffEmail } },
+                  _set: { keycloakId: staffId }
+               })
+            }
+         }
+      }
+
+      return res.status(200).json({
+         'X-Hasura-Role': keycloakId ? 'consumer' : 'guest-consumer',
+         'X-Hasura-Source': source,
+         'X-Hasura-Brand-Id': brandId,
+         ...(keycloakId && {
+            'X-Hasura-Keycloak-Id': keycloakId
+         }),
+         ...(cartId && { 'X-Hasura-Cart-Id': cartId }),
+         ...(brandCustomerId && {
+            'X-Hasura-Brand-Customer-Id': brandCustomerId
+         }),
+         ...(staffId &&
+            staffUserExists && {
+               'X-Hasura-Role': 'admin',
+               'X-Hasura-Staff-Id': staffId,
+               'X-Hasura-Email-Id': staffEmail
+            })
+      })
+   } catch (error) {
+      return res.status(404).json({ success: false, error: error.message })
    }
 }

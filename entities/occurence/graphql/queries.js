@@ -19,22 +19,49 @@ export const GET_TEMPLATE_SETTINGS = `
 export const GET_CUSTOMERS_DETAILS = `
 query customerDetails($id: Int!) {
   subscriptionOccurences(where: {id: {_eq: $id}}) {
+    id
+    subscriptionId
     subscription {
-      subscriptionId: id
+      id
       brand_customers {
-        brandCustomerId: id
+        id
+        keycloakId
         isAutoSelectOptOut
-         customer {
+        customerEmail: customer {
           email
         }
-        subscriptionOccurence_customer: subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $id}}) {
+      subscriptionOccurences(where: {subscriptionOccurenceId: {_eq: $id}}) {
             validStatus
             isSkipped
             isAuto
             cartId
           }
       }
-    }
-  }
-}
+   }
+`
+
+export const CUSTOMERS = `
+   query subscription_view_full_occurence_report(
+      $where: subscription_view_full_occurence_report_bool_exp = {}
+   ) {
+      subscription_view_full_occurence_report(where: $where) {
+         cartId
+         isPaused
+         isSkipped
+         keycloakId
+         betweenPause
+         paymentStatus
+         subscriptionId
+         brand_customerId
+         isItemCountValid
+         subscriptionOccurenceId
+         brandCustomer {
+            id
+            keycloakId
+            subscriptionId
+            isSubscriber
+            isSubscriptionCancelled
+         }
+      }
+   }
 `
