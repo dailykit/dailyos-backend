@@ -62,3 +62,15 @@ export const CUSTOMERS = `
       }
    }
 `
+
+export const SUBSCRIPTION_OCCURENCES = `
+   query subscriptionOccurences(
+      $where: subscription_subscriptionOccurence_bool_exp = {}
+   ) {
+      subscriptionOccurences(where: $where) {
+         id
+         cutoffTimeStamp
+         fulfillmentDate
+      }
+   }
+`

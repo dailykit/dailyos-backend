@@ -6,7 +6,8 @@ import {
    UPDATE_OCCURENCE_CUSTOMER_BY_PK,
    DELETE_OCCURENCE_CUSTOMER,
    DELETE_CART,
-   INSERT_ACTIVITY_LOGS
+   INSERT_ACTIVITY_LOGS,
+   SUBSCRIPTION_OCCURENCES
 } from '../graphql'
 
 export const manageOccurence = async (req, res) => {
@@ -29,6 +30,21 @@ export const manageOccurence = async (req, res) => {
          return res.status(200).json({
             success: false,
             message: 'Occurence id is required!'
+         })
+
+      const { subscriptionOccurences = [] } = await client.request(
+         SUBSCRIPTION_OCCURENCES,
+         {
+            id: { _eq: occurence.id },
+            cutoffTimeStamp: { _eq: occurence.cutoffTimeStamp }
+         }
+      )
+
+      if (subscriptionOccurences.length === 0)
+         return res.status(200).json({
+            success: false,
+            message:
+               "Cutoff timestamp does not match the given occurence id's cutoff timestamp"
          })
 
       // HANDLE NO OCCURENCE CUSTOMERS
