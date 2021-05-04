@@ -39,6 +39,10 @@ export const getCalculatedValue = (
 
       let allConversions = []
 
+      if (conversions.value) {
+         allConversions.push(conversions)
+      }
+
       const directCustomConversions = conversions.custom
       const directStandardConversions = conversions.standard
       const otherCustomConversions = conversions.others
