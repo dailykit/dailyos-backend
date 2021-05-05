@@ -55,6 +55,7 @@ export const CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER = `
       $bulkItemId: Int!
       $quantity: numeric!
       $status: String!
+      $unit: String!
       $bulkWorkOrderId: Int!
    ) {
       createBulkItemHistory(
@@ -62,6 +63,7 @@ export const CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER = `
             bulkItemId: $bulkItemId
             quantity: $quantity
             status: $status
+            unit: $unit
             bulkWorkOrderId: $bulkWorkOrderId
          }
       ) {
