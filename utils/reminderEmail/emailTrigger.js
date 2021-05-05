@@ -80,7 +80,7 @@ const getHtml = async (
       )
       if (subjectLineTemplate) {
          const url = `${origin}/?template=${template_options}&data=${template_variables}&readVar=true`
-         console.log("👩lineno-83", url)
+         // console.log("👩lineno-83", url)
          const { data } = await axios.get(url)
 
          const result = template_compiler(subjectLineTemplate, { data })
