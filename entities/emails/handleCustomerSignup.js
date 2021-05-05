@@ -3,7 +3,7 @@ import { client } from '../../lib/graphql'
 export const handleCustomerSignup = async (req, res) => {
     try {
         const { data = {} } = req.body.event
-        console.log("data", data)
+        // console.log("data", data)
         const { brandCustomer = [] } = await client.request(GET_CUSTOMER_EMAIL, {
             id: data.new.id
         })
