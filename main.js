@@ -36,7 +36,7 @@ import {
    printLabel,
    handleThirdPartyOrder
 } from './entities/events'
-
+import { handleCustomerSignup } from './entities/emails'
 const app = express()
 
 // Middlewares
@@ -86,6 +86,7 @@ app.post('/webhook/authorize-request', authorizeRequest)
 app.post('/event/print-label', printLabel)
 app.post('/event/print-kot', printKOT)
 app.post('/event/order/third-party', handleThirdPartyOrder)
+app.post('/webhook/emails/handle-customer-signup', handleCustomerSignup)
 
 app.use('/api/store', StoreRouter)
 

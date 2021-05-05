@@ -11,7 +11,6 @@ export const emailTrigger = async ({ title, variables = {}, to }) => {
             title
          }
       )
-
       if (templateSettings.length === 1) {
          const [
             {
@@ -28,14 +27,14 @@ export const emailTrigger = async ({ title, variables = {}, to }) => {
             proceed = variables.hasOwnProperty(item)
             return proceed
          })
-
+         console.log(functionFile, emailTemplateFile.fileName)
          if (proceed) {
             let html = await getHtml(
                functionFile,
                emailTemplateFile.fileName,
                variables
             )
-
+            console.log(html)
             let subjectLine = await getHtml(
                functionFile,
                emailTemplateFile.fileName,
@@ -71,7 +70,8 @@ const getHtml = async (
    subjectLineTemplate
 ) => {
    try {
-      const { origin } = new URL(process.env.DATA_HUB)
+      const { origin } = new URL(process.env.TEMPLATE_BASE_URL)
+      console.log(origin)
       const template_variables = encodeURI(
          JSON.stringify({ ...variables, emailTemplateFileName })
       )
@@ -79,18 +79,16 @@ const getHtml = async (
          JSON.stringify({ path: functionFile.path, format: 'html' })
       )
       if (subjectLineTemplate) {
-         const url = `${origin}/template/?template=${template_options}&data=${template_variables}&readVar=true`
+         const url = `${origin}/?template=${template_options}&data=${template_variables}&readVar=true`
+         console.log("👩lineno-83", url)
+         const { data } = await axios.get(url)
 
-         const { data: customerDetails } = await axios.get(url)
-
-         const result = template_compiler(subjectLineTemplate, {
-            customerName: customerDetails.name
-         })
-
+         const result = template_compiler(subjectLineTemplate, { data })
+         console.log("subjectLine: ", result)
          return result
       } else {
-         const url = `${origin}/template/?template=${template_options}&data=${template_variables}`
-
+         const url = `${origin}/?template=${template_options}&data=${template_variables}`
+         console.log(url)
          const { data: html } = await axios.get(url)
          return html
       }
@@ -100,20 +98,22 @@ const getHtml = async (
 }
 
 export const GET_TEMPLATE_SETTINGS = `
-   query templateSettings ($title: String!) {
-  templateSettings: notifications_emailTriggers(where: {title: {_eq: $title}}) {
-    id
-    title
-    requiredVar: var
-    subjectLineTemplate
-    functionFile {
-      fileName
-      path
-    }
-    emailTemplateFile {
-      fileName
-      path
-    }
-  }
-} 
+query templateSettings($title: String!) {
+   templateSettings: notifications_emailTriggers(where: {title: {_eq: $title}}) {
+     id
+     title
+     requiredVar: var
+     subjectLineTemplate
+     functionFile {
+       fileName
+       path
+     }
+     emailTemplateFile {
+       fileName
+       path
+     }
+     fromEmail
+   }
+ }  
 `
+
