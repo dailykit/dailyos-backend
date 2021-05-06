@@ -27,11 +27,6 @@ export const reminderMail = async (req, res) => {
             message: `No subscription is linked to occurence id ${subscriptionOccurenceId}`
          })
 
-      const { products = [] } = await client.request(GET_PRODUCTS, {
-         subscriptionOccurenceId,
-         subscriptionId
-      })
-
       const { brand_customers = [] } = subscription
 
       if (brand_customers.length === 0)
@@ -141,8 +136,7 @@ export const reminderMail = async (req, res) => {
                      await autoGenerateCart({
                         keycloakId,
                         brand_customerId: id,
-                        subscriptionOccurenceId,
-                        products
+                        subscriptionOccurenceId
                      })
                   }
                }
@@ -160,18 +154,3 @@ export const reminderMail = async (req, res) => {
       return res.status(400).json({ success: false, error: error.message })
    }
 }
-
-const GET_PRODUCTS = `
-   query products($subscriptionOccurenceId: Int!, $subscriptionId: Int!) {
-      products: subscription_subscriptionOccurence_product(
-         where: {
-            _or: [
-               { subscriptionOccurenceId: { _eq: $subscriptionOccurenceId } }
-               { subscriptionId: { _eq: $subscriptionId } }
-            ]
-         }
-      ) {
-         cartItem
-      }
-   }
-`

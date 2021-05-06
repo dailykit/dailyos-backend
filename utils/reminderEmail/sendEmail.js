@@ -1,5 +1,5 @@
 import { client } from '../../lib/graphql'
-import { getHtml } from '../'
+import { getHtml } from '..'
 import { SEND_MAIL } from '../../entities/occurence/graphql'
 
 export const sendEmail = async ({

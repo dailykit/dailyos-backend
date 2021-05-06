@@ -1,3 +1,3 @@
-export * from './addProductsToCart.js'
-export * from './emailTrigger.js'
+export * from './emailTrigger'
 export * from './autoGenerateCart'
+export * from './statusLogger'

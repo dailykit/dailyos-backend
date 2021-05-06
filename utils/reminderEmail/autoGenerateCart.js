@@ -1,10 +1,11 @@
+import axios from 'axios'
 import { evalTime } from '..'
 import { client } from '../../lib/graphql'
 import {
    CREATE_CART,
    UPDATE_SUB_OCCURENCE
 } from '../../entities/occurence/graphql'
-import { addProductsToCart, statusLogger } from './'
+import { statusLogger } from './'
 
 export const autoGenerateCart = async ({
    keycloakId,
@@ -69,12 +70,14 @@ export const autoGenerateCart = async ({
          }
       }
 
+      const URL = `${
+         new URL(process.env.DATA_HUB).origin
+      }/webhook/occurence/auto-select`
       if (cartId) {
-         await addProductsToCart({
+         await axios.post(URL, {
             keycloakId,
             brand_customerId,
-            subscriptionOccurenceId,
-            products
+            subscriptionOccurenceId
          })
       } else {
          let _cartId = await createCart({
@@ -100,11 +103,10 @@ export const autoGenerateCart = async ({
          })
 
          if (_cartId) {
-            await addProductsToCart({
+            await axios.post(URL, {
                keycloakId,
                brand_customerId,
-               subscriptionOccurenceId,
-               products
+               subscriptionOccurenceId
             })
          }
       }
