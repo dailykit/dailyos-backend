@@ -70,7 +70,7 @@ const getHtml = async (
    subjectLineTemplate
 ) => {
    try {
-      const { origin } = new URL(process.env.TEMPLATE_BASE_URL)
+      const { origin } = new URL(process.env.DATA_HUB)
       const template_variables = encodeURI(
          JSON.stringify({ ...variables, emailTemplateFileName })
       )
@@ -81,11 +81,9 @@ const getHtml = async (
          const url = `${origin}/?template=${template_options}&data=${template_variables}&readVar=true`
          const { data } = await axios.get(url)
          const result = template_compiler(subjectLineTemplate, { data })
-         console.log("subjectLine: ", result)
          return result
       } else {
          const url = `${origin}/?template=${template_options}&data=${template_variables}`
-         // console.log(url)
          const { data: html } = await axios.get(url)
          return html
       }
@@ -113,4 +111,3 @@ query templateSettings($title: String!) {
    }
  }  
 `
-

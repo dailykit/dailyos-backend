@@ -8,12 +8,6 @@ export const addProductsToCart = async ({
    products
 }) => {
    try {
-      await statusLogger({
-         keycloakId,
-         brand_customerId,
-         subscriptionOccurenceId,
-         message: 'Adding Products To Cart'
-      })
       const { brandCustomers = [] } = await client.request(
          PENDING_PRODUCT_COUNT,
          {
@@ -50,7 +44,7 @@ export const addProductsToCart = async ({
                let node = insertCartId(cartItem, cartId)
                await client.request(INSERT_CART_ITEM, {
                   object: {
-                     node,
+                     ...node,
                      isAutoAdded: true
                   }
                })
@@ -65,7 +59,9 @@ export const addProductsToCart = async ({
                keycloakId,
                brand_customerId,
                subscriptionOccurenceId,
-               message: `Brand Customer ${brandCustomerId} has skipped the week. Sending Email`
+               type: 'Auto Select Product',
+               message:
+                  'Sent reminder email alerting customer that this week is skipped.'
             })
             await emailTrigger({
                title: 'weekSkipped',
@@ -80,7 +76,9 @@ export const addProductsToCart = async ({
                keycloakId,
                brand_customerId,
                subscriptionOccurenceId,
-               message: `Products have been added for ${brandCustomerId} and ${subscriptionOccurenceId}. Sending Email`
+               type: 'Auto Select Product',
+               message:
+                  'Sent email reminding customer that product has been added for this week.'
             })
             await emailTrigger({
                title: 'autoGenerateCart',
@@ -96,9 +94,9 @@ export const addProductsToCart = async ({
             keycloakId,
             brand_customerId,
             subscriptionOccurenceId,
-            message: {
-               error: `Not enought products in ${subscriptionOccurenceId} `
-            }
+            type: 'Auto Select Product',
+            message:
+               'This occurence doesnt have enough products to populate cart.'
          })
       }
    } catch (error) {
@@ -126,11 +124,13 @@ export const statusLogger = async ({
    keycloakId,
    brand_customerId,
    subscriptionOccurenceId,
-   message
+   message,
+   type = ''
 }) => {
-   await client.request(INSERT_CART_ITEM, {
+   await client.request(INSERT_ACTIVITY_LOGS, {
       objects: [
          {
+            type,
             keycloakId,
             brand_customerId,
             subscriptionOccurenceId,
@@ -170,6 +170,16 @@ const PENDING_PRODUCT_COUNT = `
                subscriptionId
             }
          }
+      }
+   }
+`
+
+const INSERT_ACTIVITY_LOGS = `
+   mutation insertActivityLogs(
+      $objects: [settings_activityLogs_insert_input!]!
+   ) {
+      insertActivityLogs: insert_settings_activityLogs(objects: $objects) {
+         affected_rows
       }
    }
 `

@@ -15,12 +15,13 @@ export const autoGenerateCart = async ({
    await statusLogger({
       keycloakId,
       brand_customerId,
+      type: 'Reminder Email',
       subscriptionOccurenceId,
-      message: `Attempting autoGenerate ${brandCustomerId}`
+      message: `Attempting autoGenerate ${brand_customerId}`
    })
    try {
       const { brandCustomers = [] } = await client.request(GET_SUB_OCCURENCE, {
-         brand_customerId,
+         brandCustomerId: brand_customerId,
          subscriptionOccurenceId
       })
 
@@ -28,14 +29,6 @@ export const autoGenerateCart = async ({
          brandCustomers.length > 0 &&
          brandCustomers[0].subscriptionOccurences.length === 0
       ) {
-         await statusLogger({
-            keycloakId,
-            brand_customerId,
-            subscriptionOccurenceId,
-            message: `Creating Subscription Occurence Customer for ${brandCustomerId}`
-         })
-         const { keycloakId } = brandCustomers[0]
-
          await client.request(INSERT_SUBS_OCCURENCE, {
             object: {
                isAuto: true,
@@ -48,8 +41,9 @@ export const autoGenerateCart = async ({
          await statusLogger({
             keycloakId,
             brand_customerId,
+            type: 'Reminder Email',
             subscriptionOccurenceId,
-            message: `Subscriptiion Occurence Customer created.`
+            message: `Subscription Occurence Customer created.`
          })
       }
 
@@ -57,7 +51,7 @@ export const autoGenerateCart = async ({
          GET_CUSTOMER_ORDER_DETAILS,
          {
             subscriptionOccurenceId,
-            brandCustomerId
+            brandCustomerId: brand_customerId
          }
       )
 
@@ -75,14 +69,15 @@ export const autoGenerateCart = async ({
          }
       }
 
-      if (cartId === null) {
-         await statusLogger({
+      if (cartId) {
+         await addProductsToCart({
             keycloakId,
             brand_customerId,
             subscriptionOccurenceId,
-            message: `Creating cart for ${brandCustomerId}`
+            products
          })
-         cartId = await createCart({
+      } else {
+         let _cartId = await createCart({
             ...subscription,
             subscriptionOccurenceId,
             isAuto: true,
@@ -91,35 +86,36 @@ export const autoGenerateCart = async ({
 
          await client.request(UPDATE_SUB_OCCURENCE, {
             subscriptionOccurenceId,
-            brandCustomerId,
+            brandCustomerId: brand_customerId,
             isAuto: true,
-            cartId
+            cartId: _cartId
          })
 
          await statusLogger({
             keycloakId,
             brand_customerId,
+            type: 'Reminder Email',
             subscriptionOccurenceId,
-            message: `Cart ${cartId} is created.`
+            message: 'Cart has been created for auto product selection.'
          })
-      }
 
-      await addProductsToCart({
-         keycloakId,
-         brand_customerId,
-         subscriptionOccurenceId,
-         products
-      })
+         if (_cartId) {
+            await addProductsToCart({
+               keycloakId,
+               brand_customerId,
+               subscriptionOccurenceId,
+               products
+            })
+         }
+      }
    } catch (error) {
-      console.log(error)
-      // throw Error(error.message)
+      throw error
    }
 }
 
 const createCart = async data => {
    try {
       const {
-         isAuto = true,
          fulfillmentDate,
          subscriptionOccurenceId = '',
          brand_customers,
@@ -221,8 +217,7 @@ const createCart = async data => {
          return createCart.cartId
       }
    } catch (error) {
-      console.log(error)
-      // throw Error(error.message)
+      throw error
    }
 }
 
