@@ -99,33 +99,15 @@ const handle_no_occurence_customers = async occurence => {
                return {
                   keycloakId: node.keycloakId,
                   brand_customerId: node.brand_customerId,
-                  subscriptionOccurenceId: node.subscriptionOccurenceId
+                  subscriptionOccurenceId: node.subscriptionOccurenceId,
+                  lastUpdatedBy: {
+                     type: 'auto',
+                     message:
+                        'Creating occurence customer due to no action being taken by customer.'
+                  }
                }
             })
          )
-         // CREATE ENTRY FOR PENDING CUSTOMERS IN OCCURENCE_CUSTOMER
-         const {
-            insertSubscriptionOccurenceCustomers = {}
-         } = await client.request(INSERT_OCCURENCE_CUSTOMER, {
-            objects: rows
-         })
-         await client.request(INSERT_ACTIVITY_LOGS, {
-            objects: insertSubscriptionOccurenceCustomers.returning.map(
-               node => {
-                  return {
-                     type: 'Manage Occurence',
-                     keycloakId: node.keycloakId,
-                     brand_customerId: node.brand_customerId,
-                     subscriptionOccurenceId: node.subscriptionOccurenceId,
-                     log: {
-                        operation: 'UPDATE',
-                        message:
-                           'Creating occurence customer due to no action being taken by customer.'
-                     }
-                  }
-               }
-            )
-         })
       }
 
       return customers
@@ -166,8 +148,23 @@ const handle_paused_occurence_customers = async occurence => {
                try {
                   const _set = {
                      ...(row.hasPaused
-                        ? { isPaused: true, isSkipped: true }
-                        : { isPaused: false })
+                        ? {
+                             isPaused: true,
+                             isSkipped: true,
+                             lastUpdatedBy: {
+                                type: 'auto',
+                                message:
+                                   'Occurence customer has been paused and skipped due to paused subscription.'
+                             }
+                          }
+                        : {
+                             isPaused: false,
+                             lastUpdatedBy: {
+                                type: 'auto',
+                                message:
+                                   'Occurence customer has been marked unpaused due to resumed subscription.'
+                             }
+                          })
                   }
                   const {
                      update_subscription_subscriptionOccurence_customer_by_pk = {}
@@ -179,31 +176,6 @@ const handle_paused_occurence_customers = async occurence => {
                         subscriptionOccurenceId: row.subscriptionOccurenceId
                      }
                   })
-                  if (_set.isPaused) {
-                     const {
-                        cartId = null,
-                        keycloakId = null,
-                        brand_customerId = null,
-                        subscriptionOccurenceId = null
-                     } = update_subscription_subscriptionOccurence_customer_by_pk
-                     await client.request(INSERT_ACTIVITY_LOGS, {
-                        objects: [
-                           {
-                              keycloakId,
-                              brand_customerId,
-                              subscriptionOccurenceId,
-                              type: 'Manage Occurence',
-                              ...(cartId && { cartId }),
-                              log: {
-                                 fields: _set,
-                                 operation: 'UPDATE',
-                                 message:
-                                    'Occurence customer has been paused and skipped due to paused subscription.'
-                              }
-                           }
-                        ]
-                     })
-                  }
                   return update_subscription_subscriptionOccurence_customer_by_pk
                } catch (error) {
                   return error
@@ -251,34 +223,19 @@ const handle_no_cart_occurence_customers = async occurence => {
                   const {
                      update_subscription_subscriptionOccurence_customer_by_pk = {}
                   } = await client.request(UPDATE_OCCURENCE_CUSTOMER_BY_PK, {
-                     _set: { isSkipped: true },
+                     _set: {
+                        isSkipped: true,
+                        lastUpdatedBy: {
+                           type: 'auto',
+                           message:
+                              'Skipping occurence customer since there is no cart.'
+                        }
+                     },
                      pk_columns: {
                         keycloakId: row.keycloakId,
                         brand_customerId: row.brand_customerId,
                         subscriptionOccurenceId: row.subscriptionOccurenceId
                      }
-                  })
-
-                  const {
-                     keycloakId = null,
-                     brand_customerId = null,
-                     subscriptionOccurenceId = null
-                  } = update_subscription_subscriptionOccurence_customer_by_pk
-                  await client.request(INSERT_ACTIVITY_LOGS, {
-                     objects: [
-                        {
-                           keycloakId,
-                           brand_customerId,
-                           subscriptionOccurenceId,
-                           type: 'Manage Occurence',
-                           log: {
-                              operation: 'UPDATE',
-                              fields: { isSkipped: true },
-                              message:
-                                 'Skipping occurence customer since there is no cart.'
-                           }
-                        }
-                     ]
                   })
 
                   return update_subscription_subscriptionOccurence_customer_by_pk
@@ -337,26 +294,6 @@ const handle_cancelled_subscription_occurence_customers = async occurence => {
                         id: row.cartId
                      })
                   }
-                  const {
-                     keycloakId = null,
-                     brand_customerId = null,
-                     subscriptionOccurenceId = null
-                  } = deleteOccurenceCustomer
-                  await client.request(INSERT_ACTIVITY_LOGS, {
-                     objects: [
-                        {
-                           keycloakId,
-                           brand_customerId,
-                           subscriptionOccurenceId,
-                           type: 'Manage Occurence',
-                           log: {
-                              operation: 'DELETE',
-                              message:
-                                 'Deleted occurence customer due to cancelled subscription'
-                           }
-                        }
-                     ]
-                  })
                   return deleteOccurenceCustomer
                } catch (error) {
                   return error
@@ -411,27 +348,6 @@ const handle_non_subscriber_occurence_customers = async occurence => {
                         id: row.cartId
                      })
                   }
-
-                  const {
-                     keycloakId = null,
-                     brand_customerId = null,
-                     subscriptionOccurenceId = null
-                  } = deleteOccurenceCustomer
-                  await client.request(INSERT_ACTIVITY_LOGS, {
-                     objects: [
-                        {
-                           keycloakId,
-                           brand_customerId,
-                           subscriptionOccurenceId,
-                           type: 'Manage Occurence',
-                           log: {
-                              operation: 'DELETE',
-                              message:
-                                 'Deleted occurence customer since customer is not a subscriber yet.'
-                           }
-                        }
-                     ]
-                  })
                   return deleteOccurenceCustomer
                } catch (error) {
                   return error
@@ -488,27 +404,6 @@ const handle_changed_plan_occurence_customers = async occurence => {
                         id: row.cartId
                      })
                   }
-
-                  const {
-                     keycloakId = null,
-                     brand_customerId = null,
-                     subscriptionOccurenceId = null
-                  } = deleteOccurenceCustomer
-                  await client.request(INSERT_ACTIVITY_LOGS, {
-                     objects: [
-                        {
-                           keycloakId,
-                           brand_customerId,
-                           subscriptionOccurenceId,
-                           type: 'Manage Occurence',
-                           log: {
-                              operation: 'DELETE',
-                              message:
-                                 'Deleted occurence customer due to changed subscription plan.'
-                           }
-                        }
-                     ]
-                  })
                   return deleteOccurenceCustomer
                } catch (error) {
                   return error
@@ -543,22 +438,13 @@ const handle_valid_cart_occurence_customers = async occurence => {
       if (customers.length > 0) {
          await client.request(UDPATE_OCCURENCE_CUSTOMER_CARTS, {
             where: { id: { _in: customers.map(node => node.cartId) } },
-            _inc: { paymentRetryAttempt: 1 }
-         })
-         await client.request(INSERT_ACTIVITY_LOGS, {
-            objects: customers.map(node => {
-               return {
-                  cartId: node.cartId,
-                  keycloakId: node.keycloakId,
-                  brand_customerId: node.brand_customerId,
-                  subscriptionOccurenceId: node.subscriptionOccurenceId,
-                  type: 'Manage Occurence',
-                  log: {
-                     operation: 'UPDATE',
-                     message: "Attempted payment on occurence customer's cart"
-                  }
+            _inc: { paymentRetryAttempt: 1 },
+            _set: {
+               lastUpdatedBy: {
+                  type: 'auto',
+                  message: "Attempted payment on occurence customer's cart"
                }
-            })
+            }
          })
       }
 
@@ -601,35 +487,19 @@ const handle_invalid_cart_occurence_customers = async occurence => {
                   const {
                      update_subscription_subscriptionOccurence_customer_by_pk = {}
                   } = await client.request(UPDATE_OCCURENCE_CUSTOMER_BY_PK, {
-                     _set: { isSkipped: true },
+                     _set: {
+                        isSkipped: true,
+                        lastUpdatedBy: {
+                           type: 'auto',
+                           message:
+                              'Skipped occurence customer since cart is not full yet.'
+                        }
+                     },
                      pk_columns: {
                         keycloakId: row.keycloakId,
                         brand_customerId: row.brand_customerId,
                         subscriptionOccurenceId: row.subscriptionOccurenceId
                      }
-                  })
-                  const {
-                     cartId = null,
-                     keycloakId = null,
-                     brand_customerId = null,
-                     subscriptionOccurenceId = null
-                  } = update_subscription_subscriptionOccurence_customer_by_pk
-                  await client.request(INSERT_ACTIVITY_LOGS, {
-                     objects: [
-                        {
-                           cartId,
-                           keycloakId,
-                           brand_customerId,
-                           subscriptionOccurenceId,
-                           type: 'Manage Occurence',
-                           log: {
-                              operation: 'UPDATE',
-                              fields: { isSkipped: true },
-                              message:
-                                 'Skipped occurence customer since cart is not full yet.'
-                           }
-                        }
-                     ]
                   })
                   return update_subscription_subscriptionOccurence_customer_by_pk
                } catch (error) {
