@@ -123,26 +123,24 @@ const createCart = async data => {
          availableZipcodes
       } = data
       if (brand_customers.length > 0 && availableZipcodes.length > 0) {
-         const [
-            {
-               subscriptionAddressId = '',
-               subscriptionPaymentMethodId = ' ',
-               brandId,
-               customer = {}
-            }
-         ] = brand_customers
+         const {
+            subscriptionAddressId = '',
+            subscriptionPaymentMethodId = ' ',
+            brandId,
+            customer = {}
+         } = brand_customers[0]
          const { id = '', keycloakId = '', platform_customer = {} } = customer
-         let deliveryTime = null
-         if (availableZipcodes.length > 0) {
-            deliveryTime = availableZipcodes[0].deliveryTime
-         }
 
-         const defaultAddress =
+         let defaultAddress = null
+
+         if (
             platform_customer &&
-            platform_customer.customerAddresses &&
+            platform_customer.customerAddresses.length > 0
+         ) {
             platform_customer.customerAddresses.filter(
                address => address.id === subscriptionAddressId
             )
+         }
 
          let customerInfo = {
             customerEmail: '',
@@ -167,6 +165,18 @@ const createCart = async data => {
             customerInfo.customerLastName = platform_customer.lastName
          }
 
+         let fulfillment = null
+         if (defaultAddress && Object.keys(defaultAddress || {}).length > 0) {
+            availableZipcodes.forEach(node => {
+               if (
+                  'zipcode' in defaultAddress &&
+                  node.zipcode === defaultAddress.zipcode
+               ) {
+                  fulfillment = node
+               }
+            })
+         }
+
          let fulfillmentInfo = {
             type: 'PREORDER_DELIVERY',
             slot: {
@@ -177,20 +187,50 @@ const createCart = async data => {
 
          if (
             fulfillmentDate &&
-            deliveryTime &&
-            Object.keys(deliveryTime || {}).length > 0
+            fulfillment &&
+            Object.keys(fulfillment || {}).length > 0
          ) {
-            if (deliveryTime.from) {
-               fulfillmentInfo.slot.from = evalTime(
-                  fulfillmentDate,
-                  deliveryTime.from
-               )
-            }
-            if (deliveryTime.to) {
-               fulfillmentInfo.slot.to = evalTime(
-                  fulfillmentDate,
-                  deliveryTime.to
-               )
+            const {
+               deliveryTime,
+               isActive,
+               isDeliveryActive,
+               isPickupActive,
+               subscriptionPickupOptionId
+            } = fulfillment
+
+            if (isActive) {
+               if (isDeliveryActive) {
+                  if (deliveryTime.from) {
+                     fulfillmentInfo.slot.from = evalTime(
+                        fulfillmentDate,
+                        deliveryTime.from
+                     )
+                  }
+                  if (deliveryTime.to) {
+                     fulfillmentInfo.slot.to = evalTime(
+                        fulfillmentDate,
+                        deliveryTime.to
+                     )
+                  }
+               } else if (isPickupActive && subscriptionPickupOptionId) {
+                  const { time } = subscriptionPickupOption
+                  fulfillmentInfo.type = 'PREORDER_PICKUP'
+                  if (time.from) {
+                     fulfillmentInfo.slot.from = evalTime(
+                        fulfillmentDate,
+                        time.from
+                     )
+                  }
+                  if (time.to) {
+                     fulfillmentInfo.slot.to = evalTime(
+                        fulfillmentDate,
+                        time.to
+                     )
+                  }
+                  if (time.address && Object.keys(time.address).length > 0) {
+                     fulfillmentInfo.address = time.address
+                  }
+               }
             }
          }
 
@@ -274,8 +314,17 @@ const GET_CUSTOMER_ORDER_DETAILS = `
          subscription {
             subscriptionId: id
             availableZipcodes {
+               zipcode
                deliveryTime
                deliveryPrice
+               isActive
+               isDeliveryActive
+               isPickupActive
+               subscriptionPickupOptionId
+               subscriptionPickupOption {
+                  id
+                  time
+               }
             }
             subscriptionItemCount {
                count
