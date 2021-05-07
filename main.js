@@ -27,7 +27,8 @@ import {
    StoreRouter,
    getDistance,
    authorizeRequest,
-   handleImage
+   handleImage,
+   TestRouter
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -75,6 +76,7 @@ app.use('/api/rewards', RewardsRouter)
 app.get('/api/kot-urls', getKOTUrls)
 app.use('/api/modifier', ModifierRouter)
 app.use('/api/parseur', ParseurRouter)
+app.use('/api/test', TestRouter)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)
