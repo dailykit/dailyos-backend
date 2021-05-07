@@ -10,8 +10,7 @@ import { statusLogger } from './'
 export const autoGenerateCart = async ({
    keycloakId,
    brand_customerId,
-   subscriptionOccurenceId,
-   products
+   subscriptionOccurenceId
 }) => {
    await statusLogger({
       keycloakId,
@@ -195,6 +194,19 @@ const createCart = async data => {
             }
          }
 
+         const { organization } = await client.request(ORGANIZATION, {
+            id: process.env.ORGANIZATION_ID
+         })
+
+         const { stripeAccountType = '' } = organization
+
+         let stripeCustomerId = platform_customer.stripeCustomerId
+         const { customerByClients = [] } = platform_customer
+
+         if (customerByClients.length > 0 && stripeAccountType === 'standard') {
+            const [customer] = customerByClients
+            stripeCustomerId = customer.organizationStripeCustomerId
+         }
          const { createCart } = await client.request(CREATE_CART, {
             object: {
                brandId,
@@ -207,10 +219,7 @@ const createCart = async data => {
                address: defaultAddress,
                customerKeycloakId: keycloakId,
                subscriptionOccurenceId,
-               ...(platform_customer &&
-                  platform_customer.stripeCustomerId && {
-                     stripeCustomerId: platform_customer.stripeCustomerId
-                  }),
+               ...(stripeCustomerId && { stripeCustomerId }),
                ...(subscriptionPaymentMethodId && {
                   paymentMethodId: subscriptionPaymentMethodId
                })
@@ -243,6 +252,15 @@ const GET_SUB_OCCURENCE = `
             subscriptionId
             brand_customerId
          }
+      }
+   }
+`
+
+const ORGANIZATION = `
+   query organization($id: Int!) {
+      organization(id: $id) {
+         id
+         stripeAccountType
       }
    }
 `
@@ -298,6 +316,10 @@ const GET_CUSTOMER_ORDER_DETAILS = `
                         zipcode
                         state
                         id
+                     }
+                     customerByClients: CustomerByClients {
+                        keycloakId
+                        organizationStripeCustomerId
                      }
                   }
                }
