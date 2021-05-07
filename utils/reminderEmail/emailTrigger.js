@@ -27,14 +27,14 @@ export const emailTrigger = async ({ title, variables = {}, to }) => {
             proceed = variables.hasOwnProperty(item)
             return proceed
          })
-         console.log(functionFile, emailTemplateFile.fileName)
+         // console.log(functionFile, emailTemplateFile.fileName)
          if (proceed) {
             let html = await getHtml(
                functionFile,
                emailTemplateFile.fileName,
                variables
             )
-            console.log(html)
+            // console.log(html)
             let subjectLine = await getHtml(
                functionFile,
                emailTemplateFile.fileName,
