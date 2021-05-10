@@ -12,71 +12,103 @@ import {
 
 export const manageOccurence = async (req, res) => {
    try {
-      const occurence = {
-         id: null,
-         cutoffTimeStamp: null
-      }
-      if (typeof req.body.payload === 'string') {
+      const occurences = []
+      if ('input' in req.body) {
+         const { occurences: list = [] } = req.body.input
+         occurences = list
+      } else if (typeof req.body.payload === 'string') {
          const { occurenceId, cutoffTimeStamp } = JSON.parse(req.body.payload)
-         occurence.id = occurenceId
-         occurence.cutoffTimeStamp = cutoffTimeStamp
+         occurences.push({
+            id: occurenceId,
+            cutoffTimeStamp: cutoffTimeStamp
+         })
       } else {
          const { occurenceId, cutoffTimeStamp } = req.body.payload
-         occurence.id = occurenceId
-         occurence.cutoffTimeStamp = cutoffTimeStamp
-      }
-
-      if (!occurence.id)
-         return res.status(200).json({
-            success: false,
-            message: 'Occurence id is required!'
+         occurences.push({
+            id: occurenceId,
+            cutoffTimeStamp: cutoffTimeStamp
          })
+      }
+      const result = await Promise.all(
+         occurences.map(async occurence => {
+            try {
+               if (!occurence.id)
+                  return {
+                     success: false,
+                     message: 'Occurence id is required!'
+                  }
 
-      const { subscriptionOccurences = [] } = await client.request(
-         SUBSCRIPTION_OCCURENCES,
-         {
-            id: { _eq: occurence.id },
-            cutoffTimeStamp: { _eq: occurence.cutoffTimeStamp }
-         }
+               const { subscriptionOccurences = [] } = await client.request(
+                  SUBSCRIPTION_OCCURENCES,
+                  {
+                     where: {
+                        id: { _eq: occurence.id },
+                        cutoffTimeStamp: { _eq: occurence.cutoffTimeStamp }
+                     }
+                  }
+               )
+
+               if (subscriptionOccurences.length > 0)
+                  return {
+                     success: false,
+                     data: occurence,
+                     message:
+                        "Cutoff timestamp does not match the given occurence id's cutoff timestamp"
+                  }
+
+               // HANDLE OCCURENCE CUSTOMERS THAT HAVE CHANGED PLAN
+               await handle_changed_plan_occurence_customers(occurence)
+
+               // HANDLE NO OCCURENCE CUSTOMERS
+               await handle_no_occurence_customers(occurence)
+
+               // HANDLE PAUSED OCCURENCE CUSTOMERS
+               await handle_paused_occurence_customers(occurence)
+
+               // HANDLE NO CART OCCURENCE CUSTOMERS
+               await handle_no_cart_occurence_customers(occurence)
+
+               // HANDLE CANCELLED SUBSCRIPTION OCCURENCE CUSTOMERS
+               await handle_cancelled_subscription_occurence_customers(
+                  occurence
+               )
+
+               // HANDLE NON SUBSCRIBER OCCURENCE CUSTOMERS
+               await handle_non_subscriber_occurence_customers(occurence)
+
+               // HANDLE OCCURENCE CUSTOMERS WITH VALID CART
+               await handle_valid_cart_occurence_customers(occurence)
+
+               // HANDLE OCCURENCE CUSTOMERS WITH INVALID CART
+               await handle_invalid_cart_occurence_customers(occurence)
+
+               return {
+                  success: true,
+                  data: occurence,
+                  message: 'Successfully processed occurence!'
+               }
+            } catch (error) {
+               return {
+                  success: false,
+                  data: occurence,
+                  error: error.message,
+                  message: 'Failed to process occurence!'
+               }
+            }
+         })
       )
 
-      if (subscriptionOccurences.length === 0)
-         return res.status(200).json({
-            success: false,
-            message:
-               "Cutoff timestamp does not match the given occurence id's cutoff timestamp"
-         })
-
-      // HANDLE OCCURENCE CUSTOMERS THAT HAVE CHANGED PLAN
-      await handle_changed_plan_occurence_customers(occurence)
-
-      // HANDLE NO OCCURENCE CUSTOMERS
-      await handle_no_occurence_customers(occurence)
-
-      // HANDLE PAUSED OCCURENCE CUSTOMERS
-      await handle_paused_occurence_customers(occurence)
-
-      // HANDLE NO CART OCCURENCE CUSTOMERS
-      await handle_no_cart_occurence_customers(occurence)
-
-      // HANDLE CANCELLED SUBSCRIPTION OCCURENCE CUSTOMERS
-      await handle_cancelled_subscription_occurence_customers(occurence)
-
-      // HANDLE NON SUBSCRIBER OCCURENCE CUSTOMERS
-      await handle_non_subscriber_occurence_customers(occurence)
-
-      // HANDLE OCCURENCE CUSTOMERS WITH VALID CART
-      await handle_valid_cart_occurence_customers(occurence)
-
-      // HANDLE OCCURENCE CUSTOMERS WITH INVALID CART
-      await handle_invalid_cart_occurence_customers(occurence)
-
       return res.status(200).json({
+         data: result,
          success: true,
          message: 'Successfully updated carts!'
       })
    } catch (error) {
-      return res.status(400).json({ success: false, error: error.message })
+      return res.status(200).json({
+         success: false,
+         error: error.message,
+         message: 'Failed to process manage occurence'
+      })
    }
 }
 
