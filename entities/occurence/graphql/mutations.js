@@ -75,11 +75,21 @@ export const SEND_MAIL = `
    }
 `
 export const CREATE_CART = `
-   mutation createCart($object: crm_orderCart_insert_input!) {
-      createCart(object: $object) {
-         id
-      }
+mutation createCart($object: order_cart_insert_input!) {
+   createCart(object: $object) {
+      cartId: id
    }
+}
+`
+export const UPDATE_SUB_OCCURENCE = `mutation UpdateSubOcc($subscriptionOccurenceId: Int!, $brandCustomerId: Int!, $cartId: Int!, $isAuto: Boolean! ) {
+  update_subscription_subscriptionOccurence_customer(where: {subscriptionOccurenceId: {_eq: $subscriptionOccurenceId}, _and: {brand_customerId: {_eq: $brandCustomerId}}}, _set: {cartId: $cartId, isAuto: $isAuto}) {
+    affected_rows
+    returning {
+      cartId
+      isAuto
+    }
+  }
+}
 `
 
 export const INSERT_OCCURENCE_CUSTOMER = `

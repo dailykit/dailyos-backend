@@ -1,60 +1,141 @@
 import { client } from '../../../lib/graphql'
-import { addProducts, sendEmail, autoGenerate } from '../../../utils'
-import { GET_CUSTOMERS_DETAILS, GET_TEMPLATE_SETTINGS } from '../graphql'
+import { emailTrigger, autoGenerateCart, statusLogger } from '../../../utils'
+import { GET_CUSTOMERS_DETAILS } from '../graphql'
 
 export const reminderMail = async (req, res) => {
    try {
       const { subscriptionOccurenceId } = req.body.payload
-      const {
-         subscriptionOccurences: [
-            { subscription: { brand_customers = [] } = {} }
-         ] = []
-      } = await client.request(GET_CUSTOMERS_DETAILS, {
-         subscriptionOccurenceId
-      })
+      const { subscriptionOccurences = [] } = await client.request(
+         GET_CUSTOMERS_DETAILS,
+         {
+            id: subscriptionOccurenceId
+         }
+      )
+
+      if (subscriptionOccurences.length === 0)
+         return res.status(200).json({
+            success: false,
+            message: `No subscription occurence linked to id ${subscriptionOccurenceId}`
+         })
+
+      const [occurence] = subscriptionOccurences
+      const { subscription = {}, subscriptionId } = occurence
+
+      if (!subscriptionId)
+         return res.status(200).json({
+            success: false,
+            message: `No subscription is linked to occurence id ${subscriptionOccurenceId}`
+         })
+
+      const { brand_customers = [] } = subscription
+
+      if (brand_customers.length === 0)
+         return res.status(200).json({
+            success: false,
+            message: `There are no brand customers yet linked to subscription id ${subscriptionId}`
+         })
 
       await Promise.all(
-         brand_customers.map(async brand_customer => {
+         brand_customers.map(async customer => {
             try {
                const {
-                  brandCustomerId,
+                  id,
+                  keycloakId,
                   isAutoSelectOptOut,
-                  customer
-               } = brand_customer
-               if (customer.subscriptionOccurences.length !== 0) {
-                  // Cart exists
-                  const {
-                     isAuto,
-                     cartId,
-                     isSkipped,
-                     validStatus
-                  } = customer.subscriptionOccurences[0]
+                  subscriptionOccurences = []
+               } = customer
 
-                  if (isAuto) {
-                     // Cart is Created by us
-                     sendEmail({ brandCustomerId, subscriptionOccurenceId })
-                  } else {
-                     if (isSkipped === false && !validStatus.itemCountValid) {
-                        // Cart is Created by them
-                        addProducts({
-                           cartId,
+               await statusLogger({
+                  keycloakId,
+                  brand_customerId: id,
+                  subscriptionOccurenceId,
+                  type: 'Reminder Email',
+                  message:
+                     'Initiating reminder emails and auto product selection system.'
+               })
+
+               if (
+                  subscriptionOccurences.length > 0 &&
+                  subscriptionOccurences[0].cartId != null &&
+                  'itemCountValid' in subscriptionOccurences[0].validStatus &&
+                  subscriptionOccurences[0].validStatus.itemCountValid
+               ) {
+                  const [occurence] = subscriptionOccurences
+                  const { isAuto, isSkipped } = occurence
+
+                  if (isSkipped) {
+                     await statusLogger({
+                        keycloakId,
+                        brand_customerId: id,
+                        type: 'Reminder Email',
+                        subscriptionOccurenceId,
+                        message:
+                           'Sent reminder email alerting customer that this week is skipped.'
+                     })
+                     await emailTrigger({
+                        title: 'weekSkipped',
+                        variables: {
                            brandCustomerId,
                            subscriptionOccurenceId
+                        },
+                        to: customerEmail.email
+                     })
+                  } else {
+                     if (isAuto) {
+                        await statusLogger({
+                           keycloakId,
+                           brand_customerId: id,
+                           type: 'Reminder Email',
+                           subscriptionOccurenceId,
+                           message: `Sent reminder email for previously auto generated cart.`
+                        })
+                        await emailTrigger({
+                           title: 'autoGenerateCart',
+                           variables: {
+                              brandCustomerId: id,
+                              subscriptionOccurenceId
+                           },
+                           to: customerEmail.email
                         })
                      } else {
-                        // Skipped the week
-                        sendEmail({ brandCustomerId, subscriptionOccurenceId })
+                        await statusLogger({
+                           keycloakId,
+                           brand_customerId: id,
+                           type: 'Reminder Email',
+                           subscriptionOccurenceId,
+                           message: `Sending reminder email for existing cart.`
+                        })
+                        await emailTrigger({
+                           title: 'allSetCart',
+                           variables: {
+                              brandCustomerId: id,
+                              subscriptionOccurenceId
+                           },
+                           to: customerEmail.email
+                        })
                      }
                   }
                } else {
-                  // Cart doesn't exist
                   if (isAutoSelectOptOut) {
-                     // Doesn't have option to creat cart
-                     sendEmail({ brandCustomerId, subscriptionOccurenceId })
+                     await statusLogger({
+                        keycloakId,
+                        type: 'Reminder Email',
+                        brand_customerId: id,
+                        subscriptionOccurenceId,
+                        message: `Brand Customer ${id} doesn't have option to generate the cart. Sent Email`
+                     })
+                     await emailTrigger({
+                        title: 'weekSkipped',
+                        variables: {
+                           brandCustomerId: id,
+                           subscriptionOccurenceId
+                        },
+                        to: customerEmail.email
+                     })
                   } else {
-                     // create cart
-                     autoGenerate({
-                        brandCustomerId,
+                     await autoGenerateCart({
+                        keycloakId,
+                        brand_customerId: id,
                         subscriptionOccurenceId
                      })
                   }
@@ -70,7 +151,6 @@ export const reminderMail = async (req, res) => {
          message: 'Successfully sent the mail'
       })
    } catch (error) {
-      console.log('Reminder email -> error', error)
       return res.status(400).json({ success: false, error: error.message })
    }
 }
