@@ -15,7 +15,7 @@ export const statusLogger = async ({
             log: { message },
             brand_customerId,
             subscriptionOccurenceId,
-            lastUpdatedBy: {
+            updated_by: {
                type: 'auto',
                message
             }
