@@ -20,9 +20,11 @@ export const GET_CUSTOMERS_DETAILS = `
    query customerDetails($id: Int!) {
       subscriptionOccurences(where: { id: { _eq: $id } }) {
          id
+         settings
          subscriptionId
          subscription {
             id
+            settings
             brand_customers {
                id
                keycloakId
@@ -84,8 +86,14 @@ export const SUBSCRIPTION_OCCURENCES = `
    ) {
       subscriptionOccurences(where: $where) {
          id
+         settings
          cutoffTimeStamp
          fulfillmentDate
+         subscriptionId
+         subscription {
+            id
+            settings
+         }
       }
    }
 `

@@ -19,15 +19,27 @@ export const reminderMail = async (req, res) => {
          })
 
       const [occurence] = subscriptionOccurences
-      const { subscription = {}, subscriptionId } = occurence
-
+      const {
+         subscription = {},
+         settings: localSettings,
+         subscriptionId
+      } = occurence
       if (!subscriptionId)
          return res.status(200).json({
             success: false,
             message: `No subscription is linked to occurence id ${subscriptionOccurenceId}`
          })
 
-      const { brand_customers = [] } = subscription
+      const { settings: globalSettings, brand_customers = [] } = subscription
+
+      if (
+         globalSettings.isReminderEmail === false ||
+         localSettings.isReminderEmail === false
+      )
+         return res.status(200).json({
+            success: true,
+            message: `Reminder email functionality is disabled`
+         })
 
       if (brand_customers.length === 0)
          return res.status(200).json({

@@ -1,4 +1,5 @@
 import { client } from '../../../lib/graphql'
+import { SUBSCRIPTION_OCCURENCES } from '../graphql'
 import { statusLogger, emailTrigger } from '../../../utils/reminderEmail'
 
 export const autoSelect = async (req, res) => {
@@ -17,7 +18,7 @@ export const autoSelect = async (req, res) => {
                const { keycloakId, brand_customerId, subscriptionOccurenceId } =
                   row
                const { subscriptionOccurences = [] } = await client.request(
-                  SUBSCRIPTION_OCCURENCE,
+                  SUBSCRIPTION_OCCURENCES,
                   {
                      where: { id: { _eq: subscriptionOccurenceId } }
                   }
@@ -30,6 +31,24 @@ export const autoSelect = async (req, res) => {
                   }
 
                const [occurence] = subscriptionOccurences
+
+               const {
+                  subscriptionId,
+                  subscription = {},
+                  settings: localSettings
+               } = occurence
+
+               if (subscriptionId) {
+                  const { settings: globalSettings } = subscription
+                  if (
+                     globalSettings.isAutoSelect === false ||
+                     localSettings.isAutoSelect === false
+                  )
+                     return {
+                        success: true,
+                        message: `Reminder email functionality is disabled`
+                     }
+               }
 
                const { products = [] } = await client.request(GET_PRODUCTS, {
                   subscriptionOccurenceId,

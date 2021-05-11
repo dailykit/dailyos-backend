@@ -6,7 +6,6 @@ import {
    UPDATE_OCCURENCE_CUSTOMER_BY_PK,
    DELETE_OCCURENCE_CUSTOMER,
    DELETE_CART,
-   INSERT_ACTIVITY_LOGS,
    SUBSCRIPTION_OCCURENCES
 } from '../graphql'
 
@@ -55,6 +54,26 @@ export const manageOccurence = async (req, res) => {
                      message:
                         "Cutoff timestamp does not match the given occurence id's cutoff timestamp"
                   }
+
+               const [subscriptionOccurence] = subscriptionOccurences
+
+               const {
+                  subscriptionId,
+                  subscription = {},
+                  settings: localSettings
+               } = subscriptionOccurence
+
+               if (subscriptionId) {
+                  const { settings: globalSettings } = subscription
+                  if (
+                     globalSettings.isManageOccurence === false ||
+                     localSettings.isManageOccurence === false
+                  )
+                     return res.status(200).json({
+                        success: true,
+                        message: `Reminder email functionality is disabled`
+                     })
+               }
 
                // HANDLE OCCURENCE CUSTOMERS THAT HAVE CHANGED PLAN
                await handle_changed_plan_occurence_customers(occurence)
@@ -116,14 +135,13 @@ export const manageOccurence = async (req, res) => {
 const handle_no_occurence_customers = async occurence => {
    try {
       if (!occurence.id) return
-      const {
-         subscription_view_full_occurence_report: customers = []
-      } = await client.request(CUSTOMERS, {
-         where: {
-            keycloakId: { _is_null: true },
-            subscriptionOccurenceId: { _eq: occurence.id }
-         }
-      })
+      const { subscription_view_full_occurence_report: customers = [] } =
+         await client.request(CUSTOMERS, {
+            where: {
+               keycloakId: { _is_null: true },
+               subscriptionOccurenceId: { _eq: occurence.id }
+            }
+         })
 
       if (customers.length > 0) {
          const rows = await Promise.all(
@@ -152,13 +170,12 @@ const handle_no_occurence_customers = async occurence => {
 const handle_paused_occurence_customers = async occurence => {
    try {
       if (!occurence.id) return
-      const {
-         subscription_view_full_occurence_report: customers = []
-      } = await client.request(CUSTOMERS, {
-         where: {
-            subscriptionOccurenceId: { _eq: occurence.id }
-         }
-      })
+      const { subscription_view_full_occurence_report: customers = [] } =
+         await client.request(CUSTOMERS, {
+            where: {
+               subscriptionOccurenceId: { _eq: occurence.id }
+            }
+         })
 
       if (customers.length > 0) {
          const rows = await Promise.all(
@@ -226,16 +243,15 @@ const handle_paused_occurence_customers = async occurence => {
 const handle_no_cart_occurence_customers = async occurence => {
    try {
       if (!occurence.id) return
-      const {
-         subscription_view_full_occurence_report: customers = []
-      } = await client.request(CUSTOMERS, {
-         where: {
-            isPaused: { _eq: false },
-            isSkipped: { _eq: false },
-            cartId: { _is_null: true },
-            subscriptionOccurenceId: { _eq: occurence.id }
-         }
-      })
+      const { subscription_view_full_occurence_report: customers = [] } =
+         await client.request(CUSTOMERS, {
+            where: {
+               isPaused: { _eq: false },
+               isSkipped: { _eq: false },
+               cartId: { _is_null: true },
+               subscriptionOccurenceId: { _eq: occurence.id }
+            }
+         })
 
       if (customers.length > 0) {
          const rows = await Promise.all(
@@ -288,14 +304,13 @@ const handle_no_cart_occurence_customers = async occurence => {
 const handle_cancelled_subscription_occurence_customers = async occurence => {
    try {
       if (!occurence.id) return
-      const {
-         subscription_view_full_occurence_report: customers = []
-      } = await client.request(CUSTOMERS, {
-         where: {
-            subscriptionOccurenceId: { _eq: occurence.id },
-            brandCustomer: { isSubscriptionCancelled: { _eq: true } }
-         }
-      })
+      const { subscription_view_full_occurence_report: customers = [] } =
+         await client.request(CUSTOMERS, {
+            where: {
+               subscriptionOccurenceId: { _eq: occurence.id },
+               brandCustomer: { isSubscriptionCancelled: { _eq: true } }
+            }
+         })
 
       if (customers.length > 0) {
          const rows = await Promise.all(
@@ -344,14 +359,13 @@ const handle_cancelled_subscription_occurence_customers = async occurence => {
 const handle_non_subscriber_occurence_customers = async occurence => {
    try {
       if (!occurence.id) return
-      const {
-         subscription_view_full_occurence_report: customers = []
-      } = await client.request(CUSTOMERS, {
-         where: {
-            subscriptionOccurenceId: { _eq: occurence.id },
-            brandCustomer: { isSubscriber: { _eq: false } }
-         }
-      })
+      const { subscription_view_full_occurence_report: customers = [] } =
+         await client.request(CUSTOMERS, {
+            where: {
+               subscriptionOccurenceId: { _eq: occurence.id },
+               brandCustomer: { isSubscriber: { _eq: false } }
+            }
+         })
 
       if (customers.length > 0) {
          const rows = await Promise.all(
@@ -398,11 +412,10 @@ const handle_non_subscriber_occurence_customers = async occurence => {
 const handle_changed_plan_occurence_customers = async occurence => {
    try {
       if (!occurence.id) return
-      const {
-         subscription_view_full_occurence_report: customers = []
-      } = await client.request(CUSTOMERS, {
-         where: { subscriptionOccurenceId: { _eq: occurence.id } }
-      })
+      const { subscription_view_full_occurence_report: customers = [] } =
+         await client.request(CUSTOMERS, {
+            where: { subscriptionOccurenceId: { _eq: occurence.id } }
+         })
 
       if (customers.length > 0) {
          const rows = await Promise.all(
@@ -454,18 +467,17 @@ const handle_changed_plan_occurence_customers = async occurence => {
 const handle_valid_cart_occurence_customers = async occurence => {
    try {
       if (!occurence.id) return
-      const {
-         subscription_view_full_occurence_report: customers = []
-      } = await client.request(CUSTOMERS, {
-         where: {
-            isPaused: { _eq: false },
-            isSkipped: { _eq: false },
-            cartId: { _is_null: false },
-            isItemCountValid: { _eq: true },
-            paymentStatus: { _neq: 'SUCCEEDED' },
-            subscriptionOccurenceId: { _eq: occurence.id }
-         }
-      })
+      const { subscription_view_full_occurence_report: customers = [] } =
+         await client.request(CUSTOMERS, {
+            where: {
+               isPaused: { _eq: false },
+               isSkipped: { _eq: false },
+               cartId: { _is_null: false },
+               isItemCountValid: { _eq: true },
+               paymentStatus: { _neq: 'SUCCEEDED' },
+               subscriptionOccurenceId: { _eq: occurence.id }
+            }
+         })
 
       if (customers.length > 0) {
          await client.request(UDPATE_OCCURENCE_CUSTOMER_CARTS, {
@@ -490,18 +502,17 @@ const handle_valid_cart_occurence_customers = async occurence => {
 const handle_invalid_cart_occurence_customers = async occurence => {
    try {
       if (!occurence.id) return
-      const {
-         subscription_view_full_occurence_report: customers = []
-      } = await client.request(CUSTOMERS, {
-         where: {
-            isPaused: { _eq: false },
-            isSkipped: { _eq: false },
-            cartId: { _is_null: false },
-            isItemCountValid: { _eq: false },
-            paymentStatus: { _neq: 'SUCCEEDED' },
-            subscriptionOccurenceId: { _eq: occurence.id }
-         }
-      })
+      const { subscription_view_full_occurence_report: customers = [] } =
+         await client.request(CUSTOMERS, {
+            where: {
+               isPaused: { _eq: false },
+               isSkipped: { _eq: false },
+               cartId: { _is_null: false },
+               isItemCountValid: { _eq: false },
+               paymentStatus: { _neq: 'SUCCEEDED' },
+               subscriptionOccurenceId: { _eq: occurence.id }
+            }
+         })
 
       if (customers.length > 0) {
          const rows = await Promise.all(
