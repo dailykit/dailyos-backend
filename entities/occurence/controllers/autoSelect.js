@@ -78,11 +78,11 @@ export const autoSelect = async (req, res) => {
                   subscriptionOccurence_customers
 
                const {
-                  validStatus = {},
-                  cartId = null,
                   isSkipped,
-                  subscriptionOccurence = {},
-                  brand_customer
+                  cartId = null,
+                  brand_customer,
+                  validStatus = {},
+                  subscriptionOccurence = {}
                } = subscriptionOccurence_customer
 
                if (!cartId) {
@@ -92,76 +92,67 @@ export const autoSelect = async (req, res) => {
                   }
                }
 
-               if (!subscriptionOccurence.subscriptionAutoSelectOption)
-                  return {
-                     success: false,
-                     message: `There's no product selection logic linked with this occurence.`
-                  }
-
-               const method = require(`../../../options/${
-                  subscriptionOccurence.subscriptionAutoSelectOption &&
-                  subscriptionOccurence.subscriptionAutoSelectOption
-               }`)
-
-               const sortedProducts = await method.default(products)
-               let i = 0
-               let count = validStatus.pendingProductsCount
-
-               if (
-                  Array.isArray(sortedProducts) &&
-                  sortedProducts.length >= count
-               ) {
-                  while (i < count) {
-                     try {
-                        let { cartItem = {} } = sortedProducts[i]
-                        let node = insertCartId(cartItem, cartId)
-                        await client.request(INSERT_CART_ITEM, {
-                           object: {
-                              ...node,
-                              isAutoAdded: true
-                           }
-                        })
-                     } catch (error) {
-                        throw Error(error.message)
-                     }
-                     i++
-                  }
-                  if (isSkipped) {
-                     await statusLogger({
-                        keycloakId,
-                        brand_customerId,
+               if (isSkipped) {
+                  await statusLogger({
+                     cartId,
+                     keycloakId,
+                     brand_customerId,
+                     subscriptionOccurenceId,
+                     type: 'Auto Select Product',
+                     message:
+                        'Sent reminder email alerting customer that this week is skipped.'
+                  })
+                  await emailTrigger({
+                     title: 'weekSkipped',
+                     variables: {
                         subscriptionOccurenceId,
-                        type: 'Auto Select Product',
-                        message:
-                           'Sent reminder email alerting customer that this week is skipped.'
-                     })
-                     const { success = false, message = '' } =
-                        await emailTrigger({
-                           title: 'weekSkipped',
-                           variables: {
-                              subscriptionOccurenceId,
-                              brandCustomerId: brand_customerId
-                           },
-                           to: brand_customer.customer.email
-                        })
-                     if (success) {
-                        return {
-                           data: row,
-                           success: true,
-                           message:
-                              'Sent reminder email alerting customer that this week is skipped.'
-                        }
-                     } else {
-                        return {
-                           data: row,
-                           error: message,
-                           success: false,
-                           message:
-                              'Failed to send email regarding skipped week.'
-                        }
+                        brandCustomerId: brand_customerId
+                     },
+                     to: brand_customer.customer.email
+                  })
+                  return {
+                     data: row,
+                     success: true,
+                     message:
+                        'Sent reminder email alerting customer that this week is skipped.'
+                  }
+               } else {
+                  if (!subscriptionOccurence.subscriptionAutoSelectOption)
+                     return {
+                        success: false,
+                        message: `There's no product selection logic linked with this occurence.`
                      }
-                  } else {
+
+                  const method = require(`../../../options/${
+                     subscriptionOccurence.subscriptionAutoSelectOption &&
+                     subscriptionOccurence.subscriptionAutoSelectOption
+                  }`)
+
+                  const sortedProducts = await method.default(products)
+                  let i = 0
+                  let count = validStatus.pendingProductsCount
+
+                  if (
+                     Array.isArray(sortedProducts) &&
+                     sortedProducts.length >= count
+                  ) {
+                     while (i < count) {
+                        try {
+                           let { cartItem = {} } = sortedProducts[i]
+                           let node = insertCartId(cartItem, cartId)
+                           await client.request(INSERT_CART_ITEM, {
+                              object: {
+                                 ...node,
+                                 isAutoAdded: true
+                              }
+                           })
+                        } catch (error) {
+                           throw Error(error.message)
+                        }
+                        i++
+                     }
                      await statusLogger({
+                        cartId,
                         keycloakId,
                         brand_customerId,
                         subscriptionOccurenceId,
@@ -169,46 +160,36 @@ export const autoSelect = async (req, res) => {
                         message:
                            'Sent email reminding customer that product has been added for this week.'
                      })
-                     const { success = false, message = '' } =
-                        await emailTrigger({
-                           title: 'autoGenerateCart',
-                           variables: {
-                              subscriptionOccurenceId,
-                              brandCustomerId: brand_customerId
-                           },
-                           to: brand_customer.customer.email
-                        })
-                     if (success) {
-                        return {
-                           data: row,
-                           success: true,
-                           message:
-                              'Sent email reminding customer that product has been added for this week.'
-                        }
-                     } else {
-                        return {
-                           data: row,
-                           success: false,
-                           error: message,
-                           message:
-                              'Failed to send email regarding products added to cart via auto selection.'
-                        }
+                     await emailTrigger({
+                        title: 'autoGenerateCart',
+                        variables: {
+                           subscriptionOccurenceId,
+                           brandCustomerId: brand_customerId
+                        },
+                        to: brand_customer.customer.email
+                     })
+                     return {
+                        data: row,
+                        success: true,
+                        message:
+                           'Sent email reminding customer that product has been added for this week.'
                      }
-                  }
-               } else {
-                  await statusLogger({
-                     keycloakId,
-                     brand_customerId,
-                     subscriptionOccurenceId,
-                     type: 'Auto Select Product',
-                     message:
-                        'This occurence doesnt have enough products to populate cart.'
-                  })
-                  return {
-                     data: row,
-                     success: true,
-                     message:
-                        'This occurence doesnt have enough products to populate cart.'
+                  } else {
+                     await statusLogger({
+                        cartId,
+                        keycloakId,
+                        brand_customerId,
+                        subscriptionOccurenceId,
+                        type: 'Auto Select Product',
+                        message:
+                           'This occurence doesnt have enough products to populate cart.'
+                     })
+                     return {
+                        data: row,
+                        success: true,
+                        message:
+                           'This occurence doesnt have enough products to populate cart.'
+                     }
                   }
                }
             } catch (error) {
