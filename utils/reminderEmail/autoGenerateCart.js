@@ -20,7 +20,7 @@ export const autoGenerateCart = async ({
       message: `Attempting autoGenerate ${brand_customerId}`
    })
    try {
-      const { brandCustomers = [] } = await client.request(GET_SUB_OCCURENCE, {
+      const { brandCustomers = [] } = await client.request(BRAND_CUSTOMER, {
          brandCustomerId: brand_customerId,
          subscriptionOccurenceId
       })
@@ -69,11 +69,11 @@ export const autoGenerateCart = async ({
          }
       }
 
-      const URL = `${
+      const url = `${
          new URL(process.env.DATA_HUB).origin
       }/webhook/occurence/auto-select`
       if (cartId) {
-         await axios.post(URL, {
+         await axios.post(url, {
             keycloakId,
             brand_customerId,
             subscriptionOccurenceId
@@ -95,6 +95,7 @@ export const autoGenerateCart = async ({
 
          await statusLogger({
             keycloakId,
+            cartId: _cartId,
             brand_customerId,
             type: 'Reminder Email',
             subscriptionOccurenceId,
@@ -102,13 +103,14 @@ export const autoGenerateCart = async ({
          })
 
          if (_cartId) {
-            await axios.post(URL, {
+            await axios.post(url, {
                keycloakId,
                brand_customerId,
                subscriptionOccurenceId
             })
          }
       }
+      return
    } catch (error) {
       throw error
    }
@@ -129,18 +131,12 @@ const createCart = async data => {
             brandId,
             customer = {}
          } = brand_customers[0]
-         const { id = '', keycloakId = '', platform_customer = {} } = customer
-
-         let defaultAddress = null
-
-         if (
-            platform_customer &&
-            platform_customer.customerAddresses.length > 0
-         ) {
-            platform_customer.customerAddresses.filter(
-               address => address.id === subscriptionAddressId
-            )
-         }
+         const {
+            id = '',
+            email = '',
+            keycloakId = '',
+            platform_customer = {}
+         } = customer
 
          let customerInfo = {
             customerEmail: '',
@@ -149,8 +145,8 @@ const createCart = async data => {
             customerFirstName: ''
          }
 
-         if ('email' in platform_customer && platform_customer.email) {
-            customerInfo.customerEmail = platform_customer.email
+         if (email) {
+            customerInfo.customerEmail = customer.email
          }
          if (
             'phoneNumber' in platform_customer &&
@@ -163,6 +159,18 @@ const createCart = async data => {
          }
          if ('lastName' in platform_customer && platform_customer.lastName) {
             customerInfo.customerLastName = platform_customer.lastName
+         }
+
+         let defaultAddress = null
+
+         if (
+            platform_customer &&
+            platform_customer.customerAddresses.length > 0
+         ) {
+            const index = platform_customer.customerAddresses.findIndex(
+               address => address.id === subscriptionAddressId
+            )
+            defaultAddress = platform_customer.customerAddresses[index]
          }
 
          let fulfillment = null
@@ -272,13 +280,40 @@ const createCart = async data => {
    }
 }
 
-const GET_SUB_OCCURENCE = `
+const BRAND_CUSTOMER = `
    query subscriptionOccurences(
       $brandCustomerId: Int!
       $subscriptionOccurenceId: Int!
    ) {
       brandCustomers(where: { id: { _eq: $brandCustomerId } }) {
+         brandId
          keycloakId
+         subscriptionAddressId
+         subscriptionPaymentMethodId
+         customer {
+            id
+            email
+            keycloakId
+            platform_customer {
+               firstName
+               lastName
+               customerAddresses {
+                  id
+                  line1
+                  line2
+                  city
+                  state
+                  zipcode
+                  country
+                  label
+                  landmark
+                  notes
+                  additionalInfo
+                  lat
+                  lng
+               }
+            }
+         }
          subscriptionOccurences(
             where: {
                subscriptionOccurenceId: { _eq: $subscriptionOccurenceId }
