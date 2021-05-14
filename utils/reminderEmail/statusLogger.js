@@ -1,20 +1,22 @@
 import { client } from '../../lib/graphql'
 
 export const statusLogger = async ({
-   message,
+   message = '',
    type = '',
-   keycloakId,
-   brand_customerId,
-   subscriptionOccurenceId
+   keycloakId = null,
+   cartId = null,
+   brand_customerId = null,
+   subscriptionOccurenceId = null
 }) => {
    await client.request(INSERT_ACTIVITY_LOGS, {
       objects: [
          {
             type,
-            keycloakId,
             log: { message },
-            brand_customerId,
-            subscriptionOccurenceId,
+            ...(cartId && { cartId }),
+            ...(keycloakId && { keycloakId }),
+            ...(brand_customerId && { brand_customerId }),
+            ...(subscriptionOccurenceId && { subscriptionOccurenceId }),
             updated_by: {
                type: 'auto',
                message
