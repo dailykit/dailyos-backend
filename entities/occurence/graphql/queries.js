@@ -97,3 +97,29 @@ export const SUBSCRIPTION_OCCURENCES = `
       }
    }
 `
+
+export const SUBSCRIPTION_CUSTOMER_FULL_REPORT = `
+   query subscription_view_full_occurence_report(
+      $where: subscription_view_full_occurence_report_bool_exp = {}
+   ) {
+      subscription_view_full_occurence_report(where: $where) {
+         cartId
+         isPaused
+         isSkipped
+         keycloakId
+         betweenPause
+         paymentStatus
+         subscriptionId
+         brand_customerId
+         isItemCountValid
+         subscriptionOccurenceId
+         brandCustomer {
+            id
+            keycloakId
+            subscriptionId
+            isSubscriber
+            isSubscriptionCancelled
+         }
+      }
+   }
+`

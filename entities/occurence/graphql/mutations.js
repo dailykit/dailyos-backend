@@ -117,12 +117,10 @@ export const UPDATE_OCCURENCE_CUSTOMER_BY_PK = `
    mutation update_subscription_subscriptionOccurence_customer_by_pk(
       $_set: subscription_subscriptionOccurence_customer_set_input!
       $pk_columns: subscription_subscriptionOccurence_customer_pk_columns_input!
-      $_prepend: subscription_subscriptionOccurence_customer_prepend_input!
    ) {
       update_subscription_subscriptionOccurence_customer_by_pk(
          _set: $_set
          pk_columns: $pk_columns
-         _prepend: $_prepend
       ) {
          cartId
          brand_customerId
@@ -180,6 +178,23 @@ export const DELETE_OCCURENCE_CUSTOMER = `
 export const DELETE_CART = `
    mutation deleteCart($id: Int!) {
       deleteCart(id: $id) {
+         id
+      }
+   }
+`
+
+export const UPDATE_CART = `
+   mutation updateCart($id: Int!, $_set: order_cart_set_input = {}) {
+      updateCart(pk_columns: { id: $id }, _set: $_set) {
+         id
+         orderId
+      }
+   }
+`
+
+export const UPDATE_ORDER = `
+   mutation updateOrder($id: oid!, $_set: order_order_set_input = {}) {
+      updateOrder(pk_columns: { id: $id }, _set: $_set) {
          id
       }
    }
