@@ -123,3 +123,42 @@ export const SUBSCRIPTION_CUSTOMER_FULL_REPORT = `
       }
    }
 `
+
+export const GET_PRODUCTS = `
+   query getProducts($subscriptionOccurenceId: Int!, $subscriptionId: Int!) {
+      products: subscription_subscriptionOccurence_product(
+         where: {
+            _or: [
+               { subscriptionId: { _eq: $subscriptionId } }
+               { subscriptionOccurenceId: { _eq: $subscriptionOccurenceId } }
+            ]
+         }
+      ) {
+         cartItem
+      }
+   }
+`
+
+export const SUBSCRIPTION_OCCURENCE_CUSTOMERS = `
+   query subscriptionOccurence_customers(
+      $where: subscription_subscriptionOccurence_customer_bool_exp = {}
+   ) {
+      subscriptionOccurence_customers: subscription_subscriptionOccurence_customer(
+         where: $where
+      ) {
+         validStatus
+         cartId
+         isSkipped
+         subscriptionOccurence {
+            subscriptionAutoSelectOption
+         }
+         brand_customer {
+            id
+            customer {
+               id
+               email
+            }
+         }
+      }
+   }
+`

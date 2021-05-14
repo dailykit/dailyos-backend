@@ -209,3 +209,11 @@ export const INSERT_ACTIVITY_LOGS = `
       }
    }
 `
+
+export const INSERT_CART_ITEM = `
+   mutation createCartItem($object: order_cartItem_insert_input!) {
+      createCartItem(object: $object) {
+         id
+      }
+   }
+`

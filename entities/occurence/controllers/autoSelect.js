@@ -1,6 +1,11 @@
 import { client } from '../../../lib/graphql'
-import { SUBSCRIPTION_OCCURENCES } from '../graphql'
 import { statusLogger, emailTrigger } from '../../../utils/reminderEmail'
+import {
+   GET_PRODUCTS,
+   INSERT_CART_ITEM,
+   SUBSCRIPTION_OCCURENCES,
+   SUBSCRIPTION_OCCURENCE_CUSTOMERS
+} from '../graphql'
 
 export const autoSelect = async (req, res) => {
    try {
@@ -27,11 +32,9 @@ export const autoSelect = async (req, res) => {
                if (subscriptionOccurences.length === 0)
                   return {
                      success: false,
-                     message: `No such subscription occurence linked with id ${subscriptionOccurenceId}.`
+                     message: `No such subscription occurence is linked.`
                   }
-
                const [occurence] = subscriptionOccurences
-
                const {
                   subscriptionId,
                   subscription = {},
@@ -58,7 +61,7 @@ export const autoSelect = async (req, res) => {
                const { subscriptionOccurence_customers = [] } =
                   await client.request(SUBSCRIPTION_OCCURENCE_CUSTOMERS, {
                      where: {
-                        brand_customerId: { _eq: row.brand_customerId },
+                        brand_customerId: { _eq: brand_customerId },
                         subscriptionOccurenceId: {
                            _eq: subscriptionOccurenceId
                         }
@@ -68,7 +71,7 @@ export const autoSelect = async (req, res) => {
                if (subscriptionOccurence_customers.length === 0)
                   return {
                      success: false,
-                     message: `There's no occurence customer linked with brand customer id ${brand_customer.id}`
+                     message: `There's no occurence customer linked with brand customer.`
                   }
 
                const [subscriptionOccurence_customer] =
@@ -81,6 +84,19 @@ export const autoSelect = async (req, res) => {
                   subscriptionOccurence = {},
                   brand_customer
                } = subscriptionOccurence_customer
+
+               if (!cartId) {
+                  return {
+                     success: false,
+                     message: `There's no cart linked with this occurence.`
+                  }
+               }
+
+               if (!subscriptionOccurence.subscriptionAutoSelectOption)
+                  return {
+                     success: false,
+                     message: `There's no product selection logic linked with this occurence.`
+                  }
 
                const method = require(`../../../options/${
                   subscriptionOccurence.subscriptionAutoSelectOption &&
@@ -110,7 +126,6 @@ export const autoSelect = async (req, res) => {
                      }
                      i++
                   }
-
                   if (isSkipped) {
                      await statusLogger({
                         keycloakId,
@@ -120,19 +135,30 @@ export const autoSelect = async (req, res) => {
                         message:
                            'Sent reminder email alerting customer that this week is skipped.'
                      })
-                     await emailTrigger({
-                        title: 'weekSkipped',
-                        variables: {
-                           subscriptionOccurenceId,
-                           brandCustomerId: brand_customerId
-                        },
-                        to: brand_customer.customer.email
-                     })
-                     return {
-                        data: row,
-                        success: true,
-                        message:
-                           'Sent reminder email alerting customer that this week is skipped.'
+                     const { success = false, message = '' } =
+                        await emailTrigger({
+                           title: 'weekSkipped',
+                           variables: {
+                              subscriptionOccurenceId,
+                              brandCustomerId: brand_customerId
+                           },
+                           to: brand_customer.customer.email
+                        })
+                     if (success) {
+                        return {
+                           data: row,
+                           success: true,
+                           message:
+                              'Sent reminder email alerting customer that this week is skipped.'
+                        }
+                     } else {
+                        return {
+                           data: row,
+                           error: message,
+                           success: false,
+                           message:
+                              'Failed to send email regarding skipped week.'
+                        }
                      }
                   } else {
                      await statusLogger({
@@ -143,19 +169,30 @@ export const autoSelect = async (req, res) => {
                         message:
                            'Sent email reminding customer that product has been added for this week.'
                      })
-                     await emailTrigger({
-                        title: 'autoGenerateCart',
-                        variables: {
-                           subscriptionOccurenceId,
-                           brandCustomerId: brand_customerId
-                        },
-                        to: brand_customer.customer.email
-                     })
-                     return {
-                        data: row,
-                        success: true,
-                        message:
-                           'Sent email reminding customer that product has been added for this week.'
+                     const { success = false, message = '' } =
+                        await emailTrigger({
+                           title: 'autoGenerateCart',
+                           variables: {
+                              subscriptionOccurenceId,
+                              brandCustomerId: brand_customerId
+                           },
+                           to: brand_customer.customer.email
+                        })
+                     if (success) {
+                        return {
+                           data: row,
+                           success: true,
+                           message:
+                              'Sent email reminding customer that product has been added for this week.'
+                        }
+                     } else {
+                        return {
+                           data: row,
+                           success: false,
+                           error: message,
+                           message:
+                              'Failed to send email regarding products added to cart via auto selection.'
+                        }
                      }
                   }
                } else {
@@ -199,4 +236,20 @@ export const autoSelect = async (req, res) => {
            })
          : res.status(500).json({ success: false, error })
    }
+}
+
+const insertCartId = (node, cartId) => {
+   if (node.childs.data.length > 0) {
+      node.childs.data = node.childs.data.map(item => {
+         if (item.childs.data.length > 0) {
+            item.childs.data = item.childs.data.map(item => ({
+               ...item,
+               cartId
+            }))
+         }
+         return { ...item, cartId }
+      })
+   }
+   node.cartId = cartId
+   return node
 }
