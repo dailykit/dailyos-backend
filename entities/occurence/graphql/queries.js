@@ -25,7 +25,12 @@ export const GET_CUSTOMERS_DETAILS = `
          subscription {
             id
             settings
-            brand_customers {
+            brand_customers(
+               where: {
+                  isSubscriber: { _eq: true }
+                  isSubscriptionCancelled: { _eq: false }
+               }
+            ) {
                id
                keycloakId
                isAutoSelectOptOut
