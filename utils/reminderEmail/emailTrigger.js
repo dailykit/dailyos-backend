@@ -27,14 +27,12 @@ export const emailTrigger = async ({ title, variables = {}, to }) => {
             proceed = variables.hasOwnProperty(item)
             return proceed
          })
-         // console.log(functionFile, emailTemplateFile.fileName)
          if (proceed) {
             let html = await getHtml(
                functionFile,
                emailTemplateFile.fileName,
                variables
             )
-            // console.log(html)
             let subjectLine = await getHtml(
                functionFile,
                emailTemplateFile.fileName,
@@ -58,8 +56,12 @@ export const emailTrigger = async ({ title, variables = {}, to }) => {
          }
       }
    } catch (error) {
-      // throw Error(error.message)
       console.log(error)
+      return {
+         success: false,
+         message: 'Failed to send email.',
+         error: error.message
+      }
    }
 }
 
@@ -71,43 +73,55 @@ const getHtml = async (
 ) => {
    try {
       const { origin } = new URL(process.env.DATA_HUB)
-      const template_variables = encodeURI(
-         JSON.stringify({ ...variables, emailTemplateFileName })
-      )
-      const template_options = encodeURI(
-         JSON.stringify({ path: functionFile.path, format: 'html' })
-      )
+      const template_variables = encodeURI(JSON.stringify(variables))
       if (subjectLineTemplate) {
-         const url = `${origin}/?template=${template_options}&data=${template_variables}&readVar=true`
+         const template_options = encodeURI(
+            JSON.stringify({
+               path: functionFile.path,
+               emailTemplateFileName,
+               format: 'html',
+               readVar: true
+            })
+         )
+         const url = `${origin}/template/?template=${template_options}&data=${template_variables}`
          const { data } = await axios.get(url)
-         const result = template_compiler(subjectLineTemplate, { data })
+         const result = template_compiler(subjectLineTemplate, data)
          return result
       } else {
-         const url = `${origin}/?template=${template_options}&data=${template_variables}`
+         const template_options = encodeURI(
+            JSON.stringify({
+               path: functionFile.path,
+               emailTemplateFileName,
+               format: 'html'
+            })
+         )
+         const url = `${origin}/template/?template=${template_options}&data=${template_variables}`
          const { data: html } = await axios.get(url)
          return html
       }
    } catch (error) {
-      throw Error(error.message)
+      throw error
    }
 }
 
 export const GET_TEMPLATE_SETTINGS = `
-query templateSettings($title: String!) {
-   templateSettings: notifications_emailTriggers(where: {title: {_eq: $title}}) {
-     id
-     title
-     requiredVar: var
-     subjectLineTemplate
-     functionFile {
-       fileName
-       path
-     }
-     emailTemplateFile {
-       fileName
-       path
-     }
-     fromEmail
+   query templateSettings($title: String!) {
+      templateSettings: notifications_emailTriggers(
+         where: { title: { _eq: $title } }
+      ) {
+         id
+         title
+         requiredVar: var
+         subjectLineTemplate
+         functionFile {
+            fileName
+            path
+         }
+         emailTemplateFile {
+            fileName
+            path
+         }
+         fromEmail
+      }
    }
- }  
 `
