@@ -125,7 +125,7 @@ const PRINT_JOB = `
 
 const CART_ITEM = `
    query cartItems($id: Int_comparison_exp!) {
-      cartItems: order_cartItemView(where: { id: $id }) {
+      cartItems(where: { id: $id }) {
          id
          status
          levelType
