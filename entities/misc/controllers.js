@@ -8,11 +8,32 @@ import { GET_SES_DOMAIN, UPDATE_CART } from './graphql'
 
 AWS.config.update({ region: 'us-east-2' })
 
+const CART = `
+   query cart($id: Int!) {
+      cart(id: $id) {
+         id
+         isTest
+         amount
+         totalPrice
+         paymentMethodId
+         stripeCustomerId
+         statementDescriptor
+      }
+   }
+`
+
 export const initiatePayment = async (req, res) => {
    try {
-      const cart = req.body.event.data.new
+      const payload = req.body.event.data.new
 
-      if (cart.isTest) {
+      const { cart = {} } = await client.request(CART, { id: payload.id })
+
+      await client.request(UPDATE_CART, {
+         id: cart.id,
+         set: { amount: cart.totalPrice }
+      })
+
+      if (cart.isTest || cart.totalPrice === 0) {
          await client.request(UPDATE_CART, {
             id: cart.id,
             set: {
@@ -21,21 +42,24 @@ export const initiatePayment = async (req, res) => {
                transactionId: 'NA',
                transactionRemark: {
                   id: 'NA',
-                  amount: cart.amount * 100,
+                  amount: cart.totalPrice * 100,
                   message: 'payment bypassed',
-                  reason: 'test mode'
+                  reason: cart.isTest ? 'test mode' : 'amount 0 - free'
                }
             }
          })
-         return
+         return res.status(200).json({
+            success: true,
+            message: 'Payment succeeded!'
+         })
       }
-      if (cart.amount) {
+      if (cart.totalPrice > 0) {
          const body = {
             organizationId: process.env.ORGANIZATION_ID,
             statementDescriptor: cart.statementDescriptor || '',
             cart: {
                id: cart.id,
-               amount: cart.amount
+               amount: cart.totalPrice
             },
             customer: {
                paymentMethod: cart.paymentMethodId,

@@ -26,7 +26,8 @@ import {
    placeDetails,
    StoreRouter,
    getDistance,
-   authorizeRequest
+   authorizeRequest,
+   handleImage
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -35,7 +36,7 @@ import {
    printLabel,
    handleThirdPartyOrder
 } from './entities/events'
-
+import { handleCustomerSignup, handleSubscriptionCancelled } from './entities/emails'
 const app = express()
 
 // Middlewares
@@ -86,7 +87,12 @@ app.post('/event/print-label', printLabel)
 app.post('/event/print-kot', printKOT)
 app.post('/event/order/third-party', handleThirdPartyOrder)
 
+app.post('/webhook/emails/handle-customer-signup', handleCustomerSignup)
+app.post('/webhook/emails/handle-subscription-cancelled', handleSubscriptionCancelled)
+
 app.use('/api/store', StoreRouter)
+
+app.get('/images/:url(*)', handleImage)
 
 app.use((_req, _res, next) => {
    const error = new Error('Not found')
