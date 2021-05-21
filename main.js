@@ -1,6 +1,10 @@
 require('dotenv').config()
 import cors from 'cors'
 import { StatusCodes } from 'http-status-codes'
+const { ApolloServer } = require('apollo-server-express')
+const depthLimit = require('graphql-depth-limit')
+const schema = require('./src/schema/schema')
+const functions = require('./src/functions')
 import express from 'express'
 import morgan from 'morgan'
 import AWS from 'aws-sdk'
@@ -36,8 +40,33 @@ import {
    printLabel,
    handleThirdPartyOrder
 } from './entities/events'
-import { handleCustomerSignup, handleSubscriptionCancelled } from './entities/emails'
+import {
+   handleCustomerSignup,
+   handleSubscriptionCancelled
+} from './entities/emails'
 const app = express()
+
+const apolloserver = new ApolloServer({
+   schema,
+   playground: {
+      endpoint: `${process.env.ENDPOINT}/streaming/ohyay/graphql`
+   },
+   introspection: true,
+   validationRules: [depthLimit(11)],
+   formatError: err => {
+      console.log(err)
+      if (err.message.includes('ENOENT'))
+         return isProd ? new Error('No such folder or file exists!') : err
+      return isProd ? new Error(err) : err
+   },
+   debug: true,
+   context: {
+      root: process.env.FS_PATH,
+      media: process.env.MEDIA_PATH
+   }
+})
+
+apolloserver.applyMiddleware({ app })
 
 // Middlewares
 app.use(cors())
@@ -88,7 +117,10 @@ app.post('/event/print-kot', printKOT)
 app.post('/event/order/third-party', handleThirdPartyOrder)
 
 app.post('/webhook/emails/handle-customer-signup', handleCustomerSignup)
-app.post('/webhook/emails/handle-subscription-cancelled', handleSubscriptionCancelled)
+app.post(
+   '/webhook/emails/handle-subscription-cancelled',
+   handleSubscriptionCancelled
+)
 
 app.use('/api/store', StoreRouter)
 
