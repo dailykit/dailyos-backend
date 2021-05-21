@@ -3,7 +3,7 @@ const axios = require('axios')
 
 const resolvers = {
    Mutation: {
-      createInvites: async (_, args, { root }) => {
+      ohyay_createInvites: async (_, args, { root }) => {
          try {
             const { userId = '', wsid = '', invites = [] } = args
             const apiKey = process.env.OHYAY_API_KEY
@@ -27,7 +27,7 @@ const resolvers = {
             return error
          }
       },
-      cloneWorkspace: async (_, args, { root }) => {
+      ohyay_cloneWorkspace: async (_, args, { root }) => {
          try {
             const { cloneWorkspace = {} } = args
             const apiKey = process.env.OHYAY_API_KEY
@@ -62,7 +62,7 @@ const resolvers = {
             return error
          }
       },
-      deleteWorkspace: async (_, args, { root }) => {
+      ohyay_deleteWorkspace: async (_, args, { root }) => {
          try {
             const { userId = '', wsid = '' } = args
             const apiKey = process.env.OHYAY_API_KEY
@@ -86,7 +86,7 @@ const resolvers = {
             return error
          }
       },
-      createPrettyUrl: async (_, args, { root }) => {
+      ohyay_createPrettyUrl: async (_, args, { root }) => {
          try {
             const { userId = '', wsid = '', urlPath = '' } = args
             const apiKey = process.env.OHYAY_API_KEY
@@ -112,7 +112,7 @@ const resolvers = {
             return error
          }
       },
-      ClearPrettyUrl: async (_, args, { root }) => {
+      ohyay_clearPrettyUrl: async (_, args, { root }) => {
          try {
             const { userId = '', wsid = '' } = args
             const apiKey = process.env.OHYAY_API_KEY
@@ -143,7 +143,7 @@ const resolvers = {
             return error
          }
       },
-      updateUsers: async (_, args, { root }) => {
+      ohyay_updateUsers: async (_, args, { root }) => {
          try {
             const { updateUsersInput = {} } = args
             const apiKey = process.env.OHYAY_API_KEY
@@ -183,7 +183,7 @@ const resolvers = {
             return error
          }
       },
-      updateWorkspaceInfo: async (_, args, { root }) => {
+      ohyay_updateWorkspaceInfo: async (_, args, { root }) => {
          try {
             const {
                userId = '',

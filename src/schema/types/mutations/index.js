@@ -2,17 +2,21 @@ const { gql } = require('apollo-server-express')
 
 const mutations = gql`
    type Mutation {
-      createInvites(userId: String!, wsid: String!, invites: [Invite]): [String]
-      cloneWorkspace(cloneWorkspace: CloneWorkspaceInput): CloneWorkspace
-      deleteWorkspace(userId: String!, wsid: String!): Result
-      createPrettyUrl(
+      ohyay_createInvites(
+         userId: String!
+         wsid: String!
+         invites: [Invite]
+      ): [String]
+      ohyay_cloneWorkspace(cloneWorkspace: CloneWorkspaceInput): CloneWorkspace
+      ohyay_deleteWorkspace(userId: String!, wsid: String!): DeleteWorkspace
+      ohyay_createPrettyUrl(
          userId: String!
          wsid: String!
          urlPath: String!
       ): PrettyUrl
-      ClearPrettyUrl(userId: String!, wsid: String!): ClearPrettyUrl
-      updateUsers(updateUserInput: UpdateUserInput): UpdateUser
-      updateWorkspaceInfo(
+      ohyay_clearPrettyUrl(userId: String!, wsid: String!): ClearPrettyUrl
+      ohyay_updateUsers(updateUserInput: UpdateUserInput): UpdateUser
+      ohyay_updateWorkspaceInfo(
          userId: String!
          wsid: String!
          tagsToAdd: [String]!

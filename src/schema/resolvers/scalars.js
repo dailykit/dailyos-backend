@@ -1,11 +1,10 @@
 const resolvers = {
-    Result: {
-        __resolveType: obj => {
-            if (obj.error) return 'Error'
-            if (obj.message) return 'Success'
-            return null
-        },
-    },
+   AllowedRegion: {
+      USEAST: 'up-east',
+      USWEST: 'up-west',
+      EU: 'eu',
+      ASIA: 'asia'
+   }
 }
 
 module.exports = resolvers

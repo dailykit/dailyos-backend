@@ -3,7 +3,7 @@ const axios = require('axios')
 
 const resolvers = {
    Query: {
-      workspaces: async (_, args, { root }) => {
+      ohyay_workspaces: async (_, args, { root }) => {
          try {
             const { userId = '' } = args
             const apiKey = process.env.OHYAY_API_KEY
@@ -27,7 +27,7 @@ const resolvers = {
             return error
          }
       },
-      workspaceInfo: async (_, args, { root }) => {
+      ohyay_workspaceInfo: async (_, args, { root }) => {
          try {
             const { userId = '', wsid = '' } = args
             const apiKey = process.env.OHYAY_API_KEY
@@ -54,7 +54,7 @@ const resolvers = {
             return error
          }
       },
-      workspaceChats: async (_, args, { root }) => {
+      ohyay_workspaceChats: async (_, args, { root }) => {
          try {
             const { userId = '', wsid = '' } = args
             const apiKey = process.env.OHYAY_API_KEY
@@ -78,7 +78,7 @@ const resolvers = {
             return error
          }
       },
-      getWorkspaceMovement: async (_, args, { root }) => {
+      ohyay_getWorkspaceMovement: async (_, args, { root }) => {
          try {
             const { userId = '', wsid = '', startTime = 0, endTime = 0 } = args
             const apiKey = process.env.OHYAY_API_KEY
@@ -102,7 +102,7 @@ const resolvers = {
             return error
          }
       },
-      workspaceUsers: async (_, args, { root }) => {
+      ohyay_workspaceUsers: async (_, args, { root }) => {
          try {
             const { userId = '', wsid = '' } = args
             const apiKey = process.env.OHYAY_API_KEY
@@ -126,7 +126,7 @@ const resolvers = {
             return error
          }
       },
-      workspaceActiveUsers: async (_, args, { root }) => {
+      ohyay_workspaceActiveUsers: async (_, args, { root }) => {
          try {
             const { userId = '', wsid = '' } = args
             const apiKey = process.env.OHYAY_API_KEY
@@ -149,7 +149,7 @@ const resolvers = {
             return error
          }
       },
-      workspaceRecordings: async (_, args, { root }) => {
+      ohyay_workspaceRecordings: async (_, args, { root }) => {
          try {
             const { userId = '', wsid = '' } = args
             const apiKey = process.env.OHYAY_API_KEY
@@ -172,7 +172,7 @@ const resolvers = {
             return error
          }
       },
-      workspaceRecordingMetaData: async (_, args, { root }) => {
+      ohyay_workspaceRecordingMetaData: async (_, args, { root }) => {
          try {
             const { userId = '', wsid = '', recordingId = '' } = args
             const apiKey = process.env.OHYAY_API_KEY

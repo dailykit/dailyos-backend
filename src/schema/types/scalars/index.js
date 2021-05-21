@@ -134,11 +134,10 @@ const typeDefs = gql`
       success: Boolean
    }
 
-   type Result {
+   type DeleteWorkspace {
       success: Boolean
       errorCode: String
    }
-   scalar Upload
 `
 
 module.exports = typeDefs
