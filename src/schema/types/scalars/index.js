@@ -1,7 +1,7 @@
 const { gql } = require('apollo-server-express')
 
 const typeDefs = gql`
-   type Invite {
+   input Invite {
       emailTo: String
       validFrom: Int
       validUntil: Int
@@ -10,11 +10,85 @@ const typeDefs = gql`
    type Editor {
       email: String
    }
+   input EditorInput {
+      email: String
+      directorModeOnly: Boolean
+   }
 
    type Workspace {
       wsid: String
       title: String
       editors: [Editor]
+   }
+
+   type WorkspaceInfo {
+      prettyUrl: String
+      tags: [String]
+   }
+
+   type Message {
+      from: String
+      to: String
+      time: Float
+   }
+
+   type Chat {
+      channel: String
+      messages: [Message]
+   }
+
+   type WorkspaceChat {
+      chats: [Chat]
+   }
+
+   type WorkspaceMovement {
+      userId: String
+      roomId: String
+      enterTime: Float
+      duration: Float
+   }
+
+   enum AllowedRegion {
+      USEAST
+      USWEST
+      EU
+      ASIA
+   }
+
+   input TagInput {
+      email: String
+      toAdd: [String]
+      toRemove: [String]
+   }
+
+   input CloneWorkspaceInput {
+      userId: String
+      wsid: String
+      title: String
+      region: String
+      editors: [EditorInput]
+      tags: [String]
+      tagsToRemove: [String]
+   }
+
+   input UpdateUserInput {
+      userId: String
+      wsid: String
+      editorsToRemove: [String]
+      editorsToAdd: [EditorInput]
+      tagUpdates: [TagInput]
+   }
+
+   type CloneWorkspace {
+      wsid: String
+   }
+
+   type UpdateUser {
+      success: Boolean
+   }
+
+   type UpdateWorkspaceInfo {
+      success: Boolean
    }
 
    type User {
@@ -27,58 +101,42 @@ const typeDefs = gql`
       roomIds: [String]
    }
 
-   type Folder {
-      name: String
-      path: String
-      type: String
-      size: Int
-      createdAt: String
-      children: [Folder]
+   type Recording {
+      timestamp: Float
+      downloadUrl: String
+      roomId: String
+      duration: Float
+      recordingId: String
    }
-   type FolderWithFiles {
-      id: Int
-      name: String
-      path: String
-      type: String
-      size: Int
-      createdAt: String
-      content: String
-      children: [FolderWithFiles]
+
+   type SpeakerInfo {
+      speakerId: String
+      talkStartTime: Float
+      duration: Float
    }
-   type File {
-      name: String
-      path: String
-      type: String
-      content: String
-      size: Int
-      createdAt: String
+   type EmojiInfo {
+      userId: String
+      emoji: String
+      timestamp: Float
+      count: Float
    }
-   type Author {
-      name: String
-      email: String
-      timestamp: String
+
+   type RecordingMetaData {
+      speakers: [SpeakerInfo]
+      emojis: [EmojiInfo]
    }
-   type Committer {
-      name: String
-      email: String
-      timestamp: String
+
+   type PrettyUrl {
+      prettyUrl: String
    }
-   type Commit {
-      oid: String
-      message: String
-      tree: String
-      parent: [String]
-      author: Author
-      committer: Committer
-   }
-   union Result = Success | Error
-   type Success {
+
+   type ClearPrettyUrl {
       success: Boolean
-      message: String
    }
-   type Error {
+
+   type Result {
       success: Boolean
-      error: String
+      errorCode: String
    }
    scalar Upload
 `

@@ -1,374 +1,230 @@
-const path = require('path')
-const fs = require('fs')
-
-const git = require('isomorphic-git')
-git.plugins.set('fs', fs)
-
-const dailygit = require('../../functions')
-
-const { getFilePaths } = require('../../utils/getFilePaths')
-
-const { getRepoPath, getFilePath } = require('../../utils/parsePath')
+const jwt = require('jsonwebtoken')
+const axios = require('axios')
 
 const resolvers = {
    Mutation: {
-      createFolder: async (_, args, { root }) => {
+      createInvites: async (_, args, { root }) => {
          try {
-            await dailygit.folders.createFolder(`${root}${args.path}`)
-            return {
-               success: true,
-               message: `Folder: ${path.basename(args.path)} has been created!`
+            const { userId = '', wsid = '', invites = [] } = args
+            const apiKey = process.env.OHYAY_API_KEY
+            const token = jwt.sign({ userId, wsid, invites }, apiKey)
+            let url
+            if (userId) {
+               url =
+                  'https://us-central1-ohyay-prod-d7acf.cloudfunctions.net/ohyayapi/create-invites'
             }
-         } catch (error) {
-            return {
-               success: false,
-               error
-            }
-         }
-      },
-      deleteFolder: async (_, args, { root }) => {
-         const filepaths = await getFilePaths(`${root}${args.path}`).map(path =>
-            path.replace(new RegExp(root), '')
-         )
-         try {
-            // File System
-            await dailygit.folders.deleteFolder(`${root}${args.path}`)
-
-            const author = {
-               name: 'placeholder',
-               email: 'placeholder@example.com'
-            }
-            const committer = {
-               name: 'placeholder',
-               email: 'placeholder@example.com'
-            }
-
-            await filepaths.map(async filepath => {
-               //    // Git
-               await dailygit.git.removeAndCommit(
-                  {
-                     repoPath: `${root}${getRepoPath(filepath)}`,
-                     filePath: getFilePath(filepath)
-                  },
-                  author,
-                  committer,
-                  `Deleted: File ${path.basename(filepath)}`
-               )
-
-               // Database
-               await dailygit.database
-                  .deleteRecordedFile({ path: filepath })
-                  .catch(error => console.error(error))
+            const { data: workspaces } = await axios({
+               url,
+               method: 'POST',
+               headers: {
+                  'Content-Type': 'text/plain'
+               },
+               data: token
             })
 
-            return {
-               success: true,
-               message: `Folder: ${path.basename(args.path)} has been deleted!`
-            }
+            return workspaces.links
          } catch (error) {
-            return {
-               success: false,
-               error
-            }
+            return error
          }
       },
-      renameFolder: async (_, args, { root }) => {
+      cloneWorkspace: async (_, args, { root }) => {
          try {
-            const oldFiles = await getFilePaths(
-               `${root}${args.oldPath}`
-            ).map(path => path.replace(new RegExp(root), ''))
-
-            console.log(oldFiles)
-            // File System
-            await dailygit.folders.renameFolder(
-               `${root}${args.oldPath}`,
-               `${root}${args.newPath}`
+            const { cloneWorkspace = {} } = args
+            const apiKey = process.env.OHYAY_API_KEY
+            const token = jwt.sign(
+               {
+                  userId: cloneWorkspace.userId,
+                  wsid: cloneWorkspace.wsid,
+                  title: cloneWorkspace.title,
+                  region: cloneWorkspace.region,
+                  editors: cloneWorkspace.editor,
+                  tags: cloneWorkspace.tags,
+                  tagsToRemove: cloneWorkspace.tagsToRemove
+               },
+               apiKey
             )
-
-            // Git
-            const newFiles = await getFilePaths(
-               `${root}${args.newPath}`
-            ).map(path => path.replace(new RegExp(root), ''))
-            const author = {
-               name: 'placeholder',
-               email: 'placeholder@example.com'
+            let url
+            if (Object.keys(cloneWorkspace).length) {
+               url =
+                  'https://us-central1-ohyay-prod-d7acf.cloudfunctions.net/ohyayapi/clone-workspace'
             }
-            const committer = {
-               name: 'placeholder',
-               email: 'placeholder@example.com'
-            }
-
-            await oldFiles.map(filepath => {
-               return git.remove({
-                  dir: `${root}${getRepoPath(filepath)}`,
-                  filepath: getFilePath(filepath)
-               })
+            const { data: workspaces } = await axios({
+               url,
+               method: 'POST',
+               headers: {
+                  'Content-Type': 'text/plain'
+               },
+               data: token
             })
 
-            await newFiles.map(async filepath => {
-               try {
-                  const sha = await dailygit.git.addAndCommit(
-                     {
-                        repoPath: `${root}${getRepoPath(filepath)}`,
-                        filePath: getFilePath(filepath)
-                     },
-                     author,
-                     committer,
-                     `Moved: ${path.basename(filepath)} from ${path.basename(
-                        args.oldPath
-                     )} to ${path.basename(args.newPath)}`
-                  )
+            return workspaces
+         } catch (error) {
+            return error
+         }
+      },
+      deleteWorkspace: async (_, args, { root }) => {
+         try {
+            const { userId = '', wsid = '' } = args
+            const apiKey = process.env.OHYAY_API_KEY
+            const token = jwt.sign({ userId, wsid }, apiKey)
+            let url
+            if (userId) {
+               url =
+                  'https://us-central1-ohyay-prod-d7acf.cloudfunctions.net/ohyayapi/delete-workspace'
+            }
+            const { data } = await axios({
+               url,
+               method: 'POST',
+               headers: {
+                  'Content-Type': 'text/plain'
+               },
+               data: token
+            })
 
-                  //       // Database
-                  await dailygit.database
-                     .renameRecordedFile({
-                        oldFilePath: oldFiles[newFiles.indexOf(filepath)],
-                        newFilePath: filepath,
-                        fileName: path.basename(filepath),
-                        lastSaved: new Date().toISOString()
-                     })
-                     .catch(error => console.error(error))
-               } catch (error) {
-                  throw error
+            return data
+         } catch (error) {
+            return error
+         }
+      },
+      createPrettyUrl: async (_, args, { root }) => {
+         try {
+            const { userId = '', wsid = '', urlPath = '' } = args
+            const apiKey = process.env.OHYAY_API_KEY
+            const token = jwt.sign({ userId, wsid, urlPath }, apiKey)
+            let url
+            if (userId) {
+               url =
+                  'https://us-central1-ohyay-prod-d7acf.cloudfunctions.net/ohyayapi/set-vanity-url'
+            }
+            const { data } = await axios({
+               url,
+               method: 'POST',
+               headers: {
+                  'Content-Type': 'text/plain'
+               },
+               data: token
+            })
+
+            return {
+               prettyUrl: 'https://ohyay.co/s/' + urlPath
+            }
+         } catch (error) {
+            return error
+         }
+      },
+      ClearPrettyUrl: async (_, args, { root }) => {
+         try {
+            const { userId = '', wsid = '' } = args
+            const apiKey = process.env.OHYAY_API_KEY
+            const token = jwt.sign({ userId, wsid }, apiKey)
+            let url
+            if (userId) {
+               url =
+                  'https://us-central1-ohyay-prod-d7acf.cloudfunctions.net/ohyayapi/clear-vanity-url'
+            }
+            const { data, status } = await axios({
+               url,
+               method: 'POST',
+               headers: {
+                  'Content-Type': 'text/plain'
+               },
+               data: token
+            })
+            if (status === 200) {
+               return {
+                  success: true
                }
+            } else {
+               return {
+                  success: false
+               }
+            }
+         } catch (error) {
+            return error
+         }
+      },
+      updateUsers: async (_, args, { root }) => {
+         try {
+            const { updateUsersInput = {} } = args
+            const apiKey = process.env.OHYAY_API_KEY
+            const token = jwt.sign(
+               {
+                  userId: updateUsersInput.userId,
+                  wsid: updateUsersInput.wsid,
+                  editorsToRemove: updateUsersInput.editorsToRemove,
+                  editorsToAdd: updateUsersInput.editorsToAdd,
+                  tagUpdates: updateUsersInput.tagUpdates
+               },
+               apiKey
+            )
+            let url
+            if (userId) {
+               url =
+                  'https://us-central1-ohyay-prod-d7acf.cloudfunctions.net/ohyayapi/update-users'
+            }
+            const { data, status } = await axios({
+               url,
+               method: 'POST',
+               headers: {
+                  'Content-Type': 'text/plain'
+               },
+               data: token
             })
-
-            return {
-               success: true,
-               message: `Folder ${path.basename(
-                  args.oldPath
-               )} renamed to ${path.basename(args.newPath)}`
+            if (status === 200) {
+               return {
+                  success: true
+               }
+            } else {
+               return {
+                  success: false
+               }
             }
          } catch (error) {
-            return {
-               success: false,
-               error
-            }
+            return error
          }
       },
-      createFile: async (_, args, { root }) => {
+      updateWorkspaceInfo: async (_, args, { root }) => {
          try {
-            // Filesystem
-            await dailygit.files.createFile(`${root}${args.path}`, args.content)
-
-            // Git
-            const author = {
-               name: 'placeholder',
-               email: 'placeholder@example.com'
-            }
-            const committer = {
-               name: 'placeholder',
-               email: 'placeholder@example.com'
-            }
-
-            const sha = await dailygit.git.addAndCommit(
+            const {
+               userId = '',
+               wsid = '',
+               tagsToAdd = [],
+               tagsToRemove = []
+            } = args
+            const apiKey = process.env.OHYAY_API_KEY
+            const token = jwt.sign(
                {
-                  repoPath: `${root}${getRepoPath(args.path)}`,
-                  filePath: getFilePath(args.path)
+                  userId,
+                  wsid,
+                  tagsToAdd,
+                  tagsToRemove
                },
-               author,
-               committer,
-               `Added: ${path.basename(args.path)}`
+               apiKey
             )
-
-            // Database
-            const record = await dailygit.database.createFileRecord(args.path)
-
-            return {
-               success: true,
-               message: `File ${path.basename(args.path)} has been created `,
-               id: record
+            let url
+            if (userId) {
+               url =
+                  'https://us-central1-ohyay-prod-d7acf.cloudfunctions.net/ohyayapi/update-workspace-info'
             }
-         } catch (error) {
-            return {
-               success: false,
-               error: error.code === 'ResolveRefError' ? error.message : error
-            }
-         }
-      },
-      deleteFile: async (_, args, { root }) => {
-         try {
-            // Filesystem
-            await dailygit.files.deleteFile(`${root}${args.path}`)
-
-            // Git
-            const author = {
-               name: 'placeholder',
-               email: 'placeholder@example.com'
-            }
-            const committer = {
-               name: 'placeholder',
-               email: 'placeholder@example.com'
-            }
-            await dailygit.git.removeAndCommit(
-               {
-                  repoPath: `${root}${getRepoPath(args.path)}`,
-                  filePath: getFilePath(args.path)
+            const { data, status } = await axios({
+               url,
+               method: 'POST',
+               headers: {
+                  'Content-Type': 'text/plain'
                },
-               author,
-               committer
-            )
-            // Database
-            await dailygit.database
-               .deleteRecordedFile({ path: args.path })
-               .catch(error => console.error(error))
-
-            return {
-               success: true,
-               message: `File ${path.basename(args.path)} has been deleted`
-            }
-         } catch (error) {
-            return {
-               success: false,
-               error
-            }
-         }
-      },
-      updateFile: async (_, args, { root }) => {
-         try {
-            // File System
-            await dailygit.files.updateFile(`${root}${args.path}`, args.content)
-
-            // Git
-            const author = {
-               name: 'placeholder',
-               email: 'placeholder@example.com'
-            }
-            const committer = {
-               name: 'placeholder',
-               email: 'placeholder@example.com'
-            }
-            const sha = await dailygit.git.addAndCommit(
-               {
-                  repoPath: `${root}${getRepoPath(args.path)}`,
-                  filePath: getFilePath(args.path)
-               },
-               author,
-               committer,
-               args.message
-            )
-
-            // Database
-            await dailygit.database
-               .updateRecordedFile({
-                  path: args.path,
-                  lastSaved: new Date().toISOString()
-               })
-               .catch(error => console.error(error))
-
-            return {
-               success: true,
-               message: `File: ${path.basename(args.path)} has been updated!`
-            }
-         } catch (error) {
-            return {
-               success: false,
-               error
-            }
-         }
-      },
-      draftFile: async (_, args, { root }) => {
-         try {
-            // File System
-            await dailygit.files.updateFile(`${root}${args.path}`, args.content)
-
-            // Database
-            await dailygit.database
-               .updateRecordedFile({
-                  path: args.path,
-                  lastSaved: new Date().toISOString()
-               })
-               .catch(error => console.error(error))
-
-            return {
-               success: true,
-               message: `File: ${path.basename(args.path)} has been updated!`
-            }
-         } catch (error) {
-            return {
-               success: false,
-               error
-            }
-         }
-      },
-      renameFile: async (_, args, { root }) => {
-         try {
-            // File System
-            await dailygit.files.renameFile(
-               `${root}${args.oldPath}`,
-               `${root}${args.newPath}`
-            )
-
-            // Git
-            const author = {
-               name: 'placeholder',
-               email: 'placeholder@example.com'
-            }
-            const committer = {
-               name: 'placeholder',
-               email: 'placeholder@example.com'
-            }
-
-            await git.remove({
-               dir: `${root}${getRepoPath(args.oldPath)}`,
-               filepath: getFilePath(args.oldPath)
+               data: token
             })
-
-            const sha = await dailygit.git.addAndCommit(
-               {
-                  repoPath: `${root}${getRepoPath(args.newPath)}`,
-                  filePath: getFilePath(args.newPath)
-               },
-               author,
-               committer,
-               `Renamed: ${path.basename(args.oldPath)} file to ${path.basename(
-                  args.newPath
-               )}`
-            )
-
-            // Database
-            await dailygit.database
-               .renameRecordedFile({
-                  oldFilePath: args.oldPath,
-                  newFilePath: args.newPath,
-                  fileName: path.basename(args.newPath),
-                  lastSaved: new Date().toISOString()
-               })
-               .catch(error => console.error(error))
-
-            return {
-               success: true,
-               message: `File: ${path.basename(
-                  args.oldPath
-               )} renamed to ${path.basename(args.newPath)}`
+            if (status === 200) {
+               return {
+                  success: true
+               }
+            } else {
+               return {
+                  success: false
+               }
             }
          } catch (error) {
-            return {
-               success: false,
-               error
-            }
-         }
-      },
-      imageUpload: async (_, args, { media }) => {
-         try {
-            const { files } = await args
-
-            await Object.keys(files).map(async key => {
-               // File System
-               const file = await files[key]
-               await dailygit.files.upload(`${media}`, file)
-            })
-            return {
-               success: true,
-               message: `${files.length} file${
-                  files.length > 1 ? 's' : ''
-               } has been uploaded`
-            }
-         } catch (error) {
-            return {
-               success: false,
-               error
-            }
+            return error
          }
       }
    }

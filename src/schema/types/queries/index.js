@@ -1,19 +1,23 @@
 const { gql } = require('apollo-server-express')
-
-// getFolderWithFiles(path: String): FolderWithFiles
-// getNestedFolders(path: String): Folder
-// getFiles(path: String!, offset: Int, limit: Int): [File]!
-// getFile(path: String!): File
-// getCommitLog(path: String!): [Commit]
-// getCommits(path: String!, commits: [String]!): [Commit]
-// getCommit(id: String!, path: String!): Commit
-// getCommitContent(id: String!, path: String!): String
-// openFile(path: String!): File
 const typeDefs = gql`
    type Query {
       workspaces(userId: String!): [Workspace]!
+      workspaceInfo(userId: String!, wsid: String!): WorkspaceInfo!
       workspaceUsers(userId: String!, wsid: String!): [User]!
       workspaceActiveUsers(userId: String!, wsid: String!): [ActiveUser]!
+      workspaceRecordings(userId: String!, wsid: String!): [Recording]!
+      workspaceRecordingMetaData(
+         userId: String!
+         wsid: String!
+         recordingId: String!
+      ): RecordingMetaData!
+      workspaceChats(userId: String!, wsid: String!): WorkspaceChat!
+      getWorkspaceMovement(
+         userId: String!
+         wsid: String!
+         startTime: Float!
+         endTime: Float!
+      ): [WorkspaceMovement]!
    }
 `
 

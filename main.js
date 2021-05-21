@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 const { ApolloServer } = require('apollo-server-express')
 const depthLimit = require('graphql-depth-limit')
 const schema = require('./src/schema/schema')
-const functions = require('./src/functions')
+// const functions = require('./src/functions')
 import express from 'express'
 import morgan from 'morgan'
 import AWS from 'aws-sdk'
@@ -45,11 +45,13 @@ import {
    handleSubscriptionCancelled
 } from './entities/emails'
 const app = express()
+const PORT = process.env.PORT || 4000
+const isProd = process.env.NODE_ENV === 'production' ? true : false
 
 const apolloserver = new ApolloServer({
    schema,
    playground: {
-      endpoint: `${process.env.ENDPOINT}/streaming/ohyay/graphql`
+      endpoint: `${process.env.ENDPOINT}/graphql`
    },
    introspection: true,
    validationRules: [depthLimit(11)],
@@ -85,8 +87,6 @@ AWS.config.update({
 
 AWS.config.setPromisesDependency(bluebird)
 
-const PORT = process.env.PORT || 4000
-
 // Routes
 app.use('/api/mof', MOFRouter)
 app.use('/api/menu', MenuRouter)
@@ -121,6 +121,10 @@ app.post(
    '/webhook/emails/handle-subscription-cancelled',
    handleSubscriptionCancelled
 )
+
+app.get('/deepak', (req, res) => {
+   res.send('<h1>Hellooooo</h1>')
+})
 
 app.use('/api/store', StoreRouter)
 
