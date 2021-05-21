@@ -3,8 +3,7 @@ import cors from 'cors'
 import { StatusCodes } from 'http-status-codes'
 const { ApolloServer } = require('apollo-server-express')
 const depthLimit = require('graphql-depth-limit')
-const schema = require('./src/schema/schema')
-// const functions = require('./src/functions')
+const schema = require('./streaming/ohyay/src/schema/schema')
 import express from 'express'
 import morgan from 'morgan'
 import AWS from 'aws-sdk'
