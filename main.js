@@ -123,10 +123,6 @@ app.post(
    handleSubscriptionCancelled
 )
 
-app.get('/deepak', (req, res) => {
-   res.send('<h1>Hellooooo</h1>')
-})
-
 app.use('/api/store', StoreRouter)
 
 app.get('/images/:url(*)', handleImage)
