@@ -32,7 +32,8 @@ import {
    StoreRouter,
    getDistance,
    authorizeRequest,
-   handleImage
+   handleImage,
+   OhyayRouter
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -105,6 +106,7 @@ app.use('/api/rewards', RewardsRouter)
 app.get('/api/kot-urls', getKOTUrls)
 app.use('/api/modifier', ModifierRouter)
 app.use('/api/parseur', ParseurRouter)
+app.use('/api/ohyay', OhyayRouter)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)

@@ -30,18 +30,7 @@ const resolvers = {
          try {
             const { cloneWorkspace = {} } = args
 
-            const token = jwt.sign(
-               {
-                  userId: cloneWorkspace.userId,
-                  wsid: cloneWorkspace.wsid,
-                  title: cloneWorkspace.title,
-                  region: cloneWorkspace.region,
-                  editors: cloneWorkspace.editor,
-                  tags: cloneWorkspace.tags,
-                  tagsToRemove: cloneWorkspace.tagsToRemove
-               },
-               ohyay_api_key
-            )
+            const token = jwt.sign(cloneWorkspace, ohyay_api_key)
             let url
             if (Object.keys(cloneWorkspace).length) {
                url =
