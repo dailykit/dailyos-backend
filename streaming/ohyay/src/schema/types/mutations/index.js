@@ -6,7 +6,7 @@ const mutations = gql`
          userId: String!
          wsid: String!
          invites: [Invite]
-      ): [String]
+      ): InviteUrl
       ohyay_cloneWorkspace(cloneWorkspace: CloneWorkspaceInput): CloneWorkspace
       ohyay_deleteWorkspace(userId: String!, wsid: String!): DeleteWorkspace
       ohyay_createPrettyUrl(

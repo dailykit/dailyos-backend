@@ -17,3 +17,14 @@ export const CLONE_WORKSPACE = `
       }
    }
 `
+
+export const CREATE_INVITE = `
+mutation CREATE_INVITE($userId: String!, $wsid: String!, $invites: [Invite]!) {
+    ohyay_createInvites(userId: $userId, wsid: $wsid, invites: $invites){
+      inviteUrl
+    }
+  }
+
+
+
+`

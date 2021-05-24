@@ -3,13 +3,16 @@ import { stayInClient } from '../../lib/graphql'
 import {
    EXPERIENCE_INFO,
    CLONE_WORKSPACE,
-   UPDATE_EXPERIENCE_CLASS
+   UPDATE_EXPERIENCE_CLASS,
+   EXPERIENCE_CLASS_INFO,
+   CREATE_INVITE
 } from './graphql'
 
 export const cloneWorkspace = async (req, res) => {
    try {
       const { id, experienceId } = req.body.event.data.new
       const ohyay_userId = req.header('ohyay_userId')
+      const ohyay_region = req.header('ohyay_region')
       const { experiences_experience_by_pk: experience } =
          await stayInClient.request(EXPERIENCE_INFO, {
             id: experienceId
@@ -21,8 +24,8 @@ export const cloneWorkspace = async (req, res) => {
                cloneWorkspaceInp: {
                   userId: ohyay_userId,
                   wsid: experience.ohyay_wsid,
-                  title: `experienceClass-${id}`,
-                  region: 'us-east'
+                  region: ohyay_region,
+                  title: `experienceClass-${id}`
                }
             })
          if (cloneWorkspace && cloneWorkspace.wsid) {
@@ -38,6 +41,35 @@ export const cloneWorkspace = async (req, res) => {
                   message: `Successfully cloned workspace:${experience.ohyay_wsid}`
                })
             }
+         }
+      }
+   } catch (error) {
+      return res.status(400).json({
+         success: false,
+         message: error.message
+      })
+   }
+}
+
+export const createInvite = async (req, res) => {
+   try {
+      const { id, experienceClassId, parentCartId } = req.body.event.data.new
+      console.log('req', req.body.event.data.new)
+      if (parentCartId === null) {
+         const { experiences_experienceClass_by_pk: experienceClass } =
+            await stayInClient.request(EXPERIENCE_CLASS_INFO, {
+               id: experienceClassId
+            })
+         if (experienceClass) {
+            const { ohyay_createInvites } = await stayInClient.request(
+               CREATE_INVITE,
+               {
+                  userId: ohyay_userId,
+                  wsid: experienceClass.ohyay_wsid,
+                  invites: [{}, {}]
+               }
+            )
+            console.log('Invite links', ohyay_createInvites.inviteUrl)
          }
       }
    } catch (error) {

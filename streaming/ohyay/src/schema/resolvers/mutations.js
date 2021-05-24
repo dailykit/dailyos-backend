@@ -5,14 +5,13 @@ const resolvers = {
    Mutation: {
       ohyay_createInvites: async (_, args, { ohyay_api_key }) => {
          try {
-            const { userId = '', wsid = '', invites = [] } = args
-            const token = jwt.sign({ userId, wsid, invites }, ohyay_api_key)
+            const token = jwt.sign(args, ohyay_api_key)
             let url
-            if (userId) {
+            if (args.userId) {
                url =
                   'https://us-central1-ohyay-prod-d7acf.cloudfunctions.net/ohyayapi/create-invites'
             }
-            const { data: workspaces } = await axios({
+            const { data: workspace } = await axios({
                url,
                method: 'POST',
                headers: {
@@ -21,7 +20,9 @@ const resolvers = {
                data: token
             })
 
-            return workspaces.links
+            return {
+               inviteUrl: workspace.links
+            }
          } catch (error) {
             return error
          }

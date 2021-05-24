@@ -2,7 +2,7 @@ const { gql } = require('apollo-server-express')
 
 const typeDefs = gql`
    input Invite {
-      emailTo: String
+      to: String
       validFrom: Int
       validUntil: Int
    }
@@ -13,6 +13,10 @@ const typeDefs = gql`
    input EditorInput {
       email: String
       directorModeOnly: Boolean
+   }
+
+   type InviteUrl {
+      inviteUrl: [String]
    }
 
    type Workspace {
