@@ -3,11 +3,10 @@ const axios = require('axios')
 
 const resolvers = {
    Mutation: {
-      ohyay_createInvites: async (_, args, { root }) => {
+      ohyay_createInvites: async (_, args, { ohyay_api_key }) => {
          try {
             const { userId = '', wsid = '', invites = [] } = args
-            const apiKey = process.env.OHYAY_API_KEY
-            const token = jwt.sign({ userId, wsid, invites }, apiKey)
+            const token = jwt.sign({ userId, wsid, invites }, ohyay_api_key)
             let url
             if (userId) {
                url =
@@ -27,10 +26,10 @@ const resolvers = {
             return error
          }
       },
-      ohyay_cloneWorkspace: async (_, args, { root }) => {
+      ohyay_cloneWorkspace: async (_, args, { ohyay_api_key }) => {
          try {
             const { cloneWorkspace = {} } = args
-            const apiKey = process.env.OHYAY_API_KEY
+
             const token = jwt.sign(
                {
                   userId: cloneWorkspace.userId,
@@ -41,7 +40,7 @@ const resolvers = {
                   tags: cloneWorkspace.tags,
                   tagsToRemove: cloneWorkspace.tagsToRemove
                },
-               apiKey
+               ohyay_api_key
             )
             let url
             if (Object.keys(cloneWorkspace).length) {
@@ -62,11 +61,11 @@ const resolvers = {
             return error
          }
       },
-      ohyay_deleteWorkspace: async (_, args, { root }) => {
+      ohyay_deleteWorkspace: async (_, args, { ohyay_api_key }) => {
          try {
             const { userId = '', wsid = '' } = args
-            const apiKey = process.env.OHYAY_API_KEY
-            const token = jwt.sign({ userId, wsid }, apiKey)
+
+            const token = jwt.sign({ userId, wsid }, ohyay_api_key)
             let url
             if (userId) {
                url =
@@ -86,11 +85,11 @@ const resolvers = {
             return error
          }
       },
-      ohyay_createPrettyUrl: async (_, args, { root }) => {
+      ohyay_createPrettyUrl: async (_, args, { ohyay_api_key }) => {
          try {
             const { userId = '', wsid = '', urlPath = '' } = args
-            const apiKey = process.env.OHYAY_API_KEY
-            const token = jwt.sign({ userId, wsid, urlPath }, apiKey)
+
+            const token = jwt.sign({ userId, wsid, urlPath }, ohyay_api_key)
             let url
             if (userId) {
                url =
@@ -112,11 +111,11 @@ const resolvers = {
             return error
          }
       },
-      ohyay_clearPrettyUrl: async (_, args, { root }) => {
+      ohyay_clearPrettyUrl: async (_, args, { ohyay_api_key }) => {
          try {
             const { userId = '', wsid = '' } = args
-            const apiKey = process.env.OHYAY_API_KEY
-            const token = jwt.sign({ userId, wsid }, apiKey)
+
+            const token = jwt.sign({ userId, wsid }, ohyay_api_key)
             let url
             if (userId) {
                url =
@@ -143,10 +142,10 @@ const resolvers = {
             return error
          }
       },
-      ohyay_updateUsers: async (_, args, { root }) => {
+      ohyay_updateUsers: async (_, args, { ohyay_api_key }) => {
          try {
             const { updateUsersInput = {} } = args
-            const apiKey = process.env.OHYAY_API_KEY
+
             const token = jwt.sign(
                {
                   userId: updateUsersInput.userId,
@@ -155,7 +154,7 @@ const resolvers = {
                   editorsToAdd: updateUsersInput.editorsToAdd,
                   tagUpdates: updateUsersInput.tagUpdates
                },
-               apiKey
+               ohyay_api_key
             )
             let url
             if (userId) {
@@ -183,7 +182,7 @@ const resolvers = {
             return error
          }
       },
-      ohyay_updateWorkspaceInfo: async (_, args, { root }) => {
+      ohyay_updateWorkspaceInfo: async (_, args, { ohyay_api_key }) => {
          try {
             const {
                userId = '',
@@ -191,7 +190,7 @@ const resolvers = {
                tagsToAdd = [],
                tagsToRemove = []
             } = args
-            const apiKey = process.env.OHYAY_API_KEY
+
             const token = jwt.sign(
                {
                   userId,
@@ -199,7 +198,7 @@ const resolvers = {
                   tagsToAdd,
                   tagsToRemove
                },
-               apiKey
+               ohyay_api_key
             )
             let url
             if (userId) {

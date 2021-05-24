@@ -3,11 +3,11 @@ const axios = require('axios')
 
 const resolvers = {
    Query: {
-      ohyay_workspaces: async (_, args, { root }) => {
+      ohyay_workspaces: async (_, args, { ohyay_api_key }) => {
          try {
             const { userId = '' } = args
-            const apiKey = process.env.OHYAY_API_KEY
-            const token = jwt.sign({ userId }, apiKey)
+
+            const token = jwt.sign({ userId }, ohyay_api_key)
             let url
             if (userId) {
                url =
@@ -27,11 +27,11 @@ const resolvers = {
             return error
          }
       },
-      ohyay_workspaceInfo: async (_, args, { root }) => {
+      ohyay_workspaceInfo: async (_, args, { ohyay_api_key }) => {
          try {
             const { userId = '', wsid = '' } = args
-            const apiKey = process.env.OHYAY_API_KEY
-            const token = jwt.sign({ userId, wsid }, apiKey)
+
+            const token = jwt.sign({ userId, wsid }, ohyay_api_key)
             let url
             if (userId) {
                url =
@@ -54,11 +54,11 @@ const resolvers = {
             return error
          }
       },
-      ohyay_workspaceChats: async (_, args, { root }) => {
+      ohyay_workspaceChats: async (_, args, { ohyay_api_key }) => {
          try {
             const { userId = '', wsid = '' } = args
-            const apiKey = process.env.OHYAY_API_KEY
-            const token = jwt.sign({ userId, wsid }, apiKey)
+
+            const token = jwt.sign({ userId, wsid }, ohyay_api_key)
             let url
             if (userId) {
                url =
@@ -78,11 +78,14 @@ const resolvers = {
             return error
          }
       },
-      ohyay_getWorkspaceMovement: async (_, args, { root }) => {
+      ohyay_getWorkspaceMovement: async (_, args, { ohyay_api_key }) => {
          try {
             const { userId = '', wsid = '', startTime = 0, endTime = 0 } = args
-            const apiKey = process.env.OHYAY_API_KEY
-            const token = jwt.sign({ userId, wsid, startTime, endTime }, apiKey)
+
+            const token = jwt.sign(
+               { userId, wsid, startTime, endTime },
+               ohyay_api_key
+            )
             let url
             if (userId) {
                url =
@@ -102,11 +105,11 @@ const resolvers = {
             return error
          }
       },
-      ohyay_workspaceUsers: async (_, args, { root }) => {
+      ohyay_workspaceUsers: async (_, args, { ohyay_api_key }) => {
          try {
             const { userId = '', wsid = '' } = args
-            const apiKey = process.env.OHYAY_API_KEY
-            const token = jwt.sign({ userId, wsid }, apiKey)
+
+            const token = jwt.sign({ userId, wsid }, ohyay_api_key)
             let url
             if (userId) {
                url =
@@ -126,11 +129,11 @@ const resolvers = {
             return error
          }
       },
-      ohyay_workspaceActiveUsers: async (_, args, { root }) => {
+      ohyay_workspaceActiveUsers: async (_, args, { ohyay_api_key }) => {
          try {
             const { userId = '', wsid = '' } = args
-            const apiKey = process.env.OHYAY_API_KEY
-            const token = jwt.sign({ userId, wsid }, apiKey)
+
+            const token = jwt.sign({ userId, wsid }, ohyay_api_key)
             let url
             if (userId) {
                url =
@@ -149,11 +152,11 @@ const resolvers = {
             return error
          }
       },
-      ohyay_workspaceRecordings: async (_, args, { root }) => {
+      ohyay_workspaceRecordings: async (_, args, { ohyay_api_key }) => {
          try {
             const { userId = '', wsid = '' } = args
-            const apiKey = process.env.OHYAY_API_KEY
-            const token = jwt.sign({ userId, wsid }, apiKey)
+
+            const token = jwt.sign({ userId, wsid }, ohyay_api_key)
             let url
             if (userId) {
                url =
@@ -172,11 +175,11 @@ const resolvers = {
             return error
          }
       },
-      ohyay_workspaceRecordingMetaData: async (_, args, { root }) => {
+      ohyay_workspaceRecordingMetaData: async (_, args, { ohyay_api_key }) => {
          try {
             const { userId = '', wsid = '', recordingId = '' } = args
-            const apiKey = process.env.OHYAY_API_KEY
-            const token = jwt.sign({ userId, wsid, recordingId }, apiKey)
+
+            const token = jwt.sign({ userId, wsid, recordingId }, ohyay_api_key)
             let url
             if (userId) {
                url =

@@ -1,6 +1,8 @@
 require('dotenv').config()
 import cors from 'cors'
 import { StatusCodes } from 'http-status-codes'
+import { createEvent } from 'ics'
+import { writeFileSync } from 'fs'
 const { ApolloServer } = require('apollo-server-express')
 const depthLimit = require('graphql-depth-limit')
 const schema = require('./streaming/ohyay/src/schema/schema')
@@ -61,9 +63,9 @@ const apolloserver = new ApolloServer({
       return isProd ? new Error(err) : err
    },
    debug: true,
-   context: {
-      root: process.env.FS_PATH,
-      media: process.env.MEDIA_PATH
+   context: ({ req }) => {
+      const ohyay_api_key = req.header('ohyay_api_key')
+      return { ohyay_api_key }
    }
 })
 

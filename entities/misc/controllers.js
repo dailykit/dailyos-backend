@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { createEvent } from 'ics'
+import { writeFileSync, readFileSync } from 'fs'
 import { client } from '../../lib/graphql'
 const fetch = require('node-fetch')
 const AWS = require('aws-sdk')
@@ -90,8 +92,11 @@ export const initiatePayment = async (req, res) => {
 
 export const sendMail = async (req, res) => {
    try {
-      const { emailInput } = req.body.input
+      const { emailInput, inviteInput } = req.body.input
       const inputDomain = emailInput.from.split('@')[1]
+      let inviteFileData = ''
+
+      console.log('InviteINput', inviteInput)
 
       // Get the DKIM details from dailycloak
       const dkimDetails = await client.request(GET_SES_DOMAIN, {
@@ -113,13 +118,84 @@ export const sendMail = async (req, res) => {
                privateKey: dkimDetails.aws_ses[0].privateKey.toString('binary')
             }
          })
+
+         //build the invite event
+         const event = {
+            start: inviteInput.start,
+            duration: inviteInput.duration,
+            title: inviteInput.title,
+            description: inviteInput.description,
+            location: inviteInput.location,
+            url: inviteInput.url,
+            geo: inviteInput.geo,
+            categories: inviteInput.categories,
+            status: inviteInput.status,
+            busyStatus: inviteInput.busyStatus,
+            organizer: inviteInput.organizer,
+            attendees: inviteInput.attendees
+         }
+
+         console.log('EVENT', event)
+
+         // const event = {
+         //    start: [2021, 5, 30, 6, 30],
+         //    duration: { hours: 6, minutes: 30, seconds: 45 },
+         //    title: 'TEsting invites',
+         //    description: 'Annual 10-kilometer run in Boulder, Colorado',
+         //    location: 'Folsom Field, University of Colorado (finish line)',
+         //    url: 'http://www.bolderboulder.com/',
+         //    geo: { lat: 40.0095, lon: 105.2669 },
+         //    categories: ['10k races', 'Memorial Day Weekend', 'Boulder CO'],
+         //    status: 'CONFIRMED',
+         //    busyStatus: 'BUSY',
+         //    organizer: { name: 'Admin', email: 'st.deepak15@gmail.com' },
+         //    attendees: [
+         //       {
+         //          name: 'Hema Bisht',
+         //          email: 'hemabisht117@gmail.com',
+         //          rsvp: true,
+         //          partstat: 'ACCEPTED',
+         //          role: 'REQ-PARTICIPANT'
+         //       },
+         //       {
+         //          name: 'Zack',
+         //          email: 'zackryan18@gmail.com',
+         //          dir: 'https://linkedin.com/in/brittanyseaton',
+         //          role: 'OPT-PARTICIPANT'
+         //       }
+         //    ]
+         // }
+
+         createEvent(event, async (error, value) => {
+            if (error) {
+               console.log(error)
+               return
+            }
+            console.log('EVENT OUTPUT', value)
+            await writeFileSync(
+               `${__dirname}/calendarInvite/${inviteInput.title}.ics`,
+               value
+            )
+         })
+
+         const updatedAttachments = [
+            {
+               filename: `${inviteInput.title}.ics`,
+               path: `${__dirname}/calendarInvite/${inviteInput.title}.ics`,
+               contentType: 'text/calendar'
+            }
+         ]
+         emailInput.attachments.forEach(attachment => {
+            updatedAttachments.push(attachment)
+         })
+
          // build and send the message
          const message = {
             from: emailInput.from,
             to: emailInput.to,
             subject: emailInput.subject,
             html: emailInput.html,
-            attachments: emailInput.attachments
+            attachments: updatedAttachments
          }
 
          if (dkimDetails.aws_ses[0].isVerified === true) {
