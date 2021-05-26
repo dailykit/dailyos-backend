@@ -92,9 +92,9 @@ export const initiatePayment = async (req, res) => {
 
 export const sendMail = async (req, res) => {
    try {
-      const { emailInput, inviteInput } = req.body.input
+      const { emailInput, inviteInput = {} } = req.body.input
       const inputDomain = emailInput.from.split('@')[1]
-      let inviteFileData = ''
+      let updatedAttachments = []
 
       console.log('InviteINput', inviteInput)
 
@@ -120,71 +120,39 @@ export const sendMail = async (req, res) => {
          })
 
          //build the invite event
-         const event = {
-            start: inviteInput.start,
-            duration: inviteInput.duration,
-            title: inviteInput.title,
-            description: inviteInput.description,
-            location: inviteInput.location,
-            url: inviteInput.url,
-            geo: inviteInput.geo,
-            categories: inviteInput.categories,
-            status: inviteInput.status,
-            busyStatus: inviteInput.busyStatus,
-            organizer: inviteInput.organizer,
-            attendees: inviteInput.attendees
-         }
-
-         console.log('EVENT', event)
-
-         // const event = {
-         //    start: [2021, 5, 30, 6, 30],
-         //    duration: { hours: 6, minutes: 30, seconds: 45 },
-         //    title: 'TEsting invites',
-         //    description: 'Annual 10-kilometer run in Boulder, Colorado',
-         //    location: 'Folsom Field, University of Colorado (finish line)',
-         //    url: 'http://www.bolderboulder.com/',
-         //    geo: { lat: 40.0095, lon: 105.2669 },
-         //    categories: ['10k races', 'Memorial Day Weekend', 'Boulder CO'],
-         //    status: 'CONFIRMED',
-         //    busyStatus: 'BUSY',
-         //    organizer: { name: 'Admin', email: 'st.deepak15@gmail.com' },
-         //    attendees: [
-         //       {
-         //          name: 'Hema Bisht',
-         //          email: 'hemabisht117@gmail.com',
-         //          rsvp: true,
-         //          partstat: 'ACCEPTED',
-         //          role: 'REQ-PARTICIPANT'
-         //       },
-         //       {
-         //          name: 'Zack',
-         //          email: 'zackryan18@gmail.com',
-         //          dir: 'https://linkedin.com/in/brittanyseaton',
-         //          role: 'OPT-PARTICIPANT'
-         //       }
-         //    ]
-         // }
-
-         createEvent(event, async (error, value) => {
-            if (error) {
-               console.log(error)
-               return
+         if (Object.keys(inviteInput).length) {
+            const event = {
+               start: inviteInput.start,
+               duration: inviteInput.duration,
+               title: inviteInput.title,
+               description: inviteInput.description,
+               location: inviteInput.location,
+               url: inviteInput.url,
+               geo: inviteInput.geo,
+               categories: inviteInput.categories,
+               status: inviteInput.status,
+               busyStatus: inviteInput.busyStatus,
+               organizer: inviteInput.organizer,
+               attendees: inviteInput.attendees
             }
-            console.log('EVENT OUTPUT', value)
-            await writeFileSync(
-               `${__dirname}/calendarInvite/${inviteInput.title}.ics`,
-               value
-            )
-         })
-
-         const updatedAttachments = [
-            {
+            createEvent(event, async (error, value) => {
+               if (error) {
+                  console.log(error)
+                  return
+               }
+               console.log('EVENT OUTPUT', value)
+               await writeFileSync(
+                  `${__dirname}/calendarInvite/${inviteInput.title}.ics`,
+                  value
+               )
+            })
+            updatedAttachments.push({
                filename: `${inviteInput.title}.ics`,
                path: `${__dirname}/calendarInvite/${inviteInput.title}.ics`,
                contentType: 'text/calendar'
-            }
-         ]
+            })
+         }
+
          emailInput.attachments.forEach(attachment => {
             updatedAttachments.push(attachment)
          })
