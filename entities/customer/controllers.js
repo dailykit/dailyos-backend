@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { get } from 'lodash'
 
 import { client } from '../../lib/graphql'
 
@@ -15,7 +16,10 @@ export const create = async (req, res) => {
          password = '',
          brandId = null,
          clientId = '',
-         withRegister = false
+         withRegister = false,
+         firstName = '',
+         lastName = '',
+         phoneNumber = ''
       } = req.body.input.input
       if (!email)
          return res.status(200).json({
@@ -61,15 +65,15 @@ export const create = async (req, res) => {
             keycloakId: _user.id
          })
 
+         const response = {}
+
          if (customer && 'id' in customer && customer.id) {
             // CUSTOMER EXISTS
             if (customer.brandCustomers.length > 0) {
                // BRAND CUSTOMER EXISTS
-               return res.status(200).json({
-                  success: true,
-                  data: customer,
-                  message: 'Customer already exists!'
-               })
+               response.success = true
+               response.data = customer
+               response.message = 'Customer already exists!'
             } else {
                // CREATE BRAND CUSTOMER
                const { createBrandCustomer } = await client.request(
@@ -82,14 +86,10 @@ export const create = async (req, res) => {
                   }
                )
                const { id, customer: _customer } = createBrandCustomer
-               return res.status(200).json({
-                  success: true,
-                  data: {
-                     ..._customer,
-                     brandCustomers: [{ id: id }]
-                  },
-                  message: 'Sucessfully created the brand customer!'
-               })
+
+               response.success = true
+               response.data = { ..._customer, brandCustomers: [{ id: id }] }
+               response.message = 'Sucessfully created the brand customer!'
             }
          } else {
             // CREATE CUSTOMER & BRAND CUSTOMER
@@ -104,12 +104,31 @@ export const create = async (req, res) => {
                   brandCustomers: { data: { brandId: brandId } }
                }
             })
-            return res.status(200).json({
-               success: true,
-               message: 'Successfully created the customer!',
-               data: createCustomer
+            response.success = true
+            response.message = 'Successfully created the customer!'
+            response.data = createCustomer
+         }
+
+         let _customer = {
+            firstName: get(customer, 'platform_customer.firstName') || '',
+            lastName: get(customer, 'platform_customer.lastName') || '',
+            phoneNumber: get(customer, 'platform_customer.phoneNumber') || ''
+         }
+
+         if ([firstName, lastName, phoneNumber].some(node => node)) {
+            await client.request(UPDATE_PLATFORM_CUSTOMER, {
+               keycloakId: _user.id,
+               _set: {
+                  ...(!_customer.firstName.trim() &&
+                     firstName.trim() && { firstName }),
+                  ...(!_customer.lastName.trim() &&
+                     lastName.trim() && { lastName }),
+                  ...(!_customer.phoneNumber.trim() &&
+                     phoneNumber.trim() && { phoneNumber })
+               }
             })
          }
+         return res.status(200).json(response)
       }
       return res.status(200).json({
          data: _user,
@@ -200,6 +219,11 @@ const CREATE_CUSTOMER = `
          brandCustomers(where: { brandId: { _eq: $brandId } }) {
             id
          }
+         platform_customer {
+            firstName
+            lastName
+            phoneNumber
+         }
       }
    }
 `
@@ -213,6 +237,22 @@ const CREATE_BRAND_CUSTOMER = `
             email
             keycloakId
          }
+      }
+   }
+`
+
+const UPDATE_PLATFORM_CUSTOMER = `
+   mutation updateCustomer(
+      $keycloakId: String!
+      $_set: platform_customer_set_input = {}
+   ) {
+      updateCustomer: platform_updateCustomer(
+         pk_columns: { keycloakId: $keycloakId }
+         _set: $_set
+      ) {
+         firstName
+         lastName
+         phoneNumber
       }
    }
 `
