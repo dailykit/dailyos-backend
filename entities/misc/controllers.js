@@ -142,13 +142,19 @@ export const sendMail = async (req, res) => {
                }
                console.log('EVENT OUTPUT', value)
                await writeFileSync(
-                  `${__dirname}/calendarInvite/${inviteInput.title}.ics`,
+                  `${__dirname}/calendarInvite/${inviteInput.title.replace(
+                     ' ',
+                     '_'
+                  )}.ics`,
                   value
                )
             })
             updatedAttachments.push({
-               filename: `${inviteInput.title}.ics`,
-               path: `${__dirname}/calendarInvite/${inviteInput.title}.ics`,
+               filename: `${inviteInput.title.replace(' ', '_')}.ics`,
+               path: `${__dirname}/calendarInvite/${inviteInput.title.replace(
+                  ' ',
+                  '_'
+               )}.ics`,
                contentType: 'text/calendar'
             })
          }
