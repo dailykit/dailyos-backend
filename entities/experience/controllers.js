@@ -1,5 +1,11 @@
 import axios from 'axios'
-import { EXPERIENCE_CLASS_INFO, SEND_EMAIL, CREATE_INVITE } from './graphql'
+import {
+   EXPERIENCE_CLASS_INFO,
+   SEND_EMAIL,
+   CREATE_INVITE,
+   WORKSPACE_RECORDINGS,
+   WORKSPACE_RECORDING_METADATA
+} from './graphql'
 import { stayInClient } from '../../lib/graphql'
 import { getDuration, getDateIntArray } from '../../utils'
 
@@ -61,6 +67,32 @@ export const experienceBookingEmail = async (req, res) => {
             }
          }
       }
+   } catch (error) {
+      return res.status(400).json({
+         success: false,
+         message: error.message
+      })
+   }
+}
+
+export const storeWorkspaceMetaDetails = async (req, res) => {
+   try {
+      // const { id, experienceBookingId, email, rsvp } = req.body.event.data.new
+      const { ohyay_workspaceRecordings: recordings = [] } =
+         await stayInClient.request(WORKSPACE_RECORDINGS, {
+            userId: 'u_AVUK0yYAfWbfd9dFtJhW7Aen2Fw2',
+            wsid: 'ws_d0GxIO_M'
+         })
+      recordings.forEach(async recording => {
+         const { ohyay_workspaceRecordingMetaData: metaData = {} } =
+            await stayInClient.request(WORKSPACE_RECORDING_METADATA, {
+               userId: 'u_AVUK0yYAfWbfd9dFtJhW7Aen2Fw2',
+               wsid: 'ws_d0GxIO_M',
+               recordingId: recording.recordingId
+            })
+         console.log(metaData)
+      })
+      console.log(recordings)
    } catch (error) {
       return res.status(400).json({
          success: false,

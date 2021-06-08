@@ -17,3 +17,32 @@ query EXPERIENCE_CLASS_INFO($where: experiences_experienceClass_bool_exp!) {
  }
 
 `
+export const WORKSPACE_RECORDINGS = `
+query WORKSPACE_RECORDINGS($userId: String!, $wsid: String!) {
+  ohyay_workspaceRecordings(userId: $userId, wsid: $wsid) {
+    downloadUrl
+    duration
+    recordingId
+    roomId
+    timestamp
+  }
+}
+`
+export const WORKSPACE_RECORDING_METADATA = `
+query WORKSPACE_RECORDING_METADATA($recordingId: String!, $userId: String!, $wsid: String!) {
+  ohyay_workspaceRecordingMetaData(recordingId: $recordingId, userId: $userId, wsid: $wsid) {
+    emojis {
+      count
+      emoji
+      timestamp
+      userId
+    }
+    speakers {
+      duration
+      speakerId
+      talkStartTime
+    }
+  }
+}
+
+`
