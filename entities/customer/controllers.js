@@ -110,24 +110,26 @@ export const create = async (req, res) => {
          }
 
          let _customer = {
-            firstName: get(customer, 'platform_customer.firstName') || '',
-            lastName: get(customer, 'platform_customer.lastName') || '',
-            phoneNumber: get(customer, 'platform_customer.phoneNumber') || ''
+            firstName:
+               get(customer, 'platform_customer.firstName') ||
+               firstName.trim() ||
+               '',
+            lastName:
+               get(customer, 'platform_customer.lastName') ||
+               lastName.trim() ||
+               '',
+            phoneNumber:
+               get(customer, 'platform_customer.phoneNumber') ||
+               phoneNumber.trim() ||
+               ''
          }
 
-         if ([firstName, lastName, phoneNumber].some(node => node)) {
-            await client.request(UPDATE_PLATFORM_CUSTOMER, {
-               keycloakId: _user.id,
-               _set: {
-                  ...(!_customer.firstName.trim() &&
-                     firstName.trim() && { firstName }),
-                  ...(!_customer.lastName.trim() &&
-                     lastName.trim() && { lastName }),
-                  ...(!_customer.phoneNumber.trim() &&
-                     phoneNumber.trim() && { phoneNumber })
-               }
-            })
-         }
+         await sleep(2000)
+
+         await client.request(UPDATE_PLATFORM_CUSTOMER, {
+            keycloakId: _user.id,
+            _set: _customer
+         })
          return res.status(200).json(response)
       }
       return res.status(200).json({
@@ -138,6 +140,10 @@ export const create = async (req, res) => {
    } catch (error) {
       return res.status(200).json({ success: false, error: error.message })
    }
+}
+
+function sleep(ms) {
+   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 const generatePassword = () => {
