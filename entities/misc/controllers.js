@@ -15,6 +15,7 @@ const CART = `
          isTest
          amount
          totalPrice
+         paymentStatus
          paymentMethodId
          stripeCustomerId
          statementDescriptor
@@ -27,6 +28,14 @@ export const initiatePayment = async (req, res) => {
       const payload = req.body.event.data.new
 
       const { cart = {} } = await client.request(CART, { id: payload.id })
+
+      if (cart.id && cart.paymentStatus === 'SUCCEEDED') {
+         return res.status(200).json({
+            success: true,
+            message:
+               'Payment attempt cancelled since cart has already been paid!'
+         })
+      }
 
       await client.request(UPDATE_CART, {
          id: cart.id,
