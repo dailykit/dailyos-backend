@@ -28,7 +28,9 @@ import {
    getDistance,
    authorizeRequest,
    handleImage,
+   GetFullOccurenceRouter
    CustomerRouter
+
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -79,6 +81,7 @@ app.use('/api/rewards', RewardsRouter)
 app.get('/api/kot-urls', getKOTUrls)
 app.use('/api/modifier', ModifierRouter)
 app.use('/api/parseur', ParseurRouter)
+app.use('/api/getfulloccurence', GetFullOccurenceRouter)
 app.use('/api/customer', CustomerRouter)
 
 app.use('/webhook/user', UserRouter)

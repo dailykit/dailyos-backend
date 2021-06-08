@@ -1,0 +1,145 @@
+import { client } from '../../lib/graphql'
+const {
+   FULL_OCCURENCE_REPORT,
+   CREATE_SUBSCRIPTION_OCCURENCE
+} = require('./graphql')
+export const fullOccurenceReport = async (req, res) => {
+   try {
+      let data = await client.request(FULL_OCCURENCE_REPORT)
+      let toBeOccurencesArray = []
+      console.log('Step1 start', new Date())
+      data.brandCustomers.forEach(each => {
+         const subscriptionSubscriptionOccurencesIds =
+            each.subscription.subscriptionOccurences.map(
+               subscriptionOccurence => subscriptionOccurence.id
+            )
+         const upcomingOccurencesIds = each.upcomingOccurences.map(
+            upcomingOccurence => upcomingOccurence.id
+         )
+         const toBeOccurences = subscriptionSubscriptionOccurencesIds.filter(
+            id => upcomingOccurencesIds.indexOf(id) == -1
+         )
+         if (toBeOccurences.length > 0) {
+            toBeOccurences.forEach(toBeOccurenceId => {
+               const newObject = {
+                  brand_customerId: each.id,
+                  subscriptionOccurenceId: toBeOccurenceId
+               }
+               toBeOccurencesArray = [...toBeOccurencesArray, newObject]
+            })
+         }
+      })
+      await fetch(process.env.DATAHUB, {
+         method: 'POST',
+         headers: {
+            'Content-Type': 'application/json'
+         },
+         body: JSON.stringify({
+            query: CREATE_SUBSCRIPTION_OCCURENCE,
+            variables: {
+               object: toBeOccurencesArray
+            }
+         })
+      })
+      const updatedData = await client.request(FULL_OCCURENCE_REPORT)
+
+      let finalArray = []
+      const newData = updatedData.brandCustomers
+
+      newData.forEach(each => {
+         const allOccurences = [
+            ...each.pastOccurences,
+            ...each.upcomingOccurences
+         ]
+         const sortAllOccurence = allOccurences.sort(
+            (a, b) =>
+               new Date(a.subscriptionOccurence.fulfillmentDate) -
+               new Date(b.subscriptionOccurence.fulfillmentDate)
+         )
+         sortAllOccurence.map((occurence, index) => {
+            let skipAtThisStage = 0
+            for (let i = 0; i < index; i++) {
+               if (sortAllOccurence[i]['isSkipped']) {
+                  skipAtThisStage += 1
+               }
+            }
+            occurence.brandCustomerId = each.id
+            occurence.skipAtThisStage = skipAtThisStage
+            occurence.allTimeRank = index + 1
+            occurence.percentageOfSkipping = parseFloat(
+               (skipAtThisStage / (index + 1)) * 100
+            ).toFixed(2)
+         })
+         console.log('this is sortallo', sortAllOccurence)
+         sortAllOccurence.forEach(eachOccurence => {
+            const flattenOccurence = {
+               brand_customerId: eachOccurence.brandCustomerId,
+               subscriptionOccurenceId: eachOccurence.subscriptionOccurence.id,
+               fulfillmentDate:
+                  eachOccurence.subscriptionOccurence.fulfillmentDate,
+               cutoffTimeStamp:
+                  eachOccurence.subscriptionOccurence.cutoffTimeStamp,
+               startTimeStamp:
+                  eachOccurence.subscriptionOccurence.startTimeStamp,
+               betweenPause: eachOccurence.betweenPause,
+               paymentStatus:
+                  eachOccurence.cart !== null
+                     ? eachOccurence.cart.paymentStatus
+                     : null,
+               cartStatus:
+                  eachOccurence.cart !== null
+                     ? eachOccurence.cart.status
+                     : null,
+               cartTotalPrice:
+                  eachOccurence.cart !== null
+                     ? eachOccurence.cart.totalPrice
+                     : null,
+               cartId:
+                  eachOccurence.cart !== null ? eachOccurence.cart.id : null,
+               paymentRetryAttempt:
+                  eachOccurence.cart !== null
+                     ? eachOccurence.cart.paymentRetryAttempt
+                     : null,
+               discount:
+                  eachOccurence.cart !== null
+                     ? eachOccurence.cart.discount
+                     : null,
+               hasCart: eachOccurence.validStatus.hasCart,
+               isItemCountValid: eachOccurence.validStatus.itemCountValid,
+               addedProductsCount: eachOccurence.validStatus.addedProductsCount,
+               pendingProductCount:
+                  eachOccurence.validStatus.pendingProductsCount,
+               itemCountValidComment:
+                  eachOccurence.validStatus.itemCountValidComment,
+               subscriptionItemCount:
+                  eachOccurence.subscriptionOccurence.view_subscription
+                     .subscriptionItemCount,
+               subscriptionServingSize:
+                  eachOccurence.subscriptionOccurence.view_subscription
+                     .subscriptionServingSize,
+               rrule: eachOccurence.subscriptionOccurence.view_subscription
+                  .rrule,
+               title: eachOccurence.subscriptionOccurence.view_subscription
+                  .title,
+               isPaused: eachOccurence.isPaused,
+               isSkipped: eachOccurence.isSkipped,
+               skippedAtThisStage: eachOccurence.skipAtThisStage,
+               allTimeRank: eachOccurence.allTimeRank,
+               percentageSkipped: eachOccurence.percentageOfSkipping
+            }
+            finalArray = [...finalArray, flattenOccurence]
+         })
+      })
+      console.log('Step2 end', new Date())
+      console.log('this is to be array', toBeOccurencesArray)
+      res.json({
+         data: finalArray
+      })
+   } catch (error) {
+      console.log(error)
+      return res.status(400).json({
+         message: 'error happened',
+         error: error
+      })
+   }
+}
