@@ -15,3 +15,5 @@ export * from './webhook'
 export * from './parseur'
 export * from './store'
 export * from './fullOccurence'
+export * from './customer'
+
