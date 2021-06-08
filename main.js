@@ -27,7 +27,8 @@ import {
    StoreRouter,
    getDistance,
    authorizeRequest,
-   handleImage
+   handleImage,
+   GetFullOccurenceRouter
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -36,7 +37,10 @@ import {
    printLabel,
    handleThirdPartyOrder
 } from './entities/events'
-import { handleCustomerSignup, handleSubscriptionCancelled } from './entities/emails'
+import {
+   handleCustomerSignup,
+   handleSubscriptionCancelled
+} from './entities/emails'
 const app = express()
 
 // Middlewares
@@ -75,6 +79,7 @@ app.use('/api/rewards', RewardsRouter)
 app.get('/api/kot-urls', getKOTUrls)
 app.use('/api/modifier', ModifierRouter)
 app.use('/api/parseur', ParseurRouter)
+app.use('/api/getfulloccurence', GetFullOccurenceRouter)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)
@@ -88,7 +93,10 @@ app.post('/event/print-kot', printKOT)
 app.post('/event/order/third-party', handleThirdPartyOrder)
 
 app.post('/webhook/emails/handle-customer-signup', handleCustomerSignup)
-app.post('/webhook/emails/handle-subscription-cancelled', handleSubscriptionCancelled)
+app.post(
+   '/webhook/emails/handle-subscription-cancelled',
+   handleSubscriptionCancelled
+)
 
 app.use('/api/store', StoreRouter)
 
