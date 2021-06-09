@@ -44,5 +44,18 @@ query WORKSPACE_RECORDING_METADATA($recordingId: String!, $userId: String!, $wsi
     }
   }
 }
-
+`
+export const WORKSPACE_CHATS = `
+query WORKSPACE_CHATS($userId: String!, $wsid: String!) {
+  ohyay_workspaceChats(userId: $userId, wsid: $wsid) {
+    chats {
+      channel
+      messages {
+        from
+        time
+        to
+      }
+    }
+  }
+}
 `

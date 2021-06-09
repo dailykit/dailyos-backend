@@ -1,10 +1,13 @@
 import axios from 'axios'
+import { uploadFile } from '../../utils'
+const fileType = require('file-type')
 import {
    EXPERIENCE_CLASS_INFO,
    SEND_EMAIL,
    CREATE_INVITE,
    WORKSPACE_RECORDINGS,
-   WORKSPACE_RECORDING_METADATA
+   WORKSPACE_RECORDING_METADATA,
+   WORKSPACE_CHATS
 } from './graphql'
 import { stayInClient } from '../../lib/graphql'
 import { getDuration, getDateIntArray } from '../../utils'
@@ -77,22 +80,60 @@ export const experienceBookingEmail = async (req, res) => {
 
 export const storeWorkspaceMetaDetails = async (req, res) => {
    try {
+      const { wsid } = req.body
+      const userId = req.header('ohyay_userId')
       // const { id, experienceBookingId, email, rsvp } = req.body.event.data.new
       const { ohyay_workspaceRecordings: recordings = [] } =
          await stayInClient.request(WORKSPACE_RECORDINGS, {
-            userId: 'u_AVUK0yYAfWbfd9dFtJhW7Aen2Fw2',
-            wsid: 'ws_d0GxIO_M'
+            userId,
+            wsid
          })
-      recordings.forEach(async recording => {
-         const { ohyay_workspaceRecordingMetaData: metaData = {} } =
-            await stayInClient.request(WORKSPACE_RECORDING_METADATA, {
-               userId: 'u_AVUK0yYAfWbfd9dFtJhW7Aen2Fw2',
-               wsid: 'ws_d0GxIO_M',
-               recordingId: recording.recordingId
-            })
-         console.log(metaData)
+      const { ohyay_workspaceChats: { chats = [] } = {} } =
+         await stayInClient.request(WORKSPACE_CHATS, {
+            userId,
+            wsid
+         })
+
+      const recordingMetaData = await Promise.all(
+         recordings.map(async recording => {
+            try {
+               const { ohyay_workspaceRecordingMetaData: metaData = {} } =
+                  await stayInClient.request(WORKSPACE_RECORDING_METADATA, {
+                     userId,
+                     wsid,
+                     recordingId: recording.recordingId
+                  })
+               return metaData
+            } catch (error) {
+               console.log(error)
+            }
+         })
+      )
+      const uploadedData = await Promise.all(
+         recordings.map(async recording => {
+            try {
+               const response = await axios.get(recording.downloadUrl, {
+                  responseType: 'arraybuffer'
+               })
+               const buffer = response.data
+               let type = await fileType.fromBuffer(buffer)
+               const timestamp = Date.now().toString()
+               let name = `videos/recording/recording-${timestamp}`
+               const data = await uploadFile(buffer, name, type)
+               return data
+            } catch (error) {
+               console.log(error)
+            }
+         })
+      )
+
+      return res.json({
+         success: true,
+         recordings,
+         chats,
+         recordingMetaData,
+         uploadedData
       })
-      console.log(recordings)
    } catch (error) {
       return res.status(400).json({
          success: false,
