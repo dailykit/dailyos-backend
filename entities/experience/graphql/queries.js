@@ -59,3 +59,13 @@ query WORKSPACE_CHATS($userId: String!, $wsid: String!) {
   }
 }
 `
+export const WORKSPACE_USERS = `
+query WORKSPACE_USERS($userId: String!, $wsid: String!) {
+  ohyay_workspaceUsers(userId: $userId, wsid: $wsid) {
+    email
+    tags
+    userId:uid
+  }
+}
+
+`

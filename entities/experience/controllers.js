@@ -1,13 +1,17 @@
 import axios from 'axios'
 import { uploadFile } from '../../utils'
+import moment from 'moment'
 const fileType = require('file-type')
 import {
    EXPERIENCE_CLASS_INFO,
    SEND_EMAIL,
    CREATE_INVITE,
+   CREATE_WORKSPACE_METADATA,
    WORKSPACE_RECORDINGS,
    WORKSPACE_RECORDING_METADATA,
-   WORKSPACE_CHATS
+   WORKSPACE_CHATS,
+   WORKSPACE_USERS,
+   UPDATE_EXPERIENCE_BOOKING_PARTICIPANTS
 } from './graphql'
 import { stayInClient } from '../../lib/graphql'
 import { getDuration, getDateIntArray } from '../../utils'
@@ -93,6 +97,31 @@ export const storeWorkspaceMetaDetails = async (req, res) => {
             userId,
             wsid
          })
+      const { ohyay_workspaceUsers: usersList = [] } =
+         await stayInClient.request(WORKSPACE_USERS, {
+            userId,
+            wsid
+         })
+      const updatedParticipants = await Promise.all(
+         usersList.map(async user => {
+            try {
+               const {
+                  updateExperienceBookingParticipants: { returning = [] } = {}
+               } = await stayInClient.request(
+                  UPDATE_EXPERIENCE_BOOKING_PARTICIPANTS,
+                  {
+                     email: user.email,
+                     _set: {
+                        ohyay_userId: user.userId
+                     }
+                  }
+               )
+               return returning[0]
+            } catch (error) {
+               console.log(error)
+            }
+         })
+      )
 
       const recordingMetaData = await Promise.all(
          recordings.map(async recording => {
@@ -109,6 +138,29 @@ export const storeWorkspaceMetaDetails = async (req, res) => {
             }
          })
       )
+
+      recordingMetaData.forEach(async rec => {
+         const addedMetaDataList = await Promise.all(
+            rec.emojis.map(async emoji => {
+               try {
+                  const { createWorkspaceMetaData = {} } =
+                     await stayInClient.request(CREATE_WORKSPACE_METADATA, {
+                        object: {
+                           ohyay_userId: emoji.userId,
+                           emoji: emoji.emoji,
+                           emojiCount: emoji.count,
+                           emojiTimestamp: moment(emoji.timestamp).toISOString()
+                        }
+                     })
+                  return createWorkspaceMetaData
+               } catch (error) {
+                  console.log(error)
+               }
+            })
+         )
+         console.log('createWorkspaceMetaData', addedMetaDataList)
+      })
+
       const uploadedData = await Promise.all(
          recordings.map(async recording => {
             try {
@@ -129,6 +181,7 @@ export const storeWorkspaceMetaDetails = async (req, res) => {
 
       return res.json({
          success: true,
+         usersList,
          recordings,
          chats,
          recordingMetaData,
