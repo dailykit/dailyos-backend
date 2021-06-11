@@ -160,38 +160,43 @@ export const actionFullOccurenceReport = async (req, res) => {
 
       let toBeOccurencesArray = []
       data.brandCustomers.forEach(each => {
-         const subscriptionSubscriptionOccurencesIds =
-            each.subscription.subscriptionOccurences.map(
-               subscriptionOccurence => subscriptionOccurence.id
+         if (each.subscription !== null && each.subscription.length > 0) {
+            const subscriptionSubscriptionOccurencesIds =
+               each.subscription.subscriptionOccurences.map(
+                  subscriptionOccurence => subscriptionOccurence.id
+               )
+            const upcomingOccurencesIds = each.upcomingOccurences.map(
+               upcomingOccurence => upcomingOccurence.id
             )
-         const upcomingOccurencesIds = each.upcomingOccurences.map(
-            upcomingOccurence => upcomingOccurence.id
-         )
-         const toBeOccurences = subscriptionSubscriptionOccurencesIds.filter(
-            id => upcomingOccurencesIds.indexOf(id) == -1
-         )
-         if (toBeOccurences.length > 0) {
-            toBeOccurences.forEach(toBeOccurenceId => {
-               const newObject = {
-                  brand_customerId: each.id,
-                  subscriptionOccurenceId: toBeOccurenceId
-               }
-               toBeOccurencesArray = [...toBeOccurencesArray, newObject]
-            })
+            const toBeOccurences = subscriptionSubscriptionOccurencesIds.filter(
+               id => upcomingOccurencesIds.indexOf(id) == -1
+            )
+            if (toBeOccurences.length > 0) {
+               toBeOccurences.forEach(toBeOccurenceId => {
+                  const newObject = {
+                     brand_customerId: each.id,
+                     subscriptionOccurenceId: toBeOccurenceId
+                  }
+                  toBeOccurencesArray = [...toBeOccurencesArray, newObject]
+               })
+            }
          }
       })
-      await fetch(process.env.DATA_HUB, {
-         method: 'POST',
-         headers: {
-            'Content-Type': 'application/json'
-         },
-         body: JSON.stringify({
-            query: CREATE_SUBSCRIPTION_OCCURENCE,
-            variables: {
-               object: toBeOccurencesArray
-            }
+      if (toBeOccurencesArray.length > 0) {
+         await fetch(process.env.DATA_HUB, {
+            method: 'POST',
+            headers: {
+               'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+               query: CREATE_SUBSCRIPTION_OCCURENCE,
+               variables: {
+                  object: toBeOccurencesArray
+               }
+            })
          })
-      })
+      }
+
       const updatedData = await client.request(HASURA_OPERATION, {
          brandCustomerFilter: brandCustomerFilter
       })
