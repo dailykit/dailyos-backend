@@ -1,28 +1,136 @@
 import axios from 'axios'
 import { createEvent } from 'ics'
 import { writeFileSync, readFileSync } from 'fs'
-import { client } from '../../lib/graphql'
+import { client, stayInClient } from '../../lib/graphql'
 const fetch = require('node-fetch')
 const AWS = require('aws-sdk')
 const nodemailer = require('nodemailer')
 
-import { GET_SES_DOMAIN, UPDATE_CART } from './graphql'
+import {
+   GET_SES_DOMAIN,
+   UPDATE_CART,
+   CART,
+   CART_PAYMENT,
+   CREATE_CART_PAYMENT,
+   UPDATE_CART_PAYMENT
+} from './graphql'
 
 AWS.config.update({ region: 'us-east-2' })
 
-const CART = `
-   query cart($id: Int!) {
-      cart(id: $id) {
-         id
-         isTest
-         amount
-         totalPrice
-         paymentMethodId
-         stripeCustomerId
-         statementDescriptor
+export const handleCartPayment = async (req, res) => {
+   try {
+      const payload = req.body.event.data.new
+      const { cart = {} } = await stayInClient.request(CART, { id: payload.id })
+      console.log('cart', cart)
+      if (cart.balancePayment > 0) {
+         const { cartPayments = [] } = await stayInClient.request(
+            CART_PAYMENT,
+            {
+               where: {
+                  cartId: {
+                     _eq: cart.id
+                  },
+                  paymentStatus: {
+                     _neq: 'SUCCEEDED'
+                  }
+               }
+            }
+         )
+         console.log('CartPayments', cartPayments)
+
+         if (cartPayments.length > 0) {
+            if (
+               cartPayments.length > 1 ||
+               cartPayments[0].amount !== cart.balancePayment
+            ) {
+               //cancell all invalid previous cart...
+               const cancelledCartPayments = await Promise.all(
+                  cartPayments.map(async cartPayment => {
+                     try {
+                        const { updateCartPayment = {} } =
+                           await stayInClient.request(UPDATE_CART_PAYMENT, {
+                              where: {
+                                 id: {
+                                    _eq: cartPayment.id
+                                 }
+                              },
+                              _set: {
+                                 paymentStatus: 'CANCELLED'
+                              }
+                           })
+                        return updateCartPayment
+                     } catch (error) {
+                        return {
+                           success: false,
+                           message: error.message
+                        }
+                     }
+                  })
+               )
+
+               console.log({ cancelledCartPayments })
+
+               const { createCartPayment = {} } = await stayInClient.request(
+                  CREATE_CART_PAYMENT,
+                  {
+                     object: {
+                        cartId: cart.id,
+                        paymentRetryAttempt: 1,
+                        amount: cart.balancePayment
+                     }
+                  }
+               )
+               res.status(200).json(createCartPayment)
+            } else {
+               const updatedCartPayment = await Promise.all(
+                  cartPayments.map(async cartPayment => {
+                     try {
+                        const { updatedCartPayment = {} } =
+                           await stayInClient.request(UPDATE_CART_PAYMENT, {
+                              where: {
+                                 id: {
+                                    _eq: cartPayment.id
+                                 }
+                              },
+                              _set: {
+                                 paymentRetryAttempt: 1
+                              }
+                           })
+                        return updatedCartPayment
+                     } catch (error) {
+                        return {
+                           success: false,
+                           message: error.message
+                        }
+                     }
+                  })
+               )
+               console.log({ updatedCartPayment })
+               res.status(200).json(updatedCartPayment)
+            }
+         } else {
+            const { createCartPayment = {} } = await stayInClient.request(
+               CREATE_CART_PAYMENT,
+               {
+                  object: {
+                     cartId: cart.id,
+                     paymentRetryAttempt: 1,
+                     amount: cart.balancePayment
+                  }
+               }
+            )
+            console.log({ createCartPayment })
+            res.status(200).json(createCartPayment)
+         }
       }
+   } catch (error) {
+      console.log(error)
+      res.status(400).json({
+         success: false,
+         message: error.message
+      })
    }
-`
+}
 
 export const initiatePayment = async (req, res) => {
    try {

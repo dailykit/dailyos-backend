@@ -34,7 +34,8 @@ import {
    authorizeRequest,
    handleImage,
    OhyayRouter,
-   ExperienceRouter
+   ExperienceRouter,
+   handleCartPayment
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -109,6 +110,7 @@ app.use('/api/modifier', ModifierRouter)
 app.use('/api/parseur', ParseurRouter)
 app.use('/api/ohyay', OhyayRouter)
 app.use('/api/experience', ExperienceRouter)
+app.post('/api/handleCartPayment', handleCartPayment)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)
