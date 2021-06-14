@@ -157,17 +157,17 @@ export const actionFullOccurenceReport = async (req, res) => {
             brandCustomerFilter: brandCustomerFilter
          }
       )
-
       let toBeOccurencesArray = []
       data.brandCustomers.forEach(each => {
-         if (each.subscription !== null && each.subscription.length > 0) {
+         if (each.subscription !== null) {
             const subscriptionSubscriptionOccurencesIds =
                each.subscription.subscriptionOccurences.map(
                   subscriptionOccurence => subscriptionOccurence.id
                )
-            const upcomingOccurencesIds = each.upcomingOccurences.map(
-               upcomingOccurence => upcomingOccurence.id
-            )
+            const upcomingOccurencesIds =
+               each.upcomingOccurences.map(upcomingOccurence => {
+                  return upcomingOccurence.subscriptionOccurence.id
+               }) || []
             const toBeOccurences = subscriptionSubscriptionOccurencesIds.filter(
                id => upcomingOccurencesIds.indexOf(id) == -1
             )
@@ -175,7 +175,8 @@ export const actionFullOccurenceReport = async (req, res) => {
                toBeOccurences.forEach(toBeOccurenceId => {
                   const newObject = {
                      brand_customerId: each.id,
-                     subscriptionOccurenceId: toBeOccurenceId
+                     subscriptionOccurenceId: toBeOccurenceId,
+                     keycloakId: each.keycloakId
                   }
                   toBeOccurencesArray = [...toBeOccurencesArray, newObject]
                })
@@ -183,17 +184,8 @@ export const actionFullOccurenceReport = async (req, res) => {
          }
       })
       if (toBeOccurencesArray.length > 0) {
-         await fetch(process.env.DATA_HUB, {
-            method: 'POST',
-            headers: {
-               'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-               query: CREATE_SUBSCRIPTION_OCCURENCE,
-               variables: {
-                  object: toBeOccurencesArray
-               }
-            })
+         await client.request(CREATE_SUBSCRIPTION_OCCURENCE, {
+            objects: toBeOccurencesArray
          })
       }
       const updatedData = await client.request(HASURA_OPERATION, {

@@ -71,6 +71,7 @@ export const HASURA_OPERATION_EXTRACT_TO_BE_OCCURECES = `
   query FullOccurenceReport($brandCustomerFilter: crm_brand_customer_bool_exp!) {
     brandCustomers(where: $brandCustomerFilter) {
       id
+      keycloakId
       subscription {
         subscriptionOccurences(where: {cutoffTimeStamp: {_gte: "now()"}, startTimeStamp: {_lte: "now()"}}) {
           fulfillmentDate
