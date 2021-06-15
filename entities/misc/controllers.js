@@ -113,7 +113,7 @@ export const handleCartPayment = async (req, res) => {
                      paymentRetryAttempt: 1,
                      amount: cart.balancePayment,
                      isTest: cart.isTest,
-                     paymentMethod: cart.paymentMethodId,
+                     paymentMethodId: cart.paymentMethodId,
                      stripeCustomerId: cart.stripeCustomerId
                   }
                }
