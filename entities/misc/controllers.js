@@ -71,7 +71,7 @@ export const handleCartPayment = async (req, res) => {
                      object: {
                         cartId: cart.id,
                         paymentRetryAttempt: 1,
-                        amount: cart.balancePayment,
+                        amount: 1,
                         isTest: cart.isTest,
                         paymentMethod: cart.paymentMethodId,
                         stripeCustomerId: cart.stripeCustomerId
@@ -111,7 +111,7 @@ export const handleCartPayment = async (req, res) => {
                   object: {
                      cartId: cart.id,
                      paymentRetryAttempt: 1,
-                     amount: cart.balancePayment,
+                     amount: 1,
                      isTest: cart.isTest,
                      paymentMethodId: cart.paymentMethodId,
                      stripeCustomerId: cart.stripeCustomerId
@@ -174,14 +174,15 @@ export const initiatePayment = async (req, res) => {
             statementDescriptor: payload.statementDescriptor || '',
             cart: {
                id: payload.id,
-               amount: payload.amount
+               amount: payload.amount,
+               type: 'cartPayment'
             },
             customer: {
                paymentMethod: payload.paymentMethodId,
                stripeCustomerId: payload.stripeCustomerId
             }
          }
-         await fetch(`${process.env.PAYMENTS_API}/api/initiate-payment`, {
+         await fetch(`https://89b7c16da1d3.ngrok.io/api/initiate-payment`, {
             method: 'POST',
             headers: {
                'Content-Type': 'application/json'
