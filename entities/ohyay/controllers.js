@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { stayInClient } from '../../lib/graphql'
+import { client } from '../../lib/graphql'
 import {
    EXPERIENCE_INFO,
    CLONE_WORKSPACE,
@@ -13,25 +13,29 @@ export const cloneWorkspace = async (req, res) => {
       const { id, experienceId } = req.body.event.data.new
       const ohyay_userId = req.header('ohyay_userId')
       const ohyay_region = req.header('ohyay_region')
-      const { experiences_experience_by_pk: experience } =
-         await stayInClient.request(EXPERIENCE_INFO, {
+      const { experiences_experience_by_pk: experience } = await client.request(
+         EXPERIENCE_INFO,
+         {
             id: experienceId
-         })
+         }
+      )
 
       if (experience && experience.ohyay_wsid) {
-         const { ohyay_cloneWorkspace: cloneWorkspace } =
-            await stayInClient.request(CLONE_WORKSPACE, {
+         const { ohyay_cloneWorkspace: cloneWorkspace } = await client.request(
+            CLONE_WORKSPACE,
+            {
                cloneWorkspaceInp: {
                   userId: ohyay_userId,
                   wsid: experience.ohyay_wsid,
                   region: ohyay_region,
                   title: `experienceClass-${id}`
                }
-            })
+            }
+         )
          if (cloneWorkspace && cloneWorkspace.wsid) {
             const {
                update_experiences_experienceClass_by_pk: updatedExperience
-            } = await stayInClient.request(UPDATE_EXPERIENCE_CLASS, {
+            } = await client.request(UPDATE_EXPERIENCE_CLASS, {
                id,
                ohyay_wsid: cloneWorkspace.wsid
             })
@@ -57,11 +61,11 @@ export const createInvite = async (req, res) => {
       console.log('req', req.body.event.data.new)
       if (parentCartId === null) {
          const { experiences_experienceClass_by_pk: experienceClass } =
-            await stayInClient.request(EXPERIENCE_CLASS_INFO, {
+            await client.request(EXPERIENCE_CLASS_INFO, {
                id: experienceClassId
             })
          if (experienceClass) {
-            const { ohyay_createInvites } = await stayInClient.request(
+            const { ohyay_createInvites } = await client.request(
                CREATE_INVITE,
                {
                   userId: ohyay_userId,

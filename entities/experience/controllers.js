@@ -13,7 +13,7 @@ import {
    WORKSPACE_USERS,
    UPDATE_EXPERIENCE_BOOKING_PARTICIPANTS
 } from './graphql'
-import { stayInClient } from '../../lib/graphql'
+import { client } from '../../lib/graphql'
 import { getDuration, getDateIntArray } from '../../utils'
 
 export const experienceBookingEmail = async (req, res) => {
@@ -23,7 +23,7 @@ export const experienceBookingEmail = async (req, res) => {
       const ohyay_userId = req.header('ohyay_userId')
       if (email && rsvp) {
          const { experiences_experienceClass: experienceClass = [] } =
-            await stayInClient.request(EXPERIENCE_CLASS_INFO, {
+            await client.request(EXPERIENCE_CLASS_INFO, {
                where: {
                   experienceBookings: {
                      id: {
@@ -33,17 +33,14 @@ export const experienceBookingEmail = async (req, res) => {
                }
             })
          console.log('experience:', experienceClass)
-         const { ohyay_createInvites } = await stayInClient.request(
-            CREATE_INVITE,
-            {
-               userId: ohyay_userId,
-               wsid: experienceClass[0].ohyay_wsid,
-               invites: [{}]
-            }
-         )
+         const { ohyay_createInvites } = await client.request(CREATE_INVITE, {
+            userId: ohyay_userId,
+            wsid: experienceClass[0].ohyay_wsid,
+            invites: [{}]
+         })
          console.log('invites:', ohyay_createInvites)
          if (ohyay_createInvites.inviteUrl.length > 0) {
-            const { sendEmail } = await stayInClient.request(SEND_EMAIL, {
+            const { sendEmail } = await client.request(SEND_EMAIL, {
                emailInput: {
                   subject: `${experienceClass[0].experience.title} Booking URL`,
                   to: email,
@@ -88,26 +85,28 @@ export const storeWorkspaceMetaDetails = async (req, res) => {
       const userId = req.header('ohyay_userId')
       // const { id, experienceBookingId, email, rsvp } = req.body.event.data.new
       const { ohyay_workspaceRecordings: recordings = [] } =
-         await stayInClient.request(WORKSPACE_RECORDINGS, {
+         await client.request(WORKSPACE_RECORDINGS, {
             userId,
             wsid
          })
       const { ohyay_workspaceChats: { chats = [] } = {} } =
-         await stayInClient.request(WORKSPACE_CHATS, {
+         await client.request(WORKSPACE_CHATS, {
             userId,
             wsid
          })
-      const { ohyay_workspaceUsers: usersList = [] } =
-         await stayInClient.request(WORKSPACE_USERS, {
+      const { ohyay_workspaceUsers: usersList = [] } = await client.request(
+         WORKSPACE_USERS,
+         {
             userId,
             wsid
-         })
+         }
+      )
       const updatedParticipants = await Promise.all(
          usersList.map(async user => {
             try {
                const {
                   updateExperienceBookingParticipants: { returning = [] } = {}
-               } = await stayInClient.request(
+               } = await client.request(
                   UPDATE_EXPERIENCE_BOOKING_PARTICIPANTS,
                   {
                      email: user.email,
@@ -127,7 +126,7 @@ export const storeWorkspaceMetaDetails = async (req, res) => {
          recordings.map(async recording => {
             try {
                const { ohyay_workspaceRecordingMetaData: metaData = {} } =
-                  await stayInClient.request(WORKSPACE_RECORDING_METADATA, {
+                  await client.request(WORKSPACE_RECORDING_METADATA, {
                      userId,
                      wsid,
                      recordingId: recording.recordingId
@@ -143,15 +142,17 @@ export const storeWorkspaceMetaDetails = async (req, res) => {
          const addedMetaDataList = await Promise.all(
             rec.emojis.map(async emoji => {
                try {
-                  const { createWorkspaceMetaData = {} } =
-                     await stayInClient.request(CREATE_WORKSPACE_METADATA, {
+                  const { createWorkspaceMetaData = {} } = await client.request(
+                     CREATE_WORKSPACE_METADATA,
+                     {
                         object: {
                            ohyay_userId: emoji.userId,
                            emoji: emoji.emoji,
                            emojiCount: emoji.count,
                            emojiTimestamp: moment(emoji.timestamp).toISOString()
                         }
-                     })
+                     }
+                  )
                   return createWorkspaceMetaData
                } catch (error) {
                   console.log(error)

@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { createEvent } from 'ics'
 import { writeFileSync, readFileSync } from 'fs'
-import { client, stayInClient } from '../../lib/graphql'
+import { client } from '../../lib/graphql'
 const fetch = require('node-fetch')
 const AWS = require('aws-sdk')
 const nodemailer = require('nodemailer')
@@ -20,22 +20,19 @@ AWS.config.update({ region: 'us-east-2' })
 export const handleCartPayment = async (req, res) => {
    try {
       const payload = req.body.event.data.new
-      const { cart = {} } = await stayInClient.request(CART, { id: payload.id })
+      const { cart = {} } = await client.request(CART, { id: payload.id })
       console.log('cart', cart)
       if (cart.balancePayment > 0) {
-         const { cartPayments = [] } = await stayInClient.request(
-            CART_PAYMENT,
-            {
-               where: {
-                  cartId: {
-                     _eq: cart.id
-                  },
-                  paymentStatus: {
-                     _neq: 'SUCCEEDED'
-                  }
+         const { cartPayments = [] } = await client.request(CART_PAYMENT, {
+            where: {
+               cartId: {
+                  _eq: cart.id
+               },
+               paymentStatus: {
+                  _neq: 'SUCCEEDED'
                }
             }
-         )
+         })
          console.log('CartPayments', cartPayments)
 
          if (cartPayments.length > 0) {
@@ -47,13 +44,15 @@ export const handleCartPayment = async (req, res) => {
                const cancelledCartPayments = await Promise.all(
                   cartPayments.map(async cartPayment => {
                      try {
-                        const { updateCartPayment = {} } =
-                           await stayInClient.request(UPDATE_CART_PAYMENT, {
+                        const { updateCartPayment = {} } = await client.request(
+                           UPDATE_CART_PAYMENT,
+                           {
                               id: cartPayment.id,
                               _inc: {
                                  cancelAttempt: 1
                               }
-                           })
+                           }
+                        )
                         return updateCartPayment
                      } catch (error) {
                         return {
@@ -66,7 +65,7 @@ export const handleCartPayment = async (req, res) => {
 
                console.log({ cancelledCartPayments })
 
-               const { createCartPayment = {} } = await stayInClient.request(
+               const { createCartPayment = {} } = await client.request(
                   CREATE_CART_PAYMENT,
                   {
                      object: {
@@ -84,13 +83,15 @@ export const handleCartPayment = async (req, res) => {
                const updatedCartPayment = await Promise.all(
                   cartPayments.map(async cartPayment => {
                      try {
-                        const { updateCartPayment = {} } =
-                           await stayInClient.request(UPDATE_CART_PAYMENT, {
+                        const { updateCartPayment = {} } = await client.request(
+                           UPDATE_CART_PAYMENT,
+                           {
                               id: cartPayment.id,
                               _inc: {
                                  paymentRetryAttempt: 1
                               }
-                           })
+                           }
+                        )
                         return updateCartPayment
                      } catch (error) {
                         return {
@@ -104,7 +105,7 @@ export const handleCartPayment = async (req, res) => {
                res.status(200).json(updatedCartPayment)
             }
          } else {
-            const { createCartPayment = {} } = await stayInClient.request(
+            const { createCartPayment = {} } = await client.request(
                CREATE_CART_PAYMENT,
                {
                   object: {
@@ -134,17 +135,17 @@ export const initiatePayment = async (req, res) => {
    try {
       const payload = req.body.event.data.new
 
-      const { cart = {} } = await stayInClient.request(CART, {
+      const { cart = {} } = await client.request(CART, {
          id: payload.cartId
       })
 
-      await stayInClient.request(UPDATE_CART, {
+      await client.request(UPDATE_CART, {
          id: cart.id,
          set: { amount: cart.balancePayment }
       })
 
       if (payload.isTest || payload.amount === 0) {
-         await stayInClient.request(UPDATE_CART_PAYMENT, {
+         await client.request(UPDATE_CART_PAYMENT, {
             id: payload.id,
             _set: {
                paymentStatus: 'SUCCEEDED',
