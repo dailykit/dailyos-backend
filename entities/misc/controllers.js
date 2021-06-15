@@ -49,13 +49,9 @@ export const handleCartPayment = async (req, res) => {
                      try {
                         const { updateCartPayment = {} } =
                            await stayInClient.request(UPDATE_CART_PAYMENT, {
-                              where: {
-                                 id: {
-                                    _eq: cartPayment.id
-                                 }
-                              },
-                              _set: {
-                                 paymentStatus: 'CANCELLED'
+                              id: cartPayment.id,
+                              _inc: {
+                                 cancelAttempt: 1
                               }
                            })
                         return updateCartPayment
@@ -76,7 +72,10 @@ export const handleCartPayment = async (req, res) => {
                      object: {
                         cartId: cart.id,
                         paymentRetryAttempt: 1,
-                        amount: cart.balancePayment
+                        amount: cart.balancePayment,
+                        isTest: cart.isTest,
+                        paymentMethod: cart.paymentMethodId,
+                        stripeCustomerId: cart.stripeCustomerId
                      }
                   }
                )
@@ -85,18 +84,14 @@ export const handleCartPayment = async (req, res) => {
                const updatedCartPayment = await Promise.all(
                   cartPayments.map(async cartPayment => {
                      try {
-                        const { updatedCartPayment = {} } =
+                        const { updateCartPayment = {} } =
                            await stayInClient.request(UPDATE_CART_PAYMENT, {
-                              where: {
-                                 id: {
-                                    _eq: cartPayment.id
-                                 }
-                              },
-                              _set: {
+                              id: cartPayment.id,
+                              _inc: {
                                  paymentRetryAttempt: 1
                               }
                            })
-                        return updatedCartPayment
+                        return updateCartPayment
                      } catch (error) {
                         return {
                            success: false,
@@ -115,7 +110,10 @@ export const handleCartPayment = async (req, res) => {
                   object: {
                      cartId: cart.id,
                      paymentRetryAttempt: 1,
-                     amount: cart.balancePayment
+                     amount: cart.balancePayment,
+                     isTest: cart.isTest,
+                     paymentMethod: cart.paymentMethodId,
+                     stripeCustomerId: cart.stripeCustomerId
                   }
                }
             )
@@ -136,25 +134,27 @@ export const initiatePayment = async (req, res) => {
    try {
       const payload = req.body.event.data.new
 
-      const { cart = {} } = await client.request(CART, { id: payload.id })
-
-      await client.request(UPDATE_CART, {
-         id: cart.id,
-         set: { amount: cart.totalPrice }
+      const { cart = {} } = await stayInClient.request(CART, {
+         id: payload.cartId
       })
 
-      if (cart.isTest || cart.totalPrice === 0) {
-         await client.request(UPDATE_CART, {
-            id: cart.id,
-            set: {
+      await stayInClient.request(UPDATE_CART, {
+         id: cart.id,
+         set: { amount: cart.balancePayment }
+      })
+
+      if (payload.isTest || payload.amount === 0) {
+         await stayInClient.request(UPDATE_CART_PAYMENT, {
+            id: payload.id,
+            _set: {
                paymentStatus: 'SUCCEEDED',
                isTest: true,
                transactionId: 'NA',
                transactionRemark: {
                   id: 'NA',
-                  amount: cart.totalPrice * 100,
+                  amount: cart.balancePayment,
                   message: 'payment bypassed',
-                  reason: cart.isTest ? 'test mode' : 'amount 0 - free'
+                  reason: payload.isTest ? 'test mode' : 'amount 0 - free'
                }
             }
          })
@@ -163,17 +163,17 @@ export const initiatePayment = async (req, res) => {
             message: 'Payment succeeded!'
          })
       }
-      if (cart.totalPrice > 0) {
+      if (payload.amount > 0) {
          const body = {
             organizationId: process.env.ORGANIZATION_ID,
-            statementDescriptor: cart.statementDescriptor || '',
+            statementDescriptor: payload.statementDescriptor || '',
             cart: {
-               id: cart.id,
-               amount: cart.totalPrice
+               id: payload.id,
+               amount: payload.amount
             },
             customer: {
-               paymentMethod: cart.paymentMethodId,
-               stripeCustomerId: cart.stripeCustomerId
+               paymentMethod: payload.paymentMethodId,
+               stripeCustomerId: payload.stripeCustomerId
             }
          }
          await fetch(`${process.env.PAYMENTS_API}/api/initiate-payment`, {
