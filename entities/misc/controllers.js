@@ -135,13 +135,17 @@ export const initiatePayment = async (req, res) => {
    try {
       const payload = req.body.event.data.new
 
-      const { cart = {} } = await client.request(CART, {
-         id: payload.cartId
-      })
+      if (payload.id && payload.paymentStatus === 'SUCCEEDED') {
+         return res.status(200).json({
+            success: true,
+            message:
+               'Payment attempt cancelled since cart has already been paid!'
+         })
+      }
 
       await client.request(UPDATE_CART, {
-         id: cart.id,
-         set: { amount: cart.balancePayment }
+         id: payload.cartId,
+         set: { amount: payload.amount }
       })
 
       if (payload.isTest || payload.amount === 0) {
@@ -153,7 +157,7 @@ export const initiatePayment = async (req, res) => {
                transactionId: 'NA',
                transactionRemark: {
                   id: 'NA',
-                  amount: cart.balancePayment,
+                  amount: payload.balancePayment,
                   message: 'payment bypassed',
                   reason: payload.isTest ? 'test mode' : 'amount 0 - free'
                }
