@@ -73,7 +73,7 @@ export const handleCartPayment = async (req, res) => {
                         paymentRetryAttempt: 1,
                         amount: 1,
                         isTest: cart.isTest,
-                        paymentMethod: cart.paymentMethodId,
+                        paymentMethodId: cart.paymentMethodId,
                         stripeCustomerId: cart.stripeCustomerId
                      }
                   }
@@ -182,7 +182,7 @@ export const initiatePayment = async (req, res) => {
                stripeCustomerId: payload.stripeCustomerId
             }
          }
-         await fetch(`https://89b7c16da1d3.ngrok.io/api/initiate-payment`, {
+         await fetch(`https://dailykey.ngrok.io/api/initiate-payment`, {
             method: 'POST',
             headers: {
                'Content-Type': 'application/json'
