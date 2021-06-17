@@ -15,8 +15,17 @@ query EXPERIENCE_CLASS_INFO($where: experiences_experienceClass_bool_exp!) {
      }
    }
  }
-
 `
+export const CUSTOMER = `
+query CUSTOMER($experienceBookingId: Int!) {
+  customers(where: {experienceBookings: {id: {_eq: $experienceBookingId}}}) {
+    email
+    id
+    keycloakId
+  }
+}
+`
+
 export const WORKSPACE_RECORDINGS = `
 query WORKSPACE_RECORDINGS($userId: String!, $wsid: String!) {
   ohyay_workspaceRecordings(userId: $userId, wsid: $wsid) {

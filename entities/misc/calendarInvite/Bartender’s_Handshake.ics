@@ -5,9 +5,9 @@ PRODID:adamgibbons/ics
 METHOD:PUBLISH
 X-PUBLISHED-TTL:PT1H
 BEGIN:VEVENT
-UID:3da38144-b001-4ec2-bac3-f45c9399418b
+UID:84c2f550-9a43-4aa3-b37b-0011ed72b367
 SUMMARY:Bartender’s Handshake
-DTSTAMP:20210611T074000Z
+DTSTAMP:20210617T081300Z
 DTSTART:20210609T050006Z
 DESCRIPTION:<p>I get asked many questions about my job - including what bar
 	tenders  drink when they go out. We keep it simple. Give us a good beer an
@@ -16,10 +16,10 @@ DESCRIPTION:<p>I get asked many questions about my job - including what bar
 	d the Bartender's Handshake.But the two couldn't be more different.  In th
 	is experience\, we'll start by cheering with your favorite beer and  shot 
 	before making the cocktail version\, a delicious daiquiri on ice.</p>
-URL:https://ohyay.co/viewer.html?wsid=ws_DkKHtfMc&invitecode=94072907-47fe-
-	4489-ace0-969913e9e06d
+URL:https://ohyay.co/viewer.html?wsid=ws_DkKHtfMc&invitecode=901b71fa-32f7-
+	4ced-9e5e-8de65463480a
 STATUS:CONFIRMED
-ORGANIZER;CN=Admin:mailto:zackryan18@yopmail.com
+ORGANIZER;CN=Admin:mailto:teststayin@yopmail.com
 X-MICROSOFT-CDO-BUSYSTATUS:BUSY
 DURATION:PT45M
 END:VEVENT

@@ -11,7 +11,8 @@ import {
    WORKSPACE_RECORDING_METADATA,
    WORKSPACE_CHATS,
    WORKSPACE_USERS,
-   UPDATE_EXPERIENCE_BOOKING_PARTICIPANTS
+   UPDATE_EXPERIENCE_BOOKING_PARTICIPANTS,
+   CUSTOMER
 } from './graphql'
 import { client } from '../../lib/graphql'
 import { getDuration, getDateIntArray } from '../../utils'
@@ -21,6 +22,7 @@ export const experienceBookingEmail = async (req, res) => {
       const { id, experienceBookingId, email, rsvp } = req.body.event.data.new
       console.log('body', req.body.event.data.new)
       const ohyay_userId = req.header('ohyay_userId')
+      const noReplyEmail = req.header('no_reply_email')
       if (email && rsvp) {
          const { experiences_experienceClass: experienceClass = [] } =
             await client.request(EXPERIENCE_CLASS_INFO, {
@@ -32,6 +34,11 @@ export const experienceBookingEmail = async (req, res) => {
                   }
                }
             })
+         const { customers = [] } = await client.request(CUSTOMER, {
+            experienceBookingId
+         })
+         const [organizer] = customers
+         console.log('Organizer', organizer, customers)
          console.log('experience:', experienceClass)
          const { ohyay_createInvites } = await client.request(CREATE_INVITE, {
             userId: ohyay_userId,
@@ -44,7 +51,7 @@ export const experienceBookingEmail = async (req, res) => {
                emailInput: {
                   subject: `${experienceClass[0].experience.title} Booking URL`,
                   to: email,
-                  from: 'test@dailykit.org',
+                  from: noReplyEmail,
                   html: `<h2>Hey Your Booking URL for the ${experienceClass[0].experience.title} experience is given below </h2><br><p>Experince Class joining url:${ohyay_createInvites.inviteUrl[0]}</p>`,
                   attachments: []
                },
@@ -58,7 +65,7 @@ export const experienceBookingEmail = async (req, res) => {
                   busyStatus: 'BUSY',
                   organizer: {
                      name: 'Admin',
-                     email
+                     email: organizer.email
                   }
                }
             })
