@@ -71,7 +71,7 @@ export const handleCartPayment = async (req, res) => {
                      object: {
                         cartId: cart.id,
                         paymentRetryAttempt: 1,
-                        amount: 1,
+                        amount: cart.balancePayment,
                         isTest: cart.isTest,
                         paymentMethodId: cart.paymentMethodId,
                         stripeCustomerId: cart.stripeCustomerId
@@ -111,7 +111,7 @@ export const handleCartPayment = async (req, res) => {
                   object: {
                      cartId: cart.id,
                      paymentRetryAttempt: 1,
-                     amount: 1,
+                     amount: cart.balancePayment,
                      isTest: cart.isTest,
                      paymentMethodId: cart.paymentMethodId,
                      stripeCustomerId: cart.stripeCustomerId
@@ -157,7 +157,7 @@ export const initiatePayment = async (req, res) => {
                transactionId: 'NA',
                transactionRemark: {
                   id: 'NA',
-                  amount: payload.balancePayment,
+                  amount: payload.amount,
                   message: 'payment bypassed',
                   reason: payload.isTest ? 'test mode' : 'amount 0 - free'
                }
@@ -182,7 +182,7 @@ export const initiatePayment = async (req, res) => {
                stripeCustomerId: payload.stripeCustomerId
             }
          }
-         await fetch(`https://dailykey.ngrok.io/api/initiate-payment`, {
+         await fetch(`${process.env.PAYMENTS_API}/api/initiate-payment`, {
             method: 'POST',
             headers: {
                'Content-Type': 'application/json'
