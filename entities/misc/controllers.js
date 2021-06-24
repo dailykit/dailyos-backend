@@ -134,7 +134,7 @@ export const handleCartPayment = async (req, res) => {
 export const initiatePayment = async (req, res) => {
    try {
       const payload = req.body.event.data.new
-
+      const { cart = {} } = await client.request(CART, { id: payload.cartId })
       if (payload.id && payload.paymentStatus === 'SUCCEEDED') {
          return res.status(200).json({
             success: true,
@@ -145,7 +145,7 @@ export const initiatePayment = async (req, res) => {
 
       await client.request(UPDATE_CART, {
          id: payload.cartId,
-         set: { amount: payload.amount }
+         set: { amount: cart.amount + payload.amount }
       })
 
       if (payload.isTest || payload.amount === 0) {
