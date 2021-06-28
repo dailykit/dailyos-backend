@@ -1,5 +1,8 @@
 require('dotenv').config()
 import cors from 'cors'
+import request from 'request'
+import fs from 'fs'
+import path from 'path'
 import { StatusCodes } from 'http-status-codes'
 import express from 'express'
 import morgan from 'morgan'
@@ -103,6 +106,59 @@ app.post(
 app.use('/api/store', StoreRouter)
 
 app.get('/images/:url(*)', handleImage)
+
+const RESTRICTED_FILES = ['env-config.js', 'favicon', '.next', '_next']
+
+app.use('/:path(*)', async (req, res, next) => {
+   //     Subscription shop: Browser <-> Express <-> NextJS
+
+   const { path: routePath } = req.params
+   const { preview } = req.query
+   const { host } = req.headers
+   const brand = host.replace(':', '')
+
+   const isAllowed = !RESTRICTED_FILES.some(file => routePath.includes(file))
+   if (isAllowed) {
+      console.log(routePath)
+      const filePath =
+         routePath === ''
+            ? path.join(
+                 __dirname,
+                 `./subscription-shop/.next/server/pages/${brand}.html`
+              )
+            : path.join(
+                 __dirname,
+                 `./subscription-shop/.next/server/pages/${brand}/${routePath}.html`
+              )
+      if (fs.existsSync(filePath) && preview !== 'true') {
+         res.sendFile(filePath)
+      } else {
+         const url = RESTRICTED_FILES.some(file => routePath.includes(file))
+            ? 'http://localhost:3000/' + routePath
+            : 'http://localhost:3000/' + brand + '/' + routePath
+         request(url, function (error, _, body) {
+            if (error) {
+               console.log(error)
+            } else {
+               res.send(body)
+            }
+         })
+      }
+   } else {
+      if (routePath.includes('env-config.js')) {
+         res.sendFile(
+            path.join(__dirname, 'subscription-shop/public/env-config.js')
+         )
+      } else {
+         res.sendFile(
+            path.join(
+               __dirname,
+               routePath.replace('_next', 'subscription-shop/.next')
+            )
+         )
+      }
+   }
+})
 
 app.use((_req, _res, next) => {
    const error = new Error('Not found')
