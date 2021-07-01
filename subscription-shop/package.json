@@ -3,9 +3,9 @@
    "version": "0.1.0",
    "private": true,
    "scripts": {
-      "dev": "next dev",
+      "dev": "next dev -p 8000",
       "build": "next build",
-      "start": "concurrently \"next start\" \"node main\"",
+      "start": "next start",
       "export": "next export",
       "init:config": "chmod +x \"./script.sh\" && \"./script.sh\" && cp env-config.js \"./public\""
    },

@@ -1,0 +1,10 @@
+.wrapper-class {
+   display: flex !important;
+   flex-direction: column;
+}
+.editor-class {
+}
+.toolbar-class {
+   order: 2;
+   box-shadow: -2px 4px 16px rgba(0, 0, 0, 0.2);
+}
