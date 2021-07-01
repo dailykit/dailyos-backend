@@ -6,7 +6,7 @@ import { useToasts } from 'react-toast-notifications'
 import { useConfig } from '../../lib'
 import { useUser } from '../../context'
 import { Loader } from '../../components'
-import { isClient, formatCurrency } from '../../utils'
+import { isClient, formatCurrency, getRoute } from '../../utils'
 
 export const Plan = ({ cameFrom = '', plan, handlePlanClick }) => {
    const router = useRouter()
@@ -49,14 +49,17 @@ export const Plan = ({ cameFrom = '', plan, handlePlanClick }) => {
          appearance: 'success',
       })
       router.push(
-         `/get-started/${
-            cameFrom === 'our-plans' ? 'register' : 'select-delivery'
-         }`
+         getRoute(
+            `/get-started/${
+               cameFrom === 'our-plans' ? 'register' : 'select-delivery'
+            }`
+         )
       )
    }
 
    const config = configOf('primary-labels')
    const colorConfig = configOf('theme-color', 'Visual')
+   const priceDisplay = configOf('priceDisplay', 'Visual')
    const yieldLabel = {
       singular: config?.yieldLabel?.singular || 'serving',
       plural: config?.yieldLabel?.singular || 'servings',
@@ -68,114 +71,194 @@ export const Plan = ({ cameFrom = '', plan, handlePlanClick }) => {
    const theme = configOf('theme-color', 'Visual')
    if (!defaultServing) return <Loader inline />
    return (
-      <li css={tw`border rounded-lg p-8`}>
-         <Title theme={theme}>{plan.title}</Title>
-         <section css={tw`h-12 mb-4 flex items-center justify-between`}>
-            {plan.servings.length === 1 ? (
-               <span
-                  css={tw`uppercase tracking-wider text-gray-600 text-sm font-medium`}
-               >
-                  {plan.servings[0].size}{' '}
-                  {plan.servings[0].size > 1
-                     ? yieldLabel.singular
-                     : yieldLabel.plural}
-               </span>
-            ) : (
-               <>
+      <li css={[tw`border rounded-lg`, `height: fit-content`]}>
+         {plan.metaDetails?.coverImage && (
+            <CoverImage>
+               <img src={plan.metaDetails?.coverImage} tw="object-cover" />
+            </CoverImage>
+         )}
+         <div tw="px-4 pb-4 md:px-8 md:pb-8">
+            <Title theme={theme}>
+               {plan.title}
+               {plan.metaDetails?.icon && (
+                  <img
+                     tw="rounded-full float-right w-8 h-8 object-cover"
+                     src={plan.metaDetails?.icon}
+                  />
+               )}
+            </Title>
+            {plan?.metaDetails?.description && (
+               <p tw="pb-2 mb-4 border-b-2">{plan?.metaDetails?.description}</p>
+            )}
+            <section css={tw`w-full mb-4 flex items-center justify-between`}>
+               {plan.servings.length === 1 ? (
                   <span
                      css={tw`uppercase tracking-wider text-gray-600 text-sm font-medium`}
                   >
-                     No. of {yieldLabel.plural}
+                     {plan.servings[0].size}{' '}
+                     {plan.servings[0].size > 1
+                        ? yieldLabel.singular
+                        : yieldLabel.plural}
                   </span>
-                  <CountList>
-                     {plan.servings.map(serving => (
-                        <CountListItem
-                           key={serving.id}
-                           onClick={() => setDefaultServing(serving)}
-                           className={`${
-                              serving.id === defaultServing?.id ? 'active' : ''
-                           }`}
-                        >
-                           {serving.size}
-                        </CountListItem>
-                     ))}
-                  </CountList>
-               </>
-            )}
-         </section>
-         <section css={tw`h-12 mb-4 flex items-center justify-between mt-3`}>
-            {defaultServing.itemCounts.length === 1 ? (
-               <span
-                  css={tw`uppercase tracking-wider text-gray-600 text-sm font-medium`}
-               >
-                  {defaultServing.itemCounts[0].count}{' '}
-                  {defaultServing.itemCounts[0].count === 1
-                     ? itemCountLabel.singular
-                     : itemCountLabel.plural}{' '}
-                  per week
-               </span>
-            ) : (
-               <>
+               ) : (
+                  <div tw="w-full flex flex-col justify-evenly">
+                     <span
+                        css={tw`uppercase tracking-wider text-gray-600 text-sm font-medium mb-2`}
+                     >
+                        No. of {yieldLabel.plural}
+                     </span>
+                     <CountList>
+                        {plan.servings.map(serving => (
+                           <CountListItem
+                              key={serving.id}
+                              onClick={() => setDefaultServing(serving)}
+                              className={`${
+                                 serving.id === defaultServing?.id
+                                    ? 'active'
+                                    : ''
+                              }`}
+                           >
+                              <div tw="text-sm w-full flex justify-evenly items-center">
+                                 <div>{serving.size}</div>
+                                 {serving?.metaDetails?.label && (
+                                    <div>{serving?.metaDetails?.label}</div>
+                                 )}
+                              </div>
+                           </CountListItem>
+                        ))}
+                     </CountList>
+                  </div>
+               )}
+            </section>
+            <section
+               css={tw`w-full mb-4 flex items-center justify-between mt-3`}
+            >
+               {defaultServing.itemCounts.length === 1 ? (
                   <span
-                     css={tw`uppercase tracking-wider text-gray-600 text-sm font-medium`}
+                     css={tw`uppercase tracking-wider text-gray-600 text-sm font-medium my-2`}
                   >
-                     {itemCountLabel.singular} per week
+                     {defaultServing.itemCounts[0].count}{' '}
+                     {defaultServing.itemCounts[0].count === 1
+                        ? itemCountLabel.singular
+                        : itemCountLabel.plural}{' '}
+                     per week
                   </span>
-                  <CountList>
-                     {defaultServing?.itemCounts.map(item => (
-                        <CountListItem
-                           key={item.id}
-                           onClick={() => setDefaultItemCount(item)}
-                           className={`${
-                              item.id === defaultItemCount?.id ? 'active' : ''
-                           }`}
-                        >
-                           {item.count}
-                        </CountListItem>
-                     ))}
-                  </CountList>
-               </>
-            )}
-         </section>
-         <hr />
-         <div tw="mb-6 flex items-center">
-            <section tw="h-full flex-1">
-               <Price theme={theme}>
-                  {formatCurrency(
-                     Number.parseFloat(
-                        (defaultItemCount?.price || 1) /
-                           ((defaultItemCount?.count || 1) *
-                              (defaultServing?.size || 1))
-                     ).toFixed(2)
-                  )}{' '}
-               </Price>
-               <span tw="text-gray-600">
-                  / {yieldLabel.singular} x{' '}
-                  {(defaultServing.size || 1) * (defaultItemCount?.count || 1)}
-               </span>
+               ) : (
+                  <div tw="w-full flex flex-col justify-evenly">
+                     <span
+                        css={tw`uppercase tracking-wider text-gray-600 text-sm font-medium mb-2`}
+                     >
+                        {itemCountLabel.singular} per week
+                     </span>
+                     <CountList>
+                        {defaultServing?.itemCounts.map(item => (
+                           <CountListItem
+                              key={item.id}
+                              onClick={() => setDefaultItemCount(item)}
+                              className={`${
+                                 item.id === defaultItemCount?.id
+                                    ? 'active'
+                                    : ''
+                              }`}
+                           >
+                              <div tw="w-full text-sm flex justify-evenly items-center">
+                                 <div>{item.count}</div>
+                                 {item?.metaDetails?.label && (
+                                    <div>{item?.metaDetails?.label}</div>
+                                 )}
+                              </div>
+                           </CountListItem>
+                        ))}
+                     </CountList>
+                  </div>
+               )}
             </section>
-            <section tw="h-full flex-1 flex flex-col text-right border-l py-1">
-               <TotalPrice theme={theme}>
-                  {formatCurrency(defaultItemCount?.price)}
-               </TotalPrice>
-               <span tw="text-gray-600 italic text-sm">
-                  {defaultItemCount?.isTaxIncluded
-                     ? 'Tax Inclusive'
-                     : 'Tax Exclusive'}
-               </span>
-               <span tw="text-gray-600">Weekly total</span>
-            </section>
+            <hr />
+            <div tw="py-3 flex flex-col items-center w-full">
+               {priceDisplay?.pricePerServing?.isVisible === true && (
+                  <section tw="h-full w-full flex justify-between">
+                     {priceDisplay?.pricePerServing?.prefix && (
+                        <span tw="text-gray-600">
+                           {priceDisplay?.pricePerServing?.prefix}{' '}
+                        </span>
+                     )}
+                     <Price theme={theme}>
+                        {formatCurrency(
+                           Number.parseFloat(
+                              (defaultItemCount?.price || 1) /
+                                 ((defaultItemCount?.count || 1) *
+                                    (defaultServing?.size || 1))
+                           ).toFixed(2)
+                        )}{' '}
+                        <span tw="text-gray-600 text-xs">
+                           {priceDisplay?.pricePerServing?.suffix ||
+                              `per ${yieldLabel.singular}`}
+                        </span>
+                     </Price>
+                  </section>
+               )}
+               {priceDisplay?.totalServing?.isVisible === true && (
+                  <section tw="h-full w-full flex justify-between py-1">
+                     {priceDisplay?.totalServing?.prefix && (
+                        <span tw="text-gray-600">
+                           {priceDisplay?.totalServing?.prefix}{' '}
+                        </span>
+                     )}
+                     <Price theme={theme}>
+                        {Number.parseFloat(
+                           (defaultItemCount?.count || 1) *
+                              (defaultServing?.size || 1)
+                        ).toFixed(0)}{' '}
+                     </Price>
+                  </section>
+               )}
+               {priceDisplay?.pricePerPlan?.isVisible === true && (
+                  <section tw="h-full w-full flex justify-between py-1">
+                     {priceDisplay?.pricePerPlan?.prefix && (
+                        <span tw="text-gray-600">
+                           {priceDisplay?.pricePerPlan?.prefix}{' '}
+                        </span>
+                     )}
+                     <div tw="flex flex-1 flex-col text-right">
+                        <TotalPrice theme={theme}>
+                           {formatCurrency(defaultItemCount?.price)}
+                        </TotalPrice>
+                        <span tw="text-gray-600 italic text-sm">
+                           {defaultItemCount?.isTaxIncluded
+                              ? 'Tax Inclusive'
+                              : 'Tax Exclusive'}
+                        </span>
+                        <span tw="text-gray-600">
+                           {priceDisplay?.pricePerPlan?.suffix ||
+                              'Weekly total'}
+                        </span>
+                     </div>
+                  </section>
+               )}
+            </div>
+            <Button bg={colorConfig?.accent} onClick={() => selectPlan()}>
+               Select
+            </Button>
          </div>
-         <Button bg={colorConfig?.accent} onClick={() => selectPlan()}>
-            Select
-         </Button>
       </li>
    )
 }
 
+const CoverImage = styled.div`
+   height: 200px;
+   width: 100%;
+   padding-bottom: 16px;
+   img {
+      height: 100%;
+      width: 100%;
+      object-fit: cover;
+      ${tw`rounded-t-lg`}
+   }
+`
+
 const Title = styled.h2(
    ({ theme }) => css`
-      ${tw`mb-5 text-2xl font-medium tracking-wide text-green-600`}
+      ${tw`mb-2 text-2xl font-medium tracking-wide text-green-600`}
       ${theme?.accent && `color: ${theme?.accent}`}
    `
 )
@@ -199,6 +282,7 @@ const CountList = styled.ul`
    ${tw`
       p-1
       border
+      w-full
       flex items-center justify-between 
    `}
 `
@@ -208,12 +292,13 @@ const CountListItem = styled.li`
    &.active {
       ${tw`text-white bg-green-600`}
    }
+   min-height: 3rem;
+   min-width: 7rem;
    ${tw`
-         h-12 w-12 
-         cursor-pointer
-         flex items-center justify-center 
-         hover:text-white hover:bg-green-600 hover:rounded 
-      `}
+      flex-1 cursor-pointer text-sm mr-1
+      flex items-center justify-center 
+      hover:text-white hover:bg-green-300 hover:rounded 
+   `}
 `
 
 const Button = styled.button(

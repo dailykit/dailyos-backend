@@ -9,7 +9,7 @@ import { useDelivery } from './state'
 import { CheckIcon } from '../../assets/icons'
 import { Loader, HelperBar } from '../../components'
 import { OCCURENCES_BY_SUBSCRIPTION } from '../../graphql'
-import { formatDate } from '../../utils'
+import { formatDate, getRoute } from '../../utils'
 
 export const DeliveryDateSection = () => {
    const router = useRouter()
@@ -75,7 +75,7 @@ export const DeliveryDateSection = () => {
             No dates are available for delivery on this address.
          </HelperBar.SubTitle>
          <HelperBar.Button
-            onClick={() => router.push('/get-started/select-plan')}
+            onClick={() => router.push(getRoute('/get-started/select-plan'))}
          >
             Select Plan
          </HelperBar.Button>

@@ -1,23 +1,27 @@
 import React from 'react'
 import { useRouter } from 'next/router'
 import tw, { styled, css } from 'twin.macro'
-import { useConfig } from '../../../lib'
+import { graphQLClient, useConfig } from '../../../lib'
 import { useUser } from '../../../context'
 import { SEO, Layout, ProfileSidebar, Form } from '../../../components'
 import * as moment from 'moment'
+import { getRoute, getSettings } from '../../../utils'
+import { NAVIGATION_MENU, WEBSITE_PAGE } from '../../../graphql'
 
-const LoyaltyPoints = () => {
+const LoyaltyPoints = props => {
    const router = useRouter()
-   const { isAuthenticated } = useUser()
+   const { isAuthenticated, isLoading } = useUser()
+   const { seo, settings, navigationMenus } = props
 
    React.useEffect(() => {
-      if (!isAuthenticated) {
-         router.push('/subscription')
+      if (!isAuthenticated && !isLoading) {
+         isClient && localStorage.setItem('landed_on', location.href)
+         router.push(getRoute('/get-started/register'))
       }
-   }, [isAuthenticated])
+   }, [isAuthenticated, isLoading])
 
    return (
-      <Layout>
+      <Layout settings={settings} navigationMenus={navigationMenus}>
          <SEO title="Loyalty Points" />
          <Main>
             <ProfileSidebar />
@@ -34,17 +38,17 @@ const Content = () => {
    const { configOf } = useConfig()
 
    const theme = configOf('theme-color', 'Visual')
-   const loyaltyPointsAllowed = configOf(
+   const { isAvailable = false, label = 'Loyalty Points' } = configOf(
       'Loyalty Points',
       'rewards'
-   )?.isAvailable
+   )
 
    return (
       <section tw="px-6 w-full md:w-6/12">
          <header tw="mt-6 mb-3 flex items-center justify-between">
-            <Title theme={theme}>Loyalty Points</Title>
+            <Title theme={theme}>{label}</Title>
          </header>
-         {loyaltyPointsAllowed && !!user.loyaltyPoint && (
+         {isAvailable && !!user.loyaltyPoint && (
             <>
                <Form.Label>Balance</Form.Label>
                {user.loyaltyPoint.points}
@@ -80,6 +84,42 @@ const Content = () => {
          )}
       </section>
    )
+}
+
+export const getStaticProps = async ({ params }) => {
+   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+      domain: params.brand,
+      route: '/account/loyalty-points',
+   })
+   // const domain =
+   //    process.env.NODE_ENV === 'production'
+   //       ? params.domain
+   //       : 'test.dailykit.org'
+   const domain = 'test.dailykit.org'
+   const { seo, settings } = await getSettings(
+      domain,
+      '/account/loyalty-points'
+   )
+   //navigation menu
+   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+      navigationMenuId:
+         dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
+   })
+   const navigationMenus = navigationMenu.website_navigationMenuItem
+   return {
+      props: {
+         seo,
+         settings,
+         navigationMenus,
+      },
+      revalidate: 1,
+   }
+}
+export async function getStaticPaths() {
+   return {
+      paths: [],
+      fallback: 'blocking', // true -> build page if missing, false -> serve 404
+   }
 }
 
 const Title = styled.h2(

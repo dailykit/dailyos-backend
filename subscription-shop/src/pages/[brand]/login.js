@@ -9,32 +9,39 @@ import { useLazyQuery, useMutation } from '@apollo/react-hooks'
 import { useUser } from '../../context'
 import { useConfig, auth } from '../../lib'
 import { SEO, Layout } from '../../components'
-import { isClient, processUser } from '../../utils'
-import { BRAND, CUSTOMER, MUTATIONS } from '../../graphql'
+import { getRoute, isClient, processUser } from '../../utils'
+import {
+   BRAND,
+   CUSTOMER,
+   MUTATIONS,
+   NAVIGATION_MENU,
+   WEBSITE_PAGE,
+} from '../../graphql'
 import { GET_FILES } from '../../graphql'
 import { graphQLClient } from '../../lib'
 import 'regenerator-runtime'
 import { fileParser, getSettings } from '../../utils'
 import ReactHtmlParser from 'react-html-parser'
 const Login = props => {
-   const { settings } = props
+   const { settings, navigationMenus } = props
    const router = useRouter()
    const { addToast } = useToasts()
    const { user, dispatch } = useUser()
    const { brand, organization } = useConfig()
    const [current, setCurrent] = React.useState('LOGIN')
-   const [create_brand_customer] = useMutation(BRAND.CUSTOMER.CREATE, {
-      refetchQueries: ['customer'],
-      onCompleted: () => {
-         if (isClient) {
-            window.location.href =
-               window.location.origin + '/get-started/select-plan'
-         }
-      },
-      onError: error => {
-         console.log(error)
-      },
-   })
+   const [create_brand_customer, { loading: creatingBrandCustomer }] =
+      useMutation(BRAND.CUSTOMER.CREATE, {
+         refetchQueries: ['customer'],
+         onCompleted: () => {
+            if (isClient) {
+               window.location.href =
+                  window.location.origin + '/get-started/select-plan'
+            }
+         },
+         onError: error => {
+            console.log(error)
+         },
+      })
    const [create, { loading: creatingCustomer }] = useMutation(
       MUTATIONS.CUSTOMER.CREATE,
       {
@@ -57,7 +64,6 @@ const Login = props => {
       {
          onCompleted: async ({ customer = {} }) => {
             const token = localStorage.getItem('token')
-            console.log({ token })
             const { email = '', sub: keycloakId = '' } = jwtDecode(token)
             if (isEmpty(customer)) {
                console.log('CUSTOMER DOESNT EXISTS')
@@ -96,31 +102,35 @@ const Login = props => {
                brandCustomers[0].isSubscriber
             ) {
                console.log('BRAND_CUSTOMER EXISTS & CUSTOMER IS SUBSCRIBED')
-               router.push('/menu')
                isClient && localStorage.removeItem('plan')
+               const landedOn = isClient
+                  ? localStorage.getItem('landed_on')
+                  : null
+               if (isClient && landedOn) {
+                  localStorage.removeItem('landed_on')
+                  window.location.href = landedOn
+               } else {
+                  router.push(getRoute('/menu'))
+               }
             } else {
                console.log('CUSTOMER ISNT SUBSCRIBED')
                if (isClient) {
-                  window.location.href =
-                     window.location.origin + '/get-started/select-plan'
+                  const landedOn = localStorage.getItem('landed_on')
+                  if (landedOn) {
+                     localStorage.removeItem('landed_on')
+                     window.location.href = landedOn
+                  } else {
+                     window.location.href =
+                        window.location.origin + '/get-started/select-plan'
+                  }
                }
             }
          },
       }
    )
 
-   React.useEffect(() => {
-      if (user?.keycloakId) {
-         if (user?.isSubscriber) router.push('/menu')
-         else if (isClient) {
-            window.location.href =
-               window.location.origin + '/get-started/select-plan'
-         }
-      }
-   }, [user])
-
    return (
-      <Layout settings={settings}>
+      <Layout settings={settings} navigationMenus={navigationMenus}>
          <SEO title="Login" />
          <Main tw="pt-8">
             <TabList>
@@ -134,7 +144,11 @@ const Login = props => {
             {current === 'LOGIN' && (
                <LoginPanel
                   customer={customer}
-                  loading={loadingCustomerDetails || creatingCustomer}
+                  loading={
+                     loadingCustomerDetails ||
+                     creatingCustomer ||
+                     creatingBrandCustomer
+                  }
                />
             )}
          </Main>
@@ -211,13 +225,13 @@ const LoginPanel = ({ loading, customer }) => {
          </FieldSet>
          <button
             tw="self-start mb-2 text-blue-500"
-            onClick={() => router.push('/forgot-password')}
+            onClick={() => router.push(getRoute('/forgot-password'))}
          >
             Forgot password?
          </button>
          <button
             tw="self-start mb-2 text-blue-500"
-            onClick={() => router.push('/get-started/register')}
+            onClick={() => router.push(getRoute('/get-started/register'))}
          >
             Register instead?
          </button>
@@ -281,7 +295,10 @@ export async function getStaticProps({ params }) {
    // const data = await graphQLClient.request(GET_FILES, {
    //    divId: ['home-bottom-01'],
    // })
-
+   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+      domain: params.brand,
+      route: '/login',
+   })
    // const domain =
    //    process.env.NODE_ENV === 'production'
    //       ? params.domain
@@ -289,12 +306,16 @@ export async function getStaticProps({ params }) {
    const domain = 'test.dailykit.org'
    const { seo, settings } = await getSettings(domain, '/login')
 
+   //navigation menu
+   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+      navigationMenuId:
+         dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
+   })
+   const navigationMenus = navigationMenu.website_navigationMenuItem
    console.log(settings)
 
-   // const parsedData = await fileParser(data.content_subscriptionDivIds)
-
    return {
-      props: { seo, settings },
+      props: { seo, settings, navigationMenus },
       revalidate: 60, // will be passed to the page component as props
    }
 }

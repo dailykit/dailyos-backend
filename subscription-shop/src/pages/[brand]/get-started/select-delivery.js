@@ -6,7 +6,7 @@ import { useToasts } from 'react-toast-notifications'
 import { webRenderer } from '@dailykit/web-renderer'
 
 import { useConfig } from '../../../lib'
-import { BRAND, DELETE_OCCURENCE_CUSTOMER, GET_FILEID } from '../../../graphql'
+import { BRAND, GET_FILEID } from '../../../graphql'
 import { useUser } from '../../../context'
 import { SEO, Layout, StepsNavbar, Loader, Button } from '../../../components'
 
@@ -17,19 +17,27 @@ import {
    DeliveryProvider,
    DeliveryDateSection,
 } from '../../../sections/select-delivery'
-import { isClient } from '../../../utils'
+import { getRoute, getSettings, isClient } from '../../../utils'
 
-const SelectDelivery = () => {
+const SelectDelivery = props => {
    const router = useRouter()
    const { isAuthenticated } = useUser()
+   const { seo, settings } = props
    React.useEffect(() => {
       if (!isAuthenticated) {
-         router.push('/get-started/select-plan')
+         isClient && localStorage.setItem('landed_on', location.href)
+         router.push(getRoute('/get-started/register'))
       }
    }, [isAuthenticated])
 
+   React.useEffect(() => {
+      if (isClient && !localStorage.getItem('plan')) {
+         navigate('/get-started/select-plan')
+      }
+   }, [])
+
    return (
-      <Layout noHeader>
+      <Layout noHeader settings={settings}>
          <SEO title="Delivery" />
          <StepsNavbar />
          <DeliveryProvider>
@@ -38,7 +46,27 @@ const SelectDelivery = () => {
       </Layout>
    )
 }
-
+export const getStaticProps = async () => {
+   // const domain =
+   //    process.env.NODE_ENV === 'production'
+   //       ? params.domain
+   //       : 'test.dailykit.org'
+   const domain = 'test.dailykit.org'
+   const { seo, settings } = await getSettings(domain, '/select-delivery')
+   return {
+      props: {
+         seo,
+         settings,
+      },
+      revalidate: 1,
+   }
+}
+export async function getStaticPaths() {
+   return {
+      paths: [],
+      fallback: 'blocking', // true -> build page if missing, false -> serve 404
+   }
+}
 export default SelectDelivery
 
 const DeliveryContent = () => {
@@ -47,9 +75,6 @@ const DeliveryContent = () => {
    const { state } = useDelivery()
    const { addToast } = useToasts()
    const { brand, configOf } = useConfig()
-   const [deleteOccurenceCustomer] = useMutation(DELETE_OCCURENCE_CUSTOMER, {
-      onError: error => console.log('DELETE CART -> ERROR -> ', error),
-   })
    const { loading } = useQuery(GET_FILEID, {
       variables: {
          divId: ['select-delivery-bottom-01'],
@@ -100,11 +125,15 @@ const DeliveryContent = () => {
             appearance: 'success',
          })
          router.push(
-            `/get-started/select-menu/?date=${
-               state.delivery_date.selected.fulfillmentDate
-            }${
-               state.skip_list.length > 0 ? `&previous=${state.skip_list}` : ''
-            }`
+            getRoute(
+               `/get-started/select-menu/?date=${
+                  state.delivery_date.selected.fulfillmentDate
+               }${
+                  state.skip_list.length > 0
+                     ? `&previous=${state.skip_list}`
+                     : ''
+               }`
+            )
          )
       },
       onError: error => {

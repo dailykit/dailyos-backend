@@ -1,7 +1,7 @@
 import React from 'react'
 import tw, { styled } from 'twin.macro'
 
-import { isClient } from '../../../utils'
+import { getSettings, isClient } from '../../../utils'
 import { PRODUCT_OPTION_WITH_RECIPES, RECIPE_DETAILS } from '../../../graphql'
 import { Layout, SEO } from '../../../components'
 import LockIcon from '../../../assets/icons/Lock'
@@ -12,7 +12,7 @@ import CuisineIcon from '../../../assets/icons/Cuisine'
 import { graphQLClient, useConfig } from '../../../lib'
 
 const Recipe = props => {
-   const { productOption } = props
+   const { productOption, seo, settings } = props
 
    const recipe = productOption.simpleRecipeYield?.simpleRecipe
    const { configOf } = useConfig()
@@ -28,7 +28,7 @@ const Recipe = props => {
 
    if (!recipe)
       return (
-         <Layout>
+         <Layout settings={settings}>
             <SEO title="Not found" />
             <h1 tw="py-4 text-2xl text-gray-600 text-center">
                No such recipe exists!
@@ -36,7 +36,7 @@ const Recipe = props => {
          </Layout>
       )
    return (
-      <Layout>
+      <Layout settings={settings}>
          <SEO title={recipe.name} richresult={recipe.richResult} />
          <RecipeContainer>
             <h1 tw="py-4 text-2xl md:text-3xl tracking-wide text-teal-900">
@@ -212,9 +212,17 @@ export async function getStaticProps({ params }) {
    const data = await graphQLClient.request(RECIPE_DETAILS, {
       optionId: parseInt(params.id),
    })
+   const domain = 'test.dailykit.org'
+   // const domain =
+   //    process.env.NODE_ENV === 'production'
+   //       ? params.domain
+   //       : 'test.dailykit.org'
+   //page data
 
+   //brand settings
+   const { seo, settings } = await getSettings(domain, `/recipes/${params.id}`)
    return {
-      props: { productOption: data.productOption },
+      props: { productOption: data.productOption, seo, settings },
       revalidate: 60, // will be passed to the page component as props
    }
 }

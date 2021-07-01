@@ -35,7 +35,6 @@ const HowItWorks = props => {
          console.log('Failed to render page: ', err)
       }
    }, [data])
-   console.log('this is how-it-works', data)
    return (
       <Layout settings={settings}>
          <SEO title="How it works" />
@@ -62,8 +61,6 @@ export async function getStaticProps({ params }) {
    //       : 'test.dailykit.org'
    const domain = 'test.dailykit.org'
    const { seo, settings } = await getSettings(domain, '/')
-
-   console.log(settings)
 
    const parsedData = await fileParser(data.content_subscriptionDivIds)
 

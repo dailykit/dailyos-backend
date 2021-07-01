@@ -21,7 +21,7 @@ import {
    HelperBar,
    Loader,
 } from '../../../components'
-import { getSettings, isClient } from '../../../utils'
+import { getRoute, getSettings, isClient } from '../../../utils'
 
 const SelectMenu = props => {
    const { settings } = props
@@ -29,7 +29,8 @@ const SelectMenu = props => {
    const { isAuthenticated } = useUser()
    React.useEffect(() => {
       if (!isAuthenticated) {
-         router.push('/get-started/select-plan')
+         isClient && localStorage.setItem('landed_on', location.href)
+         router.push(getRoute('/get-started/register'))
       }
    }, [isAuthenticated])
 
@@ -187,8 +188,6 @@ export async function getStaticProps({ params }) {
    //       : 'test.dailykit.org'
    const domain = 'test.dailykit.org'
    const { seo, settings } = await getSettings(domain, '/')
-
-   console.log(settings)
 
    return {
       props: { seo, settings },

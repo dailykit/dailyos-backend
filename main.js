@@ -45,7 +45,12 @@ import {
    handleCustomerSignup,
    handleSubscriptionCancelled
 } from './entities/emails'
+
 const app = express()
+const { ApolloServer } = require('apollo-server-express')
+const depthLimit = require('graphql-depth-limit')
+
+const RESTRICTED_FILES = ['env-config.js', 'favicon', '.next', '_next']
 
 // Middlewares
 app.use(cors())
@@ -107,11 +112,54 @@ app.use('/api/store', StoreRouter)
 
 app.get('/images/:url(*)', handleImage)
 
-const RESTRICTED_FILES = ['env-config.js', 'favicon', '.next', '_next']
+/*
+   ------------ DAILY OS ------------
+*/
+
+// app.use('/apps', express.static('dailyos/build'))
+
+/*
+   ------------ TEMPLATE SERVICE ------------
+*/
+const flatten = require('./src/utils/flatten')
+const schema = require('./src/schema/schema')
+const functions = require('./src/functions')
+const handlers = require('./src/handlers')
+const isProd = process.env.NODE_ENV === 'production' ? true : false
+
+const apolloserver = new ApolloServer({
+   schema,
+   playground: {
+      endpoint: `${process.env.ENDPOINT}/template/graphql`
+   },
+   introspection: true,
+   validationRules: [depthLimit(11)],
+   formatError: err => {
+      console.log(err)
+      if (err.message.includes('ENOENT'))
+         return isProd ? new Error('No such folder or file exists!') : err
+      return isProd ? new Error(err) : err
+   },
+   debug: true,
+   context: {
+      root: process.env.FS_PATH,
+      media: process.env.MEDIA_PATH
+   }
+})
+
+apolloserver.applyMiddleware({ app })
+
+app.use(cors({ origin: '*' }))
+app.use('/template/files', express.static('templates'))
+app.get('/template', handlers.root)
+app.post('/template/download/:path(*)', handlers.download)
+
+/*
+   ------------ SUBSCRIPTION SHOP ------------
+*/
 
 app.use('/:path(*)', async (req, res, next) => {
    //     Subscription shop: Browser <-> Express <-> NextJS
-
    const { path: routePath } = req.params
    const { preview } = req.query
    const { host } = req.headers
@@ -119,7 +167,6 @@ app.use('/:path(*)', async (req, res, next) => {
 
    const isAllowed = !RESTRICTED_FILES.some(file => routePath.includes(file))
    if (isAllowed) {
-      console.log(routePath)
       const filePath =
          routePath === ''
             ? path.join(

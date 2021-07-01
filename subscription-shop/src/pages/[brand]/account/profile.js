@@ -12,23 +12,29 @@ import {
    SEO,
 } from '../../../components'
 import { useUser } from '../../../context'
-import { BRAND, SUBSCRIPTION_PLAN } from '../../../graphql'
-import { useConfig } from '../../../lib'
-import { isClient } from '../../../utils'
+import {
+   BRAND,
+   NAVIGATION_MENU,
+   SUBSCRIPTION_PLAN,
+   WEBSITE_PAGE,
+} from '../../../graphql'
+import { graphQLClient, useConfig } from '../../../lib'
+import { getRoute, getSettings, isClient } from '../../../utils'
 import * as moment from 'moment'
 
-const Profile = () => {
+const Profile = props => {
    const router = useRouter()
-   const { isAuthenticated } = useUser()
-
+   const { isAuthenticated, isLoading } = useUser()
+   const { seo, settings, navigationMenus } = props
    React.useEffect(() => {
-      if (!isAuthenticated) {
-         router.push('/subscription')
+      if (!isAuthenticated && !isLoading) {
+         isClient && localStorage.setItem('landed_on', location.href)
+         router.push(getRoute('/get-started/register'))
       }
-   }, [isAuthenticated])
+   }, [isAuthenticated, isLoading])
 
    return (
-      <Layout>
+      <Layout settings={settings} navigationMenus={navigationMenus}>
          <SEO title="Profile" />
          <Main>
             <ProfileSidebar />
@@ -194,7 +200,6 @@ const CurrentPlan = () => {
          const start = new Date(startDate)
          const end = new Date(endDate)
          const now = moment().format('YYYY-MM-DD')
-         console.log({ startDate, endDate, now })
          if (moment(start).isBefore(now)) {
             return addToast('Start date is not valid!', { appearance: 'error' })
          } else if (moment(end).isBefore(now)) {
@@ -272,7 +277,7 @@ const CurrentPlan = () => {
          <Button
             size="sm"
             theme={theme}
-            onClick={() => router.push(`/change-plan`)}
+            onClick={() => router.push(getRoute(`/change-plan`))}
          >
             Change Plan
          </Button>
@@ -388,6 +393,38 @@ const CurrentPlan = () => {
    )
 }
 
+export const getStaticProps = async ({ params }) => {
+   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+      domain: params.brand,
+      route: '/account/profile',
+   })
+   // const domain =
+   //    process.env.NODE_ENV === 'production'
+   //       ? params.domain
+   //       : 'test.dailykit.org'
+   const domain = 'test.dailykit.org'
+   const { seo, settings } = await getSettings(domain, '/account/profile')
+   //navigation menu
+   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+      navigationMenuId:
+         dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
+   })
+   const navigationMenus = navigationMenu.website_navigationMenuItem
+   return {
+      props: {
+         seo,
+         settings,
+         navigationMenus,
+      },
+      revalidate: 1,
+   }
+}
+export async function getStaticPaths() {
+   return {
+      paths: [],
+      fallback: 'blocking', // true -> build page if missing, false -> serve 404
+   }
+}
 const CurrentPlanWrapper = styled.div`
    padding: 1.5rem;
 `

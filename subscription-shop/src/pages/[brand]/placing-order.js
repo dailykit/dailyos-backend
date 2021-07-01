@@ -1,23 +1,56 @@
 import React from 'react'
 import moment from 'moment'
+import { isEmpty } from 'lodash'
 import tw, { styled, css } from 'twin.macro'
 import { useSubscription } from '@apollo/react-hooks'
 
-import { useConfig } from '../../lib'
-import { isClient } from '../../utils'
-import { CART_STATUS } from '../../graphql'
+import { graphQLClient, useConfig } from '../../lib'
+import { getRoute, getSettings, isClient } from '../../utils'
+import { CART_STATUS, NAVIGATION_MENU, WEBSITE_PAGE } from '../../graphql'
+
 import OrderInfo from '../../sections/OrderInfo'
 import { Layout, SEO, Loader, HelperBar } from '../../components'
 import { PlacedOrderIllo, CartIllo, PaymentIllo } from '../../assets/icons'
+import { useRouter } from 'next/router'
+import { useUser } from '../../context'
 
-const PlacingOrder = () => {
+const PlacingOrder = props => {
+   const { seo, settings, navigationMenus } = props
+   const { isAuthenticated, isLoading } = useUser()
+   const router = useRouter()
+   React.useEffect(() => {
+      if (!isAuthenticated && !isLoading) {
+         isClient && localStorage.setItem('landed_on', location.href)
+         router.push(getRoute('/get-started/register'))
+      }
+   }, [isAuthenticated, isLoading])
+
+   return (
+      <Layout settings={settings} navigationMenus={navigationMenus}>
+         <SEO title="Placing Order" />
+         <Wrapper>
+            <Main tw="pt-4">
+               <ContentWrapper />
+            </Main>
+         </Wrapper>
+      </Layout>
+   )
+}
+
+const ContentWrapper = () => {
+   const { user } = useUser()
    const { configOf } = useConfig()
-   const { loading, data: { cart = {} } = {} } = useSubscription(CART_STATUS, {
+   const {
+      error,
+      loading,
+      data: { cart = {} } = {},
+   } = useSubscription(CART_STATUS, {
       skip: !isClient,
       variables: {
          id: isClient ? new URLSearchParams(location.search).get('id') : '',
       },
    })
+   const theme = configOf('theme-color', 'Visual')
 
    const gotoMenu = () => {
       isClient && window.localStorage.removeItem('plan')
@@ -29,95 +62,167 @@ const PlacingOrder = () => {
             : `${window.location.origin}/menu`
       }
    }
-   const theme = configOf('theme-color', 'Visual')
 
+   if (loading) return <Loader inline />
+   if (isClient && !new URLSearchParams(location.search).get('id')) {
+      return (
+         <Main>
+            <div tw="p-4 w-full">
+               <HelperBar>
+                  <HelperBar.Title>
+                     Oh no! Looks like you've wandered on an unknown path, let's
+                     get you to home.
+                  </HelperBar.Title>
+                  <HelperBar.Button onClick={() => navigate('/')}>
+                     Go to Home
+                  </HelperBar.Button>
+               </HelperBar>
+            </div>
+         </Main>
+      )
+   }
+   if (error) {
+      return (
+         <Main>
+            <div tw="p-4 w-full">
+               <HelperBar type="danger">
+                  <HelperBar.SubTitle>
+                     Looks like there was an issue fetching details, please
+                     refresh the page!
+                  </HelperBar.SubTitle>
+               </HelperBar>
+            </div>
+         </Main>
+      )
+   }
+   if (isEmpty(cart)) {
+      return (
+         <Main>
+            <div tw="p-4 w-full">
+               <HelperBar type="info">
+                  <HelperBar.Title>
+                     Looks like the page you're requesting is not available
+                     anymore, let's get you to home.
+                  </HelperBar.Title>
+                  <HelperBar.Button onClick={() => navigate('/')}>
+                     Go to Home
+                  </HelperBar.Button>
+               </HelperBar>
+            </div>
+         </Main>
+      )
+   }
+   if (user?.keycloakId !== cart?.customerKeycloakId) {
+      return (
+         <Main>
+            <div tw="p-4 w-full">
+               <HelperBar type="warning">
+                  <HelperBar.SubTitle>
+                     Seems like, you do not have access to this page, let's get
+                     you to home.
+                  </HelperBar.SubTitle>
+                  <HelperBar.Button onClick={() => navigate('/')}>
+                     Go to Home
+                  </HelperBar.Button>
+               </HelperBar>
+            </div>
+         </Main>
+      )
+   }
    return (
-      <Layout>
-         <SEO title="Placing Order" />
-         <Wrapper>
-            <Main tw="pt-4">
-               {loading ? (
-                  <Loader inline />
-               ) : (
-                  <Content>
-                     {cart && (
-                        <>
-                           <header tw="w-full my-3 pb-1 border-b flex items-center justify-between">
-                              <SectionTitle theme={theme}>
-                                 Order Summary
-                              </SectionTitle>
-                           </header>
-                           <OrderInfo cart={cart} />
-                           <Steps>
-                              <Step
-                                 className={`${
-                                    cart.status !== 'CART_PENDING'
-                                       ? 'active'
-                                       : ''
-                                 }`}
-                              >
-                                 <span tw="border rounded-full mb-3 shadow-md">
-                                    <CartIllo />
-                                 </span>
-                                 Saving Cart
-                                 {cart.status === 'CART_PENDING' && <Pulse />}
-                              </Step>
-                              <Step
-                                 className={`${
-                                    cart.paymentStatus === 'SUCCEEDED'
-                                       ? 'active'
-                                       : ''
-                                 }`}
-                              >
-                                 <span tw="border rounded-full mb-3 shadow-md">
-                                    <PaymentIllo />
-                                 </span>
-                                 Processing Payment
-                                 {cart.paymentStatus !== 'SUCCEEDED' && (
-                                    <Pulse />
-                                 )}
-                              </Step>
-                              <Step
-                                 className={`${
-                                    cart.status === 'ORDER_PENDING' &&
-                                    cart.orderId
-                                       ? 'active'
-                                       : 'null'
-                                 }`}
-                              >
-                                 <span tw="border rounded-full mb-3 shadow-md">
-                                    <PlacedOrderIllo />
-                                 </span>
-                                 Order Placed
-                                 {cart.status !== 'ORDER_PENDING' ||
-                                    (!Boolean(cart.orderId) && <Pulse />)}
-                              </Step>
-                           </Steps>
-                           {cart.status === 'ORDER_PENDING' && cart.orderId && (
-                              <HelperBar type="success" tw="mt-3">
-                                 <HelperBar.Title>
-                                    <span role="img" aria-label="celebrate">
-                                       🎉
-                                    </span>
-                                    Congratulations!{' '}
-                                 </HelperBar.Title>
-                                 <HelperBar.SubTitle>
-                                    Your order has been placed. Continue
-                                    selecting menu for others weeks.
-                                 </HelperBar.SubTitle>
-                                 <HelperBar.Button onClick={gotoMenu}>
-                                    Browse Menu
-                                 </HelperBar.Button>
-                              </HelperBar>
-                           )}
-                        </>
-                     )}
-                  </Content>
-               )}
-            </Main>
-         </Wrapper>
-      </Layout>
+      <Content>
+         <header tw="w-full my-3 pb-1 border-b flex items-center justify-between">
+            <SectionTitle theme={theme}>Order Summary</SectionTitle>
+         </header>
+         <OrderInfo cart={cart} />
+         <Steps>
+            <Step
+               className={`${cart.status !== 'CART_PENDING' ? 'active' : ''}`}
+            >
+               <span tw="border rounded-full mb-3 shadow-md">
+                  <CartIllo />
+               </span>
+               Saving Cart
+               {cart.status === 'CART_PENDING' && <Pulse />}
+            </Step>
+            <Step
+               className={`${
+                  cart.paymentStatus === 'SUCCEEDED' ? 'active' : ''
+               }`}
+            >
+               <span tw="border rounded-full mb-3 shadow-md">
+                  <PaymentIllo />
+               </span>
+               Processing Payment
+               {cart.paymentStatus !== 'SUCCEEDED' && <Pulse />}
+            </Step>
+            <Step
+               className={`${
+                  cart.status === 'ORDER_PENDING' && cart.orderId
+                     ? 'active'
+                     : 'null'
+               }`}
+            >
+               <span tw="border rounded-full mb-3 shadow-md">
+                  <PlacedOrderIllo />
+               </span>
+               Order Placed
+               {cart.status !== 'ORDER_PENDING' ||
+                  (!Boolean(cart.orderId) && <Pulse />)}
+            </Step>
+         </Steps>
+         {cart.status === 'ORDER_PENDING' && cart.orderId && (
+            <HelperBar type="success" tw="mt-3">
+               <HelperBar.Title>
+                  <span role="img" aria-label="celebrate">
+                     🎉
+                  </span>
+                  Congratulations!{' '}
+               </HelperBar.Title>
+               <HelperBar.SubTitle>
+                  Your order has been placed. Continue selecting menu for others
+                  weeks.
+               </HelperBar.SubTitle>
+               <HelperBar.Button onClick={gotoMenu}>
+                  Browse Menu
+               </HelperBar.Button>
+            </HelperBar>
+         )}
+      </Content>
    )
+}
+
+export const getStaticProps = async ({ params }) => {
+   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+      domain: params.brand,
+      route: '/placing-order',
+   })
+   // const domain =
+   //    process.env.NODE_ENV === 'production'
+   //       ? params.domain
+   //       : 'test.dailykit.org'
+   const domain = 'test.dailykit.org'
+   const { seo, settings } = await getSettings(domain, '/placing-order')
+   //navigation menu
+   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+      navigationMenuId:
+         dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
+   })
+   const navigationMenus = navigationMenu.website_navigationMenuItem
+   return {
+      props: {
+         seo,
+         settings,
+         navigationMenus,
+      },
+      revalidate: 1,
+   }
+}
+export async function getStaticPaths() {
+   return {
+      paths: [],
+      fallback: 'blocking', // true -> build page if missing, false -> serve 404
+   }
 }
 
 export default PlacingOrder

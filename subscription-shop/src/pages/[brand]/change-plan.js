@@ -3,7 +3,7 @@ import tw, { css, styled } from 'twin.macro'
 import { Layout, SEO } from '../../components'
 import { useUser } from '../../context'
 import { useToasts } from 'react-toast-notifications'
-import { useConfig } from '../../lib'
+import { graphQLClient, useConfig } from '../../lib'
 import { Plans } from '../../sections/select-plan'
 import { useRouter } from 'next/router'
 import {
@@ -13,25 +13,27 @@ import {
    DeliverySection,
    useDelivery,
 } from '../../sections/select-delivery'
-import { BRAND } from '../../graphql'
+import { BRAND, NAVIGATION_MENU, WEBSITE_PAGE } from '../../graphql'
 import { useMutation } from '@apollo/react-hooks'
+import { getRoute, getSettings, isClient } from '../../utils'
 
-const ChangePlan = () => {
+const ChangePlan = props => {
    const router = useRouter()
-   const { user, isAuthenticated } = useUser()
+   const { user, isAuthenticated, isLoading } = useUser()
    const { addToast } = useToasts()
    const { brand, configOf } = useConfig()
    const { state, dispatch } = useDelivery()
-
+   const { seo, settings, navigationMenus } = props.props
    const theme = configOf('theme-color', 'Visual')
 
    const [selectedPlanId, setSelectedPlanId] = React.useState(null)
 
    React.useEffect(() => {
-      if (!isAuthenticated) {
-         router.push('/subscription')
+      if (!isAuthenticated && !isLoading) {
+         isClient && localStorage.setItem('landed_on', location.href)
+         router.push(getRoute('/'))
       }
-   }, [isAuthenticated])
+   }, [isAuthenticated, isLoading])
 
    React.useEffect(() => {
       dispatch({ type: 'RESET' })
@@ -43,7 +45,7 @@ const ChangePlan = () => {
          addToast('Successfully changed plan.', {
             appearance: 'success',
          })
-         router.push(`/account/profile`)
+         router.push(getRoute(`/account/profile`))
       },
       onError: error => {
          addToast(error.message, {
@@ -82,7 +84,7 @@ const ChangePlan = () => {
    }
 
    return (
-      <Layout>
+      <Layout settings={settings} navigationMenus={navigationMenus}>
          <SEO title="Profile" />
          <Title theme={theme}>Change Plan</Title>
          <Plans handlePlanClick={handlePlanClick} />
@@ -110,12 +112,45 @@ const ChangePlan = () => {
    )
 }
 
-const ChangePlanWrapper = () => {
+const ChangePlanWrapper = props => {
    return (
       <DeliveryProvider>
-         <ChangePlan />
+         <ChangePlan props={props} />
       </DeliveryProvider>
    )
+}
+
+export const getStaticProps = async ({ params }) => {
+   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+      domain: params.brand,
+      route: '/change-plan',
+   })
+   // const domain =
+   //    process.env.NODE_ENV === 'production'
+   //       ? params.domain
+   //       : 'test.dailykit.org'
+   const domain = 'test.dailykit.org'
+   const { seo, settings } = await getSettings(domain, '/change-plan')
+   //navigation menu
+   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+      navigationMenuId:
+         dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
+   })
+   const navigationMenus = navigationMenu.website_navigationMenuItem
+   return {
+      props: {
+         seo,
+         settings,
+         navigationMenus,
+      },
+      revalidate: 1,
+   }
+}
+export async function getStaticPaths() {
+   return {
+      paths: [],
+      fallback: 'blocking', // true -> build page if missing, false -> serve 404
+   }
 }
 
 export default ChangePlanWrapper

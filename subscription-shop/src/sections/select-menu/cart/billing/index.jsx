@@ -5,7 +5,7 @@ import { useToasts } from 'react-toast-notifications'
 
 import { useMenu } from '../../state'
 import { SaveGhostButton } from '../styled'
-import { formatCurrency } from '../../../../utils'
+import { formatCurrency, getRoute } from '../../../../utils'
 import {
    Billing,
    Coupon,
@@ -39,7 +39,9 @@ const BillingDetails = ({ isCheckout }) => {
          })
          return
       }
-      router.push(`/checkout/?id=${state.occurenceCustomer?.cart?.id}`)
+      router.push(
+         getRoute(`/checkout/?id=${state.occurenceCustomer?.cart?.id}`)
+      )
    }
 
    return (

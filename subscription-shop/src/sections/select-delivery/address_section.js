@@ -9,6 +9,7 @@ import { useUser } from '../../context'
 import { CheckIcon } from '../../assets/icons'
 import { AddressTunnel } from './address_tunnel'
 import { Button, HelperBar } from '../../components'
+import { getRoute } from '../../utils'
 
 export const AddressSection = () => {
    const router = useRouter()
@@ -49,7 +50,9 @@ export const AddressSection = () => {
             <HelperBar type="error">
                <HelperBar.SubTitle>{state.address.error}</HelperBar.SubTitle>
                <HelperBar.Buttom
-                  onClick={() => router.push('/get-started/select-plan')}
+                  onClick={() =>
+                     router.push(getRoute('/get-started/select-plan'))
+                  }
                >
                   Change Plan
                </HelperBar.Buttom>

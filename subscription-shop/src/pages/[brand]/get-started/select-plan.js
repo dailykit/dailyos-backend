@@ -4,21 +4,30 @@ import tw, { styled } from 'twin.macro'
 import { useQuery } from '@apollo/react-hooks'
 import { webRenderer } from '@dailykit/web-renderer'
 
-import { fileParser, getSettings, isClient } from '../../../utils'
+import { fileParser, getRoute, getSettings, isClient } from '../../../utils'
 import { GET_FILEID, GET_FILES } from '../../../graphql'
 import { Plans } from '../../../sections/select-plan'
 import { SEO, Layout, StepsNavbar } from '../../../components'
 import { graphQLClient } from '../../../lib'
 import ReactHtmlParser from 'react-html-parser'
+import { useUser } from '../../../context'
 
 const SelectPlan = props => {
    const router = useRouter()
    const { data, settings } = props
+   const { isAuthenticated } = useUser()
+   React.useEffect(() => {
+      if (!isAuthenticated) {
+         isClient && localStorage.setItem('landed_on', location.href)
+         router.push(getRoute('/get-started/register'))
+      }
+   }, [isAuthenticated])
+
    React.useEffect(() => {
       if (isClient) {
          const plan = localStorage.getItem('plan')
          if (plan) {
-            router.push('/get-started/select-delivery')
+            router.push(getRoute('/get-started/select-delivery'))
          }
       }
    }, [])

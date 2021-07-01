@@ -44,7 +44,7 @@ const reducers = (state, { type, payload }) => {
 
 export const UserProvider = ({ children }) => {
    const router = useRouter()
-   const { brand, organization } = useConfig()
+   const { brand, organization, loading: configLoading } = useConfig()
    const [isLoading, setIsLoading] = React.useState(true)
    const [keycloakId, setKeycloakId] = React.useState('')
    const [updatePlatformCustomer] = useMutation(UPDATE_DAILYKEY_CUSTOMER, {
@@ -65,14 +65,12 @@ export const UserProvider = ({ children }) => {
          subscriptionOnboardStatus: 'REGISTER',
       },
    })
-   const { error } = useSubscription(BRAND_CUSTOMER, {
+   useSubscription(BRAND_CUSTOMER, {
       skip: !state?.user?.brandCustomerId,
       variables: { id: state?.user?.brandCustomerId },
       onSubscriptionData: ({
          subscriptionData: { data: { brandCustomer = {} } = {} } = {},
       }) => {
-         console.log('Sub worked...')
-         console.log({ brandCustomer })
          if (isEmpty(brandCustomer)) return
          dispatch({
             type: 'SET_USER',
@@ -83,11 +81,6 @@ export const UserProvider = ({ children }) => {
          })
       },
    })
-
-   if (error) {
-      console.log('Subscription error:', error)
-   }
-
    const { loading, data: { customer = {} } = {} } = useQuery(
       CUSTOMER.DETAILS,
       {
@@ -154,14 +147,6 @@ export const UserProvider = ({ children }) => {
       },
    })
 
-   const sendBackToSourceRoute = () => {
-      const redirectRoute = localStorage.getItem('source-route')
-      if (redirectRoute) {
-         localStorage.removeItem('source-route')
-         router.push(redirectRoute)
-      }
-   }
-
    React.useEffect(() => {
       if (isClient) {
          const token = localStorage.getItem('token')
@@ -169,7 +154,6 @@ export const UserProvider = ({ children }) => {
             const user = jwtDecode(token)
             setKeycloakId(user?.sub)
             dispatch({ type: 'SET_USER', payload: { keycloakId: user?.sub } })
-            sendBackToSourceRoute()
          } else {
             dispatch({ type: 'CLEAR_USER' })
          }
@@ -177,12 +161,9 @@ export const UserProvider = ({ children }) => {
    }, [])
 
    React.useEffect(() => {
-      if (!loading) {
-         console.log('Big useEffect')
+      if (!loading && !configLoading) {
          if (customer?.id && organization?.id) {
             const user = processUser(customer, organization?.stripeAccountType)
-
-            console.log('Big useEffect inner ')
 
             const hasPhone = Boolean(user?.platform_customer?.phoneNumber)
             const phone = isClient && localStorage.getItem('phone')
@@ -211,13 +192,22 @@ export const UserProvider = ({ children }) => {
             }
 
             dispatch({ type: 'SET_USER', payload: user })
-            sendBackToSourceRoute()
+         }
+         if (state.isAuthenticated) {
+            if (customer?.id) {
+               setIsLoading(false)
+            } else {
+               setIsLoading(true)
+            }
+         } else {
             setIsLoading(false)
          }
+      } else {
+         setIsLoading(true)
       }
-      setIsLoading(false)
-   }, [loading, customer, organization])
+   }, [loading, customer, organization, configLoading])
 
+   if (false) return <PageLoader />
    return (
       <UserContext.Provider
          value={{

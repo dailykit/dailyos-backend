@@ -64,7 +64,6 @@ export const Coupon = ({}) => {
                      })
                   }
                }
-               console.log(objects)
                if (objects.length) {
                   createOrderCartRewards({
                      variables: {

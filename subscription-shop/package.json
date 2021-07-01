@@ -5,7 +5,7 @@
    "scripts": {
       "dev": "next dev",
       "build": "next build",
-      "start": "next start",
+      "start": "concurrently \"next start\" \"node main\"",
       "export": "next export",
       "init:config": "chmod +x \"./script.sh\" && \"./script.sh\" && cp env-config.js \"./public\""
    },
@@ -59,8 +59,7 @@
       "styled-components": "^5.3.0",
       "subscriptions-transport-ws": "^0.9.18",
       "uuid": "^8.3.2",
-      "ws": "^7.4.2",
-      "@welldone-software/why-did-you-render": "^6.2.0"
+      "ws": "^7.4.2"
    },
    "devDependencies": {
       "babel-plugin-macros": "^2.8.0",

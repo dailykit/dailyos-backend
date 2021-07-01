@@ -4,14 +4,15 @@ import tw, { styled, css } from 'twin.macro'
 import { useToasts } from 'react-toast-notifications'
 
 import { SEO, Layout } from '../../components'
-import { isClient } from '../../utils'
+import { getSettings, isClient } from '../../utils'
 import { useMutation } from '@apollo/react-hooks'
-import { FORGOT_PASSWORD } from '../../graphql'
-import { useConfig } from '../../lib'
+import { FORGOT_PASSWORD, NAVIGATION_MENU, WEBSITE_PAGE } from '../../graphql'
+import { graphQLClient, useConfig } from '../../lib'
 
-const ForgotPassword = () => {
+const ForgotPassword = props => {
    const { addToast } = useToasts()
    const { configOf } = useConfig()
+   const { seo, settings, navigationMenus } = props
 
    const theme = configOf('theme-color', 'Visual')
 
@@ -43,9 +44,7 @@ const ForgotPassword = () => {
       try {
          setError('')
          if (isClient) {
-            const origin = window.location.pathname.includes('subscription')
-               ? window.location.origin + '/subscription'
-               : window.location.origin
+            const origin = window.location.origin
             forgotPassword({
                variables: {
                   email: form.email,
@@ -61,7 +60,7 @@ const ForgotPassword = () => {
    }
 
    return (
-      <Layout>
+      <Layout settings={settings} navigationMenus={navigationMenus}>
          <SEO title="Login" />
          <Main tw="pt-8">
             <Title theme={theme}>Forgot Password</Title>
@@ -91,6 +90,38 @@ const ForgotPassword = () => {
    )
 }
 
+export const getStaticProps = async ({ params }) => {
+   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+      domain: params.brand,
+      route: '/forgot-password',
+   })
+   // const domain =
+   //    process.env.NODE_ENV === 'production'
+   //       ? params.domain
+   //       : 'test.dailykit.org'
+   const domain = 'test.dailykit.org'
+   const { seo, settings } = await getSettings(domain, '/forgot-password')
+   //navigation menu
+   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+      navigationMenuId:
+         dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
+   })
+   const navigationMenus = navigationMenu.website_navigationMenuItem
+   return {
+      props: {
+         settings,
+         seo,
+         navigationMenus,
+      },
+      revalidate: 1,
+   }
+}
+export async function getStaticPaths() {
+   return {
+      paths: [],
+      fallback: 'blocking', // true -> build page if missing, false -> serve 404
+   }
+}
 export default ForgotPassword
 
 const Main = styled.main`

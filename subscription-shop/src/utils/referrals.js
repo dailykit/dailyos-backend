@@ -47,7 +47,6 @@ export const isReferralCodeValid = async (brandId, enteredCode) => {
       const response = await fetchReferrer(brandId, enteredCode)
       if (response.data?.data) {
          const { customerReferralsAggregate: cra } = response.data.data
-         console.log(cra.aggregate.count)
          if (cra.aggregate.count) {
             return true
          } else {

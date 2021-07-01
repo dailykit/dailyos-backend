@@ -4,18 +4,16 @@ import 'regenerator-runtime'
 import tw, { styled, css } from 'twin.macro'
 import ReactHtmlParser from 'react-html-parser'
 
-import { GET_FILES, NAVIGATION_MENU } from '../../graphql'
+import { GET_FILES, NAVIGATION_MENU, WEBSITE_PAGE } from '../../graphql'
 
 import { SEO, Layout, PageLoader } from '../../components'
 import { graphQLClient } from '../../lib'
 import { fileParser, getSettings } from '../../utils'
 
 const Index = props => {
-   console.log({ props })
    const { data, settings, random, revalidate, navigationMenus } = props
    // const params = useQueryParams()
    // const [loading, setLoading] = React.useState(false)
-   console.log('navigaiton from index', navigationMenus)
    React.useEffect(() => {
       try {
          if (data.length && typeof document !== 'undefined') {
@@ -35,7 +33,6 @@ const Index = props => {
          console.log('Failed to render page: ', err)
       }
    }, [data])
-   console.log('this is main page setting', settings)
    // React.useEffect(() => {
    //    if (params) {
    //       const code = params['invite-code']
@@ -77,13 +74,17 @@ const Index = props => {
 export default Index
 
 export async function getStaticProps(ctx) {
-   console.log({ ctx })
-
+   const params = ctx.params
    const data = await graphQLClient.request(GET_FILES, {
       divId: ['home-bottom-01'],
    })
+   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+      domain: params.brand,
+      route: '/',
+   })
    const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
-      navigationMenuId: 1014,
+      navigationMenuId:
+         dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
    })
 
    // const domain =
@@ -92,7 +93,6 @@ export async function getStaticProps(ctx) {
    //       : 'test.dailykit.org'
    const domain = 'test.dailykit.org'
    const { seo, settings } = await getSettings(domain, '/')
-   console.log(settings)
    const parsedData = await fileParser(data.content_subscriptionDivIds)
    const navigationMenus = navigationMenu.website_navigationMenuItem
    return {

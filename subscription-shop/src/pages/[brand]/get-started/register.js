@@ -1,4 +1,5 @@
 import React from 'react'
+import axios from 'axios'
 import { isEmpty } from 'lodash'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
@@ -9,9 +10,9 @@ import { useLazyQuery, useMutation } from '@apollo/react-hooks'
 
 import { useUser } from '../../../context'
 import { useConfig, auth } from '../../../lib'
-import { getSettings, isClient, processUser } from '../../../utils'
+import { getRoute, getSettings, isClient, processUser } from '../../../utils'
 import { SEO, Layout, StepsNavbar } from '../../../components'
-import { BRAND, CUSTOMER, MUTATIONS } from '../../../graphql'
+import { BRAND, CUSTOMER, FORGOT_PASSWORD, MUTATIONS } from '../../../graphql'
 import {
    deleteStoredReferralCode,
    getStoredReferralCode,
@@ -136,28 +137,30 @@ export default props => {
                brandCustomers[0].isSubscriber
             ) {
                console.log('BRAND_CUSTOMER EXISTS & CUSTOMER IS SUBSCRIBED')
-               router.push('/menu')
                isClient && localStorage.removeItem('plan')
+               const landedOn = localStorage.getItem('landed_on')
+               if (isClient && landedOn) {
+                  localStorage.removeItem('landed_on')
+                  window.location.href = landedOn
+               } else {
+                  router.push(getRoute('/menu'))
+               }
             } else {
                console.log('CUSTOMER ISNT SUBSCRIBED')
                if (isClient) {
-                  window.location.href =
-                     window.location.origin + '/get-started/select-plan'
+                  const landedOn = localStorage.getItem('landed_on')
+                  if (landedOn) {
+                     localStorage.removeItem('landed_on')
+                     window.location.href = landedOn
+                  } else {
+                     window.location.href =
+                        window.location.origin + '/get-started/select-plan'
+                  }
                }
             }
          },
       }
    )
-
-   React.useEffect(() => {
-      if (user?.keycloakId) {
-         if (user?.isSubscriber) router.push('/menu')
-         else if (isClient) {
-            window.location.href =
-               window.location.origin + '/get-started/select-plan'
-         }
-      }
-   }, [user])
 
    return (
       <Layout settings={settings}>
@@ -262,7 +265,7 @@ const LoginPanel = ({ loading, customer }) => {
          </FieldSet>
          <button
             tw="self-start mb-2 text-blue-500"
-            onClick={() => router.push('/forgot-password')}
+            onClick={() => router.push(getRoute('/forgot-password'))}
          >
             Forgot password?
          </button>
@@ -285,6 +288,8 @@ function validateEmail(email) {
 
 const RegisterPanel = ({ loading, customer, setCurrent }) => {
    const { brand } = useConfig()
+   const { addToast } = useToasts()
+   const [emailExists, setEmailExists] = React.useState(false)
    const [hasAccepted, setHasAccepted] = React.useState(false)
    const [isReferralFieldVisible, setIsReferralFieldVisible] =
       React.useState(false)
@@ -292,12 +297,37 @@ const RegisterPanel = ({ loading, customer, setCurrent }) => {
    const [emailError, setEmailError] = React.useState('')
    const [passwordError, setPasswordError] = React.useState('')
    const [phoneError, setPhoneError] = React.useState('')
+   const [forgotPasswordText, setForgotPasswordText] = React.useState('')
    const [form, setForm] = React.useState({
       email: '',
       password: '',
       phone: '',
       code: '',
    })
+
+   const [forgotPassword, { loading: forgotPasswordLoading }] = useMutation(
+      FORGOT_PASSWORD,
+      {
+         onCompleted: ({ forgotPassword = {} } = {}) => {
+            if (forgotPassword?.success) {
+               setForgotPasswordText(
+                  'An email has been sent to your provided email. Please check your  inbox.'
+               )
+               setTimeout(() => {
+                  setForgotPasswordText('')
+               }, 4000)
+            }
+            addToast('Successfully sent the set password email.', {
+               appearance: 'success',
+            })
+         },
+         onError: () => {
+            addToast('Failed to send the set password email.', {
+               appearance: 'error',
+            })
+         },
+      }
+   )
 
    const isValid =
       validateEmail(form.email) &&
@@ -313,6 +343,25 @@ const RegisterPanel = ({ loading, customer, setCurrent }) => {
          setIsReferralFieldVisible(true)
       }
    }, [])
+
+   const onEmailBlur = async e => {
+      const { value } = e.target
+      if (validateEmail(value)) {
+         setEmailError('')
+         const url =
+            new URL(window._env_.DATA_HUB_HTTPS).origin +
+            '/server/api/customer/' +
+            value
+         const { status, data } = await axios.get(url)
+         if (status === 200 && data?.success && data?.data?.id) {
+            setEmailExists(true)
+         } else {
+            setEmailExists(false)
+         }
+      } else {
+         setEmailError('Must be a valid email!')
+      }
+   }
 
    const onChange = e => {
       const { name, value } = e.target
@@ -384,100 +433,145 @@ const RegisterPanel = ({ loading, customer, setCurrent }) => {
                value={form.email}
                onChange={onChange}
                placeholder="Enter your email"
-               onBlur={e =>
-                  validateEmail(e.target.value)
-                     ? setEmailError('')
-                     : setEmailError('Must be a valid email!')
-               }
+               onBlur={onEmailBlur}
             />
          </FieldSet>
          {emailError && (
             <span tw="self-start block text-red-500 mb-2">{emailError}</span>
          )}
-         <FieldSet css={[passwordError && tw`mb-1`]}>
-            <Label htmlFor="password">Password*</Label>
-            <Input
-               name="password"
-               type="password"
-               onChange={onChange}
-               value={form.password}
-               placeholder="Enter your password"
-               onBlur={e =>
-                  e.target.value.length < 6
-                     ? setPasswordError(
-                          'Password must be atleast 6 letters long!'
-                       )
-                     : setPasswordError('')
-               }
-            />
-         </FieldSet>
-         {passwordError && (
-            <span tw="self-start block text-red-500 mb-2">{passwordError}</span>
-         )}
-         <FieldSet css={[phoneError && tw`mb-1`]}>
-            <Label htmlFor="phone">Phone Number*</Label>
-            <Input
-               type="text"
-               name="phone"
-               value={form.phone}
-               onChange={onChange}
-               placeholder="Eg. 9879879876"
-               onBlur={e =>
-                  e.target.value.length === 0
-                     ? setPhoneError('Must be a valid phone number!')
-                     : setPhoneError('')
-               }
-            />
-         </FieldSet>
-         {phoneError && (
-            <span tw="self-start block text-red-500 mb-2">{phoneError}</span>
-         )}
-         {isReferralFieldVisible ? (
-            <FieldSet>
-               <Label htmlFor="code">Referral Code</Label>
-               <Input
-                  name="code"
-                  type="text"
-                  onChange={onChange}
-                  value={form.code}
-                  placeholder="Enter referral code"
-               />
-            </FieldSet>
+         {!emailExists ? (
+            <>
+               <FieldSet css={[passwordError && tw`mb-1`]}>
+                  <Label htmlFor="password">Password*</Label>
+                  <Input
+                     name="password"
+                     type="password"
+                     onChange={onChange}
+                     value={form.password}
+                     placeholder="Enter your password"
+                     onBlur={e =>
+                        e.target.value.length < 6
+                           ? setPasswordError(
+                                'Password must be atleast 6 letters long!'
+                             )
+                           : setPasswordError('')
+                     }
+                  />
+               </FieldSet>
+               {passwordError && (
+                  <span tw="self-start block text-red-500 mb-2">
+                     {passwordError}
+                  </span>
+               )}
+               <FieldSet css={[phoneError && tw`mb-1`]}>
+                  <Label htmlFor="phone">Phone Number*</Label>
+                  <Input
+                     type="text"
+                     name="phone"
+                     value={form.phone}
+                     onChange={onChange}
+                     placeholder="Eg. 9879879876"
+                     onBlur={e =>
+                        e.target.value.length === 0
+                           ? setPhoneError('Must be a valid phone number!')
+                           : setPhoneError('')
+                     }
+                  />
+               </FieldSet>
+               {phoneError && (
+                  <span tw="self-start block text-red-500 mb-2">
+                     {phoneError}
+                  </span>
+               )}
+               {isReferralFieldVisible ? (
+                  <FieldSet>
+                     <Label htmlFor="code">Referral Code</Label>
+                     <Input
+                        name="code"
+                        type="text"
+                        onChange={onChange}
+                        value={form.code}
+                        placeholder="Enter referral code"
+                     />
+                  </FieldSet>
+               ) : (
+                  <button
+                     tw="self-start mb-1 text-blue-500"
+                     onClick={() => setIsReferralFieldVisible(true)}
+                  >
+                     Got a referral code?
+                  </button>
+               )}
+               <section tw="self-start mt-2 mb-3">
+                  <input
+                     tw="mr-2"
+                     type="checkbox"
+                     name="terms&conditions"
+                     id="terms&conditions"
+                     onChange={() => setHasAccepted(!hasAccepted)}
+                  />
+                  <label htmlFor="terms&conditions" tw="text-gray-600">
+                     I accept{' '}
+                     <Link to={getRoute('/terms-and-conditions')}>
+                        <span tw="text-blue-500">terms and conditions.</span>
+                     </Link>
+                  </label>
+               </section>
+               <Submit
+                  className={
+                     !hasAccepted || !isValid || loading ? 'disabled' : ''
+                  }
+                  onClick={() => isValid && submit()}
+               >
+                  {loading ? 'Registering' : 'Register'}
+               </Submit>
+               <button
+                  tw="self-start mt-2 text-blue-500"
+                  onClick={() => setCurrent('LOGIN')}
+               >
+                  Login instead?
+               </button>
+            </>
          ) : (
-            <button
-               tw="self-start mb-1 text-blue-500"
-               onClick={() => setIsReferralFieldVisible(true)}
-            >
-               Got a referral code?
-            </button>
+            <>
+               <p tw="text-gray-600 mb-4">
+                  Looks like your email already exists. If you remember your
+                  password then go to&nbsp;
+                  <button
+                     tw="text-blue-500"
+                     onClick={() => setCurrent('LOGIN')}
+                  >
+                     login
+                  </button>
+                  &nbsp;or
+               </p>
+               <Submit
+                  onClick={() =>
+                     forgotPassword({
+                        variables: {
+                           email: form.email,
+                           origin: location.origin,
+                           type: 'set_password',
+                           ...(isClient &&
+                              localStorage.getItem('landed_on') && {
+                                 redirectUrl: localStorage.getItem('landed_on'),
+                              }),
+                        },
+                     })
+                  }
+                  className={
+                     !form.email || forgotPasswordLoading ? 'disabled' : ''
+                  }
+               >
+                  {forgotPasswordLoading
+                     ? 'Sending email...'
+                     : 'Send Login Email'}
+               </Submit>
+               {forgotPasswordText && (
+                  <p tw="text-green-600 mt-3">{forgotPasswordText}</p>
+               )}
+            </>
          )}
-         <section tw="self-start mt-2 mb-3">
-            <input
-               tw="mr-2"
-               type="checkbox"
-               name="terms&conditions"
-               id="terms&conditions"
-               onChange={() => setHasAccepted(!hasAccepted)}
-            />
-            <label htmlFor="terms&conditions" tw="text-gray-600">
-               I accept{' '}
-               <Link href="/terms-and-conditions">
-                  <span tw="text-blue-500">terms and conditions.</span>
-               </Link>
-            </label>
-         </section>
-         <Submit
-            className={!hasAccepted || !isValid || loading ? 'disabled' : ''}
-            onClick={() => isValid && submit()}
-         >
-            {loading ? 'Registering' : 'Register'}
-         </Submit>
-         <button
-            tw="self-start mt-2 text-blue-500"
-            onClick={() => setCurrent('LOGIN')}
-         >
-            Login instead?
-         </button>
          {error && <span tw="self-start block text-red-500 mt-2">{error}</span>}
       </Panel>
    )

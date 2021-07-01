@@ -13,21 +13,24 @@ import {
    useMenu,
 } from '../../sections/select-menu'
 import { useUser } from '../../context'
-import { useConfig } from '../../lib'
+import { graphQLClient, useConfig } from '../../lib'
+import { NAVIGATION_MENU, WEBSITE_PAGE } from '../../graphql'
+import { getRoute, getSettings, isClient } from '../../utils'
 
-const MenuPage = () => {
+const MenuPage = props => {
    const router = useRouter()
-   const { isAuthenticated } = useUser()
-
+   const { isAuthenticated, isLoading } = useUser()
+   const { seo, settings, navigationMenus } = props
    React.useEffect(() => {
-      if (!isAuthenticated) {
-         router.push('/get-started/select-plan')
+      if (!isAuthenticated && !isLoading) {
+         isClient && localStorage.setItem('landed_on', location.href)
+         router.push(getRoute('/get-started/register'))
       }
-   }, [isAuthenticated])
+   }, [isAuthenticated, isLoading])
 
    return (
       <MenuProvider>
-         <Layout>
+         <Layout settings={settings} navigationMenus={navigationMenus}>
             <SEO title="Select Menu" />
             <MenuContent />
          </Layout>
@@ -76,7 +79,7 @@ const MenuContent = () => {
                   state.occurenceCustomer?.betweenPause && (
                      <MessageBar>
                         You've paused the plan for this week.&nbsp;
-                        <Link href="/account/profile">
+                        <Link href={getRoute('/account/profile')}>
                            UNPAUSE SUBSCRIPTION
                         </Link>
                      </MessageBar>
@@ -84,7 +87,7 @@ const MenuContent = () => {
                {user.isSubscriptionCancelled && (
                   <MessageBar large>
                      Oh! Looks like you cancelled your subscription.&nbsp;
-                     <Link href="/account/profile">
+                     <Link href={getRoute('/account/profile')}>
                         REACTIVATE SUBSCRIPTION
                      </Link>
                   </MessageBar>
@@ -107,7 +110,9 @@ const MenuContent = () => {
                   Let's start with setting up a plan for you.
                </HelperBar.SubTitle>
                <HelperBar.Button
-                  onClick={() => router.push('/get-started/select-plan')}
+                  onClick={() =>
+                     router.push(getRoute('/get-started/select-plan'))
+                  }
                >
                   Select Plan
                </HelperBar.Button>
@@ -115,6 +120,37 @@ const MenuContent = () => {
          </div>
       </Main>
    )
+}
+
+export const getStaticProps = async ({ params }) => {
+   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+      domain: params.brand,
+      route: '/menu',
+   })
+
+   // const domain =
+   //    process.env.NODE_ENV === 'production'
+   //       ? params.domain
+   //       : 'test.dailykit.org'
+   const domain = 'test.dailykit.org'
+   const { seo, settings } = await getSettings(domain, '/menu')
+   //navigation menu
+   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+      navigationMenuId:
+         dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
+   })
+   const navigationMenus = navigationMenu.website_navigationMenuItem
+   return {
+      props: { seo, settings, navigationMenus },
+      revalidate: 60, // will be passed to the page component as props
+   }
+}
+
+export async function getStaticPaths() {
+   return {
+      paths: [],
+      fallback: 'blocking', // true -> build page if missing, false -> serve 404
+   }
 }
 
 const Main = styled.main`

@@ -6,20 +6,29 @@
    "author": "Praveen Bisht <prvnbist@gmail.com>",
    "license": "MIT",
    "scripts": {
-      "dev": "nodemon -r esm index.js",
-      "prod": "node src/index.js"
+      "dev": "concurrently \"nodemon -r esm index.js\" \"cd subscription-shop && yarn dev\"",
+      "build": "cd subscription-shop && yarn build",
+      "prod": "concurrently \"node -r esm index.js\" \"cd subscription-shop && yarn start\""
    },
    "dependencies": {
+      "apollo-server-express": "^2.25.2",
       "aws-sdk": "^2.678.0",
-      "axios": "^0.19.2",
+      "axios": "^0.21.1",
       "bluebird": "^3.7.2",
+      "concurrently": "^6.2.0",
       "cors": "^2.8.5",
       "dotenv": "^8.2.0",
       "esm": "^3.2.25",
       "express": "^4.17.1",
       "file-type": "^14.4.0",
-      "graphql-request": "^1.8.2",
+      "gql": "^1.1.2",
+      "graphql": "^14.5.8",
+      "graphql-depth-limit": "^1.1.0",
+      "graphql-request": "^3.4.0",
+      "graphql-tools": "^4.0.6",
+      "http-proxy-middleware": "^2.0.0",
       "http-status-codes": "^2.1.4",
+      "isomorphic-git": "0.75.0",
       "lodash": "^4.17.20",
       "logger": "^0.0.1",
       "moment": "^2.27.0",
@@ -28,8 +37,15 @@
       "multiparty": "^4.2.1",
       "nodemailer": "^6.4.11",
       "pg": "^8.6.0",
+      "pug": "^3.0.0",
+      "puppeteer": "^10.0.0",
+      "qrcode": "^1.4.4",
       "request": "^2.88.2",
-      "rrule": "2.6.4"
+      "rimraf": "^3.0.0",
+      "rrule": "2.6.4",
+      "ssh2": "^0.8.9",
+      "tar-fs": "^2.1.1",
+      "zlib": "^1.0.5"
    },
    "devDependencies": {
       "nodemon": "^2.0.3"

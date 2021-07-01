@@ -6,7 +6,7 @@ import { findKey, has, isEmpty } from 'lodash'
 
 import { useConfig } from '../lib'
 import { useUser } from '../context'
-import { isClient } from '../utils'
+import { getRoute, isClient } from '../utils'
 
 const routes = {
    '/get-started/register': { status: 'REGISTER', level: 0 },
@@ -46,7 +46,7 @@ export const StepsNavbar = () => {
 
    React.useEffect(() => {
       if (router.pathname === '/get-started/select-delivery/') {
-         router.push('/get-started/select-delivery')
+         router.push(getRoute('/get-started/select-delivery'))
       } else {
          if (!has(routes, router.pathname)) return
          setCurrentStep(routes[router.pathname].level)
@@ -59,7 +59,7 @@ export const StepsNavbar = () => {
    const logout = () => {
       isClient && localStorage.removeItem('token')
       if (isClient) {
-         window.location.href = window.location.origin + '/subscription'
+         window.location.href = window.location.origin
       }
    }
 
@@ -88,17 +88,17 @@ export const StepsNavbar = () => {
                path += `?date=${cart.subscriptionOccurence?.fulfillmentDate}`
             }
          }
-         router.push(path)
+         router.push(getRoute(path))
       }
    }
 
    return (
       <Navbar>
-         <Link href="/">
+         <Link href={getRoute('/')}>
             <Brand>
                {brand?.logo?.logoMark && (
                   <img
-                     tw="h-auto md:h-12"
+                     tw="h-12 md:h-12"
                      src={brand?.logo?.logoMark}
                      alt={brand?.name || 'Subscription Shop'}
                   />

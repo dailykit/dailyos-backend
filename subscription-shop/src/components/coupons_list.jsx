@@ -26,14 +26,12 @@ export const CouponsList = ({ createOrderCartRewards, closeTunnel }) => {
          brandId: brand.id,
       },
       onSubscriptionData: data => {
-         console.log(data)
          const coupons = data.subscriptionData.data.coupons
          setAvailableCoupons([
             ...coupons.filter(coupon => coupon.visibilityCondition.isValid),
          ])
       },
    })
-   console.log('🚀 ~ CouponsList ~ error', error)
 
    const handleApplyCoupon = coupon => {
       try {
@@ -55,7 +53,6 @@ export const CouponsList = ({ createOrderCartRewards, closeTunnel }) => {
                cartId: id,
             })
          }
-         console.log(objects)
          createOrderCartRewards({
             variables: {
                objects,

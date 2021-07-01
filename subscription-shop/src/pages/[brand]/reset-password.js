@@ -1,24 +1,37 @@
 import React from 'react'
+import { isEmpty } from 'lodash'
+import jwtDecode from 'jwt-decode'
 
 import tw, { styled, css } from 'twin.macro'
 import { useToasts } from 'react-toast-notifications'
 
 import { SEO, Layout, Loader } from '../../components'
-import { isClient } from '../../utils'
-import { useMutation } from '@apollo/react-hooks'
-import { RESET_PASSWORD, VERIFY_RESET_PASSWORD_TOKEN } from '../../graphql'
+import { getRoute, getSettings, isClient } from '../../utils'
+import { useMutation, useLazyQuery } from '@apollo/react-hooks'
+import {
+   NAVIGATION_MENU,
+   RESET_PASSWORD,
+   VERIFY_RESET_PASSWORD_TOKEN,
+   WEBSITE_PAGE,
+   MUTATIONS,
+   BRAND,
+   CUSTOMER,
+} from '../../graphql'
 import { useConfig } from '../../lib'
 import { useQueryParams } from '../../utils/useQueryParams'
 import { useRouter } from 'next/router'
+import { useUser } from '../../context'
 
-const ResetPassword = () => {
+const ResetPassword = props => {
    const router = useRouter()
    const { addToast } = useToasts()
-   const { configOf } = useConfig()
+   const { dispatch } = useUser()
+   const { brand, configOf, organization } = useConfig()
    const params = { token: '' }
-
+   const { seo, settings, navigationMenus } = props
    const theme = configOf('theme-color', 'Visual')
 
+   const [type, setType] = React.useState('reset_password')
    const [token, setToken] = React.useState(null)
    const [isVerified, setIsVerified] = React.useState(false)
    const [error, setError] = React.useState('')
@@ -29,41 +42,154 @@ const ResetPassword = () => {
 
    const isValid = form.password && form.confirmPassword
 
+   const [create_brand_customer] = useMutation(BRAND.CUSTOMER.CREATE, {
+      refetchQueries: ['customer'],
+      onCompleted: () => {
+         if (isClient) {
+            window.location.href =
+               window.location.origin + '/get-started/select-plan'
+         }
+      },
+      onError: error => {
+         console.log(error)
+      },
+   })
+   const [create] = useMutation(MUTATIONS.CUSTOMER.CREATE, {
+      refetchQueries: ['customer'],
+      onCompleted: () => {
+         dispatch({ type: 'SET_USER', payload: {} })
+         if (isClient) {
+            window.location.href =
+               window.location.origin + '/get-started/select-plan'
+         }
+      },
+      onError: () =>
+         addToast('Something went wrong!', {
+            appearance: 'error',
+         }),
+   })
+   const [customer] = useLazyQuery(CUSTOMER.DETAILS, {
+      onCompleted: async ({ customer = {} }) => {
+         const { email = '', keycloakId = '' } = jwtDecode(token)
+         if (isEmpty(customer)) {
+            console.log('CUSTOMER DOESNT EXISTS')
+            create({
+               variables: {
+                  object: {
+                     email,
+                     keycloakId,
+                     source: 'subscription',
+                     sourceBrandId: brand.id,
+                     clientId: isClient && window._env_.CLIENTID,
+                     brandCustomers: { data: { brandId: brand.id } },
+                  },
+               },
+            })
+            return
+         }
+         console.log('CUSTOMER EXISTS')
+
+         const user = await processUser(
+            customer,
+            organization?.stripeAccountType
+         )
+         dispatch({ type: 'SET_USER', payload: user })
+
+         const { brandCustomers = {} } = customer
+         if (isEmpty(brandCustomers)) {
+            console.log('BRAND_CUSTOMER DOESNT EXISTS')
+            create_brand_customer({
+               variables: {
+                  object: { keycloakId, brandId: brand.id },
+               },
+            })
+         } else if (customer.isSubscriber && brandCustomers[0].isSubscriber) {
+            console.log('BRAND_CUSTOMER EXISTS & CUSTOMER IS SUBSCRIBED')
+            isClient && localStorage.removeItem('plan')
+            const landedOn = isClient ? localStorage.getItem('landed_on') : null
+            if (isClient && landedOn) {
+               localStorage.removeItem('landed_on')
+               window.location.href = landedOn
+            } else {
+               window.location.href = '/menu'
+            }
+         } else {
+            console.log('CUSTOMER ISNT SUBSCRIBED')
+            if (isClient) {
+               const landedOn = localStorage.getItem('landed_on')
+               if (landedOn) {
+                  localStorage.removeItem('landed_on')
+                  window.location.href = landedOn
+               } else {
+                  window.location.href =
+                     window.location.origin + '/get-started/select-plan'
+               }
+            }
+         }
+      },
+   })
+
    const [verifyResetPasswordToken, { loading: verifying }] = useMutation(
       VERIFY_RESET_PASSWORD_TOKEN,
       {
          onCompleted: data => {
-            if (data.verifyResetPasswordToken.success) {
+            if (data?.verifyResetPasswordToken?.success) {
                setIsVerified(true)
             } else {
-               addToast('Token expired or incorrect!', { appearance: 'error' })
-               router.push('/login')
+               addToast(
+                  'Seems like token has either expired or is invalid, please try again!',
+                  { appearance: 'error' }
+               )
+               router.push(getRoute('/get-started/register'))
             }
          },
          onError: error => {
-            addToast(error.message, { appearance: 'error' })
-            router.push('/login')
+            addToast(
+               'Seems like token has either expired or is invalid, please try again!',
+               { appearance: 'error' }
+            )
+            router.push(getRoute('/get-started/register'))
          },
       }
    )
 
    const [resetPassword, { loading }] = useMutation(RESET_PASSWORD, {
-      onCompleted: () => {
+      onCompleted: async () => {
          addToast('Password changed successfully!', { appearance: 'success' })
-         router.push('/login')
+         const parsedToken = jwtDecode(params['token'])
+         const token = await auth.login({
+            email: parsedToken.email,
+            password: form.password,
+         })
+         if (token?.sub) {
+            customer({
+               variables: {
+                  keycloakId: token?.sub,
+                  brandId: brand.id,
+               },
+            })
+         } else {
+            router.push(getRoute('/get-started/register'))
+         }
       },
       onError: error => {
          addToast(error.message, { appearance: 'error' })
       },
    })
-
    React.useEffect(() => {
       if (params) {
          const token = params['token']
          if (token) {
             setToken(token)
+            const { type = '', redirectUrl = '' } = jwtDecode(token)
+            if (type) {
+               setType(type)
+            }
+            if (isClient && redirectUrl) {
+               localStorage.setItem('landed_on', redirectUrl)
+            }
          } else {
-            router.push('/login')
+            router.push(getRoute('/get-started/register'))
          }
       }
    }, [params])
@@ -108,10 +234,12 @@ const ResetPassword = () => {
 
    if (verifying) return <Loader />
    return (
-      <Layout>
+      <Layout settings={settings} navigationMenus={navigationMenus}>
          <SEO title="Login" />
          <Main tw="pt-8">
-            <Title theme={theme}>Reset Password</Title>
+            <Title theme={theme}>
+               {type === 'set_password' ? 'Set' : 'Reset'} Password
+            </Title>
             {isVerified ? (
                <Panel>
                   <FieldSet>
@@ -154,6 +282,39 @@ const ResetPassword = () => {
          </Main>
       </Layout>
    )
+}
+
+export const getStaticProps = async ({ params }) => {
+   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+      domain: params.brand,
+      route: '/reset-password',
+   })
+   // const domain =
+   //    process.env.NODE_ENV === 'production'
+   //       ? params.domain
+   //       : 'test.dailykit.org'
+   const domain = 'test.dailykit.org'
+   const { settings, seo } = await getSettings(domain, '/reset-password')
+   //navigation menu
+   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+      navigationMenuId:
+         dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
+   })
+   const navigationMenus = navigationMenu.website_navigationMenuItem
+   return {
+      props: {
+         settings,
+         seo,
+         navigationMenus,
+      },
+      revalidate: 1,
+   }
+}
+export async function getStaticPaths() {
+   return {
+      paths: [],
+      fallback: 'blocking', // true -> build page if missing, false -> serve 404
+   }
 }
 
 export default ResetPassword

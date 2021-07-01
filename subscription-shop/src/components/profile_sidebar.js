@@ -3,23 +3,29 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import tw, { styled, css } from 'twin.macro'
 import { useConfig } from '../lib'
+import { getRoute } from '../utils'
 
 export const ProfileSidebar = ({ toggle = true, logout }) => {
    const { configOf } = useConfig()
    const router = useRouter()
 
-   const loyaltyPointsAllowed = configOf(
-      'Loyalty Points',
-      'rewards'
-   )?.isAvailable
-   const walletAllowed = configOf('Wallet', 'rewards')?.isAvailable
+   const loyaltyPointsSettings = configOf('Loyalty Points', 'rewards')
+
+   const walletSettings = configOf('Wallet', 'rewards')
    const referralsAllowed = configOf('Referral', 'rewards')?.isAvailable
 
    const [menu] = useState([
       { title: 'Profile', href: '/account/profile/' },
-      { title: 'Wallet', href: '/account/wallet/' },
       {
-         title: 'Loyalty Points',
+         title: `${walletSettings?.label ? walletSettings.label : 'Wallet'}`,
+         href: '/account/wallet/',
+      },
+      {
+         title: `${
+            loyaltyPointsSettings?.label
+               ? loyaltyPointsSettings.label
+               : 'Loyalty Points'
+         }`,
          href: '/account/loyalty-points/',
       },
       { title: 'Referrals', href: '/account/referrals/' },
@@ -32,10 +38,11 @@ export const ProfileSidebar = ({ toggle = true, logout }) => {
       <Aside toggle={toggle}>
          <ul>
             {menu.map(node => (
-               <Link href={node.href} key={node.href} passHref>
+               <Link href={getRoute(node.href)} key={node.href} passHref>
                   <MenuLink
                      css={
-                        node.href === `${router.pathname}/` && tw`bg-gray-300`
+                        getRoute(node.href) === `${router.pathname}/` &&
+                        tw`bg-gray-300`
                      }
                   >
                      {node.title}

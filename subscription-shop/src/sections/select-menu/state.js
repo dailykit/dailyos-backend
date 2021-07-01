@@ -16,6 +16,7 @@ import {
    DELETE_CART_ITEM,
    OCCURENCES_BY_SUBSCRIPTION,
 } from '../../graphql'
+import { getRoute } from '../../utils'
 
 export const MenuContext = React.createContext()
 
@@ -245,9 +246,15 @@ export const MenuProvider = ({ isCheckout, children }) => {
                   payload: subscription?.occurences[0],
                })
                if (!isCheckout) {
-                  router.push(
-                     '/menu?d=' + subscription?.occurences[0].fulfillmentDate
-                  )
+                  const queryDate = new URL(location.href).searchParams.get('d')
+                  if (!queryDate) {
+                     router.push(
+                        getRoute(
+                           '/menu?d=' +
+                              subscription?.occurences[0].fulfillmentDate
+                        )
+                     )
+                  }
                }
             } else {
                dispatch({
@@ -255,10 +262,16 @@ export const MenuProvider = ({ isCheckout, children }) => {
                   payload: subscription?.occurences[validWeekIndex],
                })
                if (!isCheckout) {
-                  router.push(
-                     '/menu?d=' +
-                        subscription?.occurences[validWeekIndex].fulfillmentDate
-                  )
+                  const queryDate = new URL(location.href).searchParams.get('d')
+                  if (!queryDate) {
+                     router.push(
+                        getRoute(
+                           '/menu?d=' +
+                              subscription?.occurences[validWeekIndex]
+                                 .fulfillmentDate
+                        )
+                     )
+                  }
                }
             }
             dispatch({ type: 'SET_IS_OCCURENCES_LOADING', payload: false })
@@ -334,14 +347,10 @@ export const MenuProvider = ({ isCheckout, children }) => {
          insertCartItem({
             variables: { object: cart },
          })
-            .then(({ data: { createCartItem = {} } = {} }) => {
-               const { products = [] } = createCartItem
-               if (!isEmpty(products)) {
-                  const [product] = products
-                  addToast(`You've added the product - ${product.name}.`, {
-                     appearance: 'info',
-                  })
-               }
+            .then(({ data: { createCartItem = {} } = {} } = {}) => {
+               addToast(`Successfully added the product.`, {
+                  appearance: 'info',
+               })
 
                updateOccurenceCustomer({
                   variables: {
@@ -407,14 +416,10 @@ export const MenuProvider = ({ isCheckout, children }) => {
                const cart = insertCartId(item, createCart?.id)
                insertCartItem({
                   variables: { object: cart },
-               }).then(({ data: { createCartItem = {} } = {} }) => {
-                  const { products = [] } = createCartItem
-                  if (!isEmpty(products)) {
-                     const [product] = products
-                     addToast(`You've added the product - ${product.name}.`, {
-                        appearance: 'info',
-                     })
-                  }
+               }).then(({ data: { createCartItem = {} } = {} } = {}) => {
+                  addToast(`Successfully added the product.`, {
+                     appearance: 'info',
+                  })
                   updateOccurenceCustomer({
                      variables: {
                         pk_columns: {

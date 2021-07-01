@@ -5,6 +5,7 @@ import tw, { styled } from 'twin.macro'
 
 import { useMenu } from './state'
 import { Loader } from '../../components'
+import { getRoute } from '../../utils'
 
 export const WeekPicker = ({ isFixed }) => {
    const router = useRouter()
@@ -31,7 +32,7 @@ export const WeekPicker = ({ isFixed }) => {
             <Occurence
                key={occurence.id}
                onClick={() => {
-                  router.push(`/menu?d=${occurence.fulfillmentDate}`)
+                  router.push(getRoute(`/menu?d=${occurence.fulfillmentDate}`))
                   dispatch({ type: 'SET_WEEK', payload: occurence })
                }}
                className={

@@ -51,6 +51,7 @@ export const PLANS = gql`
          id
          title
          isDemo
+         metaDetails
          defaultServingId: defaultSubscriptionServingId
          defaultServing: defaultSubscriptionServing {
             id
@@ -78,6 +79,7 @@ export const PLANS = gql`
          ) {
             id
             isDemo
+            metaDetails
             size: servingSize
             defaultItemCountId: defaultSubscriptionItemCountId
             defaultItemCount: defaultSubscriptionItemCount {
@@ -95,6 +97,7 @@ export const PLANS = gql`
                isDemo
                count
                price
+               metaDetails
                isTaxIncluded
             }
          }
@@ -244,6 +247,7 @@ export const OCCURENCE_PRODUCTS_BY_CATEGORIES = gql`
                      name
                      assets
                      additionalText
+                     tags
                   }
                }
             }
@@ -361,18 +365,6 @@ export const CART_BY_WEEK = gql`
             fulfillmentInfo
             transactionId
             paymentMethodId
-            products: cartItems(where: { level: { _eq: 1 } }) {
-               id
-               name: displayName
-               image: displayImage
-               isAddOn
-               unitPrice
-               addOnLabel
-               addOnPrice
-               isAutoAdded
-               subscriptionOccurenceProductId
-               subscriptionOccurenceAddOnProductId
-            }
          }
       }
    }
@@ -447,6 +439,7 @@ export const CART_SUBSCRIPTION = gql`
          transactionRemark
          stripeInvoiceId
          stripeInvoiceDetails
+         customerKeycloakId
          products: cartItems(where: { level: { _eq: 1 } }) {
             id
             isAddOn
@@ -475,6 +468,7 @@ export const CART_STATUS = gql`
          paymentStatus
          fulfillmentInfo
          billingDetails
+         customerKeycloakId
          products: cartItems(where: { level: { _eq: 1 } }) {
             id
             name: displayName
@@ -526,6 +520,7 @@ export const ORDER = gql`
       ) {
          isSkipped
          validStatus
+         keycloakId
          occurrence: subscriptionOccurence {
             id
             subscription {
@@ -1099,6 +1094,9 @@ export const WEBSITE_PAGE = gql`
                   }
                }
             }
+         }
+         website {
+            navigationMenuId
          }
       }
    }

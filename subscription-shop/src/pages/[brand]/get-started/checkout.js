@@ -1,4 +1,5 @@
 import React from 'react'
+import { isEmpty } from 'lodash'
 import { useRouter } from 'next/router'
 import tw, { styled, css } from 'twin.macro'
 import { useToasts } from 'react-toast-notifications'
@@ -8,8 +9,15 @@ import { useConfig } from '../../../lib'
 import * as QUERIES from '../../../graphql'
 import * as Icon from '../../../assets/icons'
 import OrderInfo from '../../../sections/OrderInfo'
-import { isClient, formatCurrency } from '../../../utils'
-import { SEO, Loader, Layout, StepsNavbar, Button } from '../../../components'
+import { isClient, formatCurrency, getSettings, getRoute } from '../../../utils'
+import {
+   SEO,
+   Loader,
+   Layout,
+   StepsNavbar,
+   Button,
+   HelperBar,
+} from '../../../components'
 import {
    usePayment,
    ProfileSection,
@@ -19,18 +27,19 @@ import {
 import { useUser } from '../../../context'
 import { UPDATE_BRAND_CUSTOMER } from '../../../graphql'
 
-const Checkout = () => {
+const Checkout = props => {
    const router = useRouter()
    const { isAuthenticated } = useUser()
-
+   const { seo, settings } = props
    React.useEffect(() => {
       if (!isAuthenticated) {
-         router.push('/get-started/select-plan')
+         isClient && localStorage.setItem('landed_on', location.href)
+         router.push(getRoute('/get-started/register'))
       }
    }, [isAuthenticated])
 
    return (
-      <Layout noHeader>
+      <Layout noHeader settings={settings}>
          <SEO title="Checkout" />
          <StepsNavbar />
          <PaymentProvider>
@@ -68,80 +77,76 @@ const PaymentContent = () => {
       },
    })
 
-   const { loading, data: { cart = {} } = {} } = useSubscription(
-      QUERIES.CART_SUBSCRIPTION,
-      {
-         skip: !isClient,
-         variables: {
-            id: isClient ? new URLSearchParams(location.search).get('id') : '',
-         },
-      }
-   )
+   const {
+      loading,
+      error,
+      data: { cart = { paymentStatus: '', transactionRemark: {} } } = {},
+   } = useSubscription(QUERIES.CART_SUBSCRIPTION, {
+      skip: !isClient || !new URLSearchParams(location.search).get('id'),
+      variables: {
+         id: isClient ? new URLSearchParams(location.search).get('id') : '',
+      },
+   })
 
    React.useEffect(() => {
-      ;(async () => {
-         const status = cart.paymentStatus
-         const remark = cart.transactionRemark
-         const next_action = cart.transactionRemark?.next_action
+      if (!loading && !isEmpty(cart)) {
+         ;(async () => {
+            const status = cart.paymentStatus
+            const remark = cart.transactionRemark
+            const next_action = cart.transactionRemark?.next_action
 
-         try {
-            if (status === 'PENDING') {
-               setOverlayMessage(messages['PENDING'])
-            } else if (status === 'REQUIRES_ACTION' && !next_action?.type) {
-               toggleOverlay(true)
-               setOverlayMessage(messages['REQUIRES_ACTION'])
-            } else if (status === 'REQUIRES_ACTION' && next_action?.type) {
-               toggleOverlay(true)
-               setOverlayMessage(messages['REQUIRES_ACTION_WITH_URL'])
-               let TAB_URL = ''
-               let remark = remark
-               if (next_action?.type === 'use_stripe_sdk') {
-                  TAB_URL = next_action?.use_stripe_sdk?.stripe_js
-               } else {
-                  TAB_URL = next_action?.redirect_to_url?.url
-               }
-               setOtpPageUrl(TAB_URL)
-               authTabRef.current = window.open(TAB_URL, 'payment_auth_page')
-            } else if (
-               status === 'REQUIRES_PAYMENT_METHOD' &&
-               remark?.last_payment_error?.code
-            ) {
-               toggleOverlay(false)
-               setOverlayMessage(messages['PENDING'])
-               addToast(remark?.last_payment_error?.message, {
-                  appearance: 'error',
-               })
-            } else if (status === 'SUCCEEDED') {
-               await updateBrandCustomer({
-                  refetchQueries: ['customer'],
-                  variables: {
-                     id: user?.brandCustomerId,
-                     _set: { subscriptionOnboardStatus: 'ONBOARDED' },
-                  },
-               })
-               if (authTabRef.current) {
-                  authTabRef.current.close()
-                  if (!authTabRef.current.closed) {
-                     window.open(
-                        `/get-started/checkout?id=${cart.id}`,
-                        'payment_auth_page'
-                     )
+            try {
+               if (status === 'PENDING') {
+                  setOverlayMessage(messages['PENDING'])
+               } else if (status === 'REQUIRES_ACTION' && !next_action?.type) {
+                  toggleOverlay(true)
+                  setOverlayMessage(messages['REQUIRES_ACTION'])
+               } else if (status === 'REQUIRES_ACTION' && next_action?.type) {
+                  toggleOverlay(true)
+                  setOverlayMessage(messages['REQUIRES_ACTION_WITH_URL'])
+                  let TAB_URL = ''
+                  let remark = remark
+                  if (next_action?.type === 'use_stripe_sdk') {
+                     TAB_URL = next_action?.use_stripe_sdk?.stripe_js
+                  } else {
+                     TAB_URL = next_action?.redirect_to_url?.url
                   }
+                  setOtpPageUrl(TAB_URL)
+                  authTabRef.current = window.open(TAB_URL, 'payment_auth_page')
+               } else if (
+                  status === 'REQUIRES_PAYMENT_METHOD' &&
+                  remark?.last_payment_error?.code
+               ) {
+                  toggleOverlay(false)
+                  setOverlayMessage(messages['PENDING'])
+                  addToast(remark?.last_payment_error?.message, {
+                     appearance: 'error',
+                  })
+               } else if (status === 'SUCCEEDED') {
+                  if (authTabRef.current) {
+                     authTabRef.current.close()
+                     if (!authTabRef.current.closed) {
+                        window.open(
+                           `/get-started/checkout?id=${cart.id}`,
+                           'payment_auth_page'
+                        )
+                     }
+                  }
+                  setOverlayMessage(messages['SUCCEEDED'])
+                  addToast(messages['SUCCEEDED'], { appearance: 'success' })
+                  navigate(`/get-started/placing-order?id=${cart.id}`)
+               } else if (status === 'PAYMENT_FAILED') {
+                  toggleOverlay(false)
+                  addToast(messages['PAYMENT_FAILED'], {
+                     appearance: 'error',
+                  })
                }
-               setOverlayMessage(messages['SUCCEEDED'])
-               addToast(messages['SUCCEEDED'], { appearance: 'success' })
-               router.push(`/get-started/placing-order?id=${cart.id}`)
-            } else if (status === 'PAYMENT_FAILED') {
-               toggleOverlay(false)
-               addToast(messages['PAYMENT_FAILED'], {
-                  appearance: 'error',
-               })
+            } catch (error) {
+               console.log('on succeeded -> error -> ', error)
             }
-         } catch (error) {
-            console.log('on succeeded -> error -> ', error)
-         }
-      })()
-   }, [cart.paymentStatus, cart.transactionRemark])
+         })()
+      }
+   }, [loading, cart])
 
    const [updateCustomerReferralRecord] = useMutation(
       QUERIES.MUTATIONS.CUSTOMER_REFERRAL.UPDATE,
@@ -287,6 +292,71 @@ const PaymentContent = () => {
    const theme = configOf('theme-color', 'Visual')
 
    if (loading) return <Loader inline />
+   if (isClient && !new URLSearchParams(location.search).get('id')) {
+      return (
+         <Main>
+            <div tw="pt-4 w-full">
+               <HelperBar>
+                  <HelperBar.Title>
+                     Oh no! Looks like you've wandered on an unknown path, let's
+                     get you to home.
+                  </HelperBar.Title>
+                  <HelperBar.Button onClick={() => navigate('/')}>
+                     Go to Home
+                  </HelperBar.Button>
+               </HelperBar>
+            </div>
+         </Main>
+      )
+   }
+   if (error) {
+      return (
+         <Main>
+            <div tw="pt-4 w-full">
+               <HelperBar type="danger">
+                  <HelperBar.SubTitle>
+                     Looks like there was an issue fetching details, please
+                     refresh the page!
+                  </HelperBar.SubTitle>
+               </HelperBar>
+            </div>
+         </Main>
+      )
+   }
+   if (isEmpty(cart)) {
+      return (
+         <Main>
+            <div tw="pt-4 w-full">
+               <HelperBar type="info">
+                  <HelperBar.Title>
+                     Looks like the page you're requesting is not available
+                     anymore, let's get you to home.
+                  </HelperBar.Title>
+                  <HelperBar.Button onClick={() => navigate('/')}>
+                     Go to Home
+                  </HelperBar.Button>
+               </HelperBar>
+            </div>
+         </Main>
+      )
+   }
+   if (user?.keycloakId !== cart?.customerKeycloakId) {
+      return (
+         <Main>
+            <div tw="pt-4 w-full">
+               <HelperBar type="warning">
+                  <HelperBar.SubTitle>
+                     Seems like, you do not have access to this page, let's get
+                     you to home.
+                  </HelperBar.SubTitle>
+                  <HelperBar.Button onClick={() => navigate('/')}>
+                     Go to Home
+                  </HelperBar.Button>
+               </HelperBar>
+            </div>
+         </Main>
+      )
+   }
    return (
       <Main>
          <Form>
@@ -345,6 +415,28 @@ const PaymentContent = () => {
          )}
       </Main>
    )
+}
+
+export const getStaticProps = async () => {
+   // const domain =
+   //    process.env.NODE_ENV === 'production'
+   //       ? params.domain
+   //       : 'test.dailykit.org'
+   const domain = 'test.dailykit.org'
+   const { seo, settings } = await getSettings(domain, '/checkout')
+   return {
+      props: {
+         seo,
+         settings,
+      },
+      revalidate: 1,
+   }
+}
+export async function getStaticPaths() {
+   return {
+      paths: [],
+      fallback: 'blocking', // true -> build page if missing, false -> serve 404
+   }
 }
 
 export default Checkout

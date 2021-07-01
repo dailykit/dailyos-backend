@@ -4,15 +4,16 @@ import tw, { styled, css } from 'twin.macro'
 
 import { Header } from './header'
 import { useUser } from '../context'
-import { normalizeAddress } from '../utils'
+import { getRoute, normalizeAddress } from '../utils'
 import { MailIcon, PhoneIcon } from '../assets/icons'
 
-const Layout = ({ children, noHeader, settings, navigationMenus = [] }) => {
+export const Layout = ({
+   children,
+   noHeader,
+   settings,
+   navigationMenus = [],
+}) => {
    const { isAuthenticated, user } = useUser()
-
-   // const user = {}
-   // const isAuthenticated = false
-   console.log('Re-rendering...')
 
    if (!settings) return null
 
@@ -44,10 +45,10 @@ const Layout = ({ children, noHeader, settings, navigationMenus = [] }) => {
          <Footer theme={theme}>
             <div>
                <section>
-                  <h2 tw="text-3xl">{brand?.name || 'Subscription Shop'}</h2>
+                  <h4 tw="text-2xl mb-4 mt-2">Contact Us</h4>
                   {location && <p tw="mt-2">{normalizeAddress(location)}</p>}
 
-                  {brand['Contact'] && (
+                  {brand?.['Contact'] && (
                      <>
                         <span tw="mt-4 flex items-center">
                            <MailIcon size={18} tw="stroke-current mr-2" />
@@ -58,10 +59,17 @@ const Layout = ({ children, noHeader, settings, navigationMenus = [] }) => {
                               {brand['Contact'].email}
                            </a>
                         </span>
-                        <span tw="mt-4 flex items-center">
-                           <PhoneIcon size={18} tw="stroke-current mr-2" />
-                           {brand['Contact'].phoneNo}
-                        </span>
+                        {brand?.['Contact']?.phoneNo && (
+                           <a
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              tw="mt-4 flex items-center"
+                              href={`https://api.whatsapp.com/send?phone=${brand?.['Contact']?.phoneNo}`}
+                           >
+                              <PhoneIcon size={18} tw="stroke-current mr-2" />
+                              {brand?.['Contact']?.phoneNo}
+                           </a>
+                        )}
                      </>
                   )}
                </section>
@@ -69,15 +77,17 @@ const Layout = ({ children, noHeader, settings, navigationMenus = [] }) => {
                   <h4 tw="text-2xl mb-4 mt-2">Navigation</h4>
                   <ul>
                      <li tw="mb-3">
-                        <Link href="/subscription">Home</Link>
+                        <Link href={getRoute('/')}>Home</Link>
                      </li>
                      {isAuthenticated && (
                         <li tw="mb-3">
-                           <Link href="/account/profile/">Profile</Link>
+                           <Link href={getRoute('/account/profile/')}>
+                              Profile
+                           </Link>
                         </li>
                      )}
                      <li tw="mb-3">
-                        <Link href="/menu">Menu</Link>
+                        <Link href={getRoute('/menu')}>Menu</Link>
                      </li>
                   </ul>
                </section>
@@ -89,21 +99,23 @@ const Layout = ({ children, noHeader, settings, navigationMenus = [] }) => {
                      <ul>
                         {isTermsAndConditionsAvailable && (
                            <li tw="mb-3">
-                              <Link href="/terms-and-conditions/">
+                              <Link href={getRoute('/terms-and-conditions/')}>
                                  Terms and Conditions
                               </Link>
                            </li>
                         )}
                         {isPrivacyPolicyAvailable && (
                            <li tw="mb-3">
-                              <Link href="/privacy-policy/">
+                              <Link href={getRoute('/privacy-policy/')}>
                                  Privacy Policy
                               </Link>
                            </li>
                         )}
                         {isRefundPolicyAvailable && (
                            <li tw="mb-3">
-                              <Link href="/refund-policy/">Refund Policy</Link>
+                              <Link href={getRoute('/refund-policy/')}>
+                                 Refund Policy
+                              </Link>
                            </li>
                         )}
                      </ul>
@@ -114,10 +126,6 @@ const Layout = ({ children, noHeader, settings, navigationMenus = [] }) => {
       </>
    )
 }
-
-Layout.whyDidYouRender = true
-
-export { Layout }
 
 const Footer = styled.footer(
    ({ theme }) => css`

@@ -22,28 +22,32 @@ import {
    HelperBar,
    ProfileSidebar,
 } from '../../../components'
-import { useConfig } from '../../../lib'
-import { isClient } from '../../../utils'
+import { graphQLClient, useConfig } from '../../../lib'
+import { getRoute, getSettings, isClient } from '../../../utils'
 import { useUser } from '../../../context'
 import { CloseIcon, DeleteIcon } from '../../../assets/icons'
 import {
    BRAND,
    CREATE_STRIPE_PAYMENT_METHOD,
    DELETE_STRIPE_PAYMENT_METHOD,
+   NAVIGATION_MENU,
+   WEBSITE_PAGE,
 } from '../../../graphql'
 
-const ManageCards = () => {
+const ManageCards = props => {
    const router = useRouter()
-   const { isAuthenticated } = useUser()
-
+   const { isAuthenticated, isLoading } = useUser()
+   const { seo, settings, navigationMenus } = props
+   console.log('this is in cards', isAuthenticated, isLoading)
    React.useEffect(() => {
-      if (!isAuthenticated) {
-         router.push('/subscription')
+      if (!isAuthenticated && !isLoading) {
+         isClient && localStorage.setItem('landed_on', location.href)
+         router.push(getRoute('/get-started/register'))
       }
-   }, [isAuthenticated])
+   }, [isAuthenticated, isLoading])
 
    return (
-      <Layout>
+      <Layout settings={settings} navigationMenus={navigationMenus}>
          <SEO title="Manage Cards" />
          <Main>
             <ProfileSidebar />
@@ -445,7 +449,38 @@ const createSetupIntent = async (customer, organization = {}) => {
       return error
    }
 }
-
+export const getStaticProps = async ({ params }) => {
+   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+      domain: params.brand,
+      route: '/account/cards',
+   })
+   // const domain =
+   //    process.env.NODE_ENV === 'production'
+   //       ? params.domain
+   //       : 'test.dailykit.org'
+   const domain = 'test.dailykit.org'
+   const { seo, settings } = await getSettings(domain, '/account/cards')
+   //navigation menu
+   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+      navigationMenuId:
+         dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
+   })
+   const navigationMenus = navigationMenu.website_navigationMenuItem
+   return {
+      props: {
+         seo,
+         settings,
+         navigationMenus,
+      },
+      revalidate: 1,
+   }
+}
+export async function getStaticPaths() {
+   return {
+      paths: [],
+      fallback: 'blocking', // true -> build page if missing, false -> serve 404
+   }
+}
 const Main = styled.main`
    display: grid;
    grid-template-rows: 1fr;

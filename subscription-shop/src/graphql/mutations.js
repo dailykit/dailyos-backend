@@ -308,8 +308,18 @@ export const DELETE_OCCURENCE_CUSTOMER = gql`
 `
 
 export const FORGOT_PASSWORD = gql`
-   mutation ForgotPassword($email: String!, $origin: String!) {
-      forgotPassword(email: $email, origin: $origin) {
+   mutation ForgotPassword(
+      $type: String
+      $email: String!
+      $origin: String!
+      $redirectUrl: String
+   ) {
+      forgotPassword(
+         type: $type
+         email: $email
+         origin: $origin
+         redirectUrl: $redirectUrl
+      ) {
          success
       }
    }

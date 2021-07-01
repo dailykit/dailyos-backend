@@ -23,7 +23,7 @@ export const SEO = ({ description, title, image, richresult, children }) => {
    const { favicon } = useConfig().configOf('theme-brand', 'brand')
    const seo = useConfig().configOf('seo', 'App')
 
-   const path = router.pathname.replace('/subscription', '')
+   const path = router.pathname
 
    const metaTitle =
       title || seo[path]?.title || seo['/']?.title || 'Meal Kit Store'

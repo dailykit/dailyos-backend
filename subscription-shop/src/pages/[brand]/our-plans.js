@@ -4,7 +4,7 @@ import { useQuery } from '@apollo/react-hooks'
 import { webRenderer } from '@dailykit/web-renderer'
 
 import { isClient } from '../../utils'
-import { GET_FILEID } from '../../graphql'
+import { GET_FILEID, NAVIGATION_MENU, WEBSITE_PAGE } from '../../graphql'
 import { Plans } from '../../sections/select-plan'
 import { SEO, Layout } from '../../components'
 import { GET_FILES } from '../../graphql'
@@ -14,7 +14,7 @@ import { fileParser, getSettings } from '../../utils'
 import ReactHtmlParser from 'react-html-parser'
 
 const SelectPlan = props => {
-   const { data, settings } = props
+   const { data, settings, navigationMenus } = props
 
    React.useEffect(() => {
       try {
@@ -36,9 +36,8 @@ const SelectPlan = props => {
       }
    }, [data])
 
-   console.log('This is data', data)
    return (
-      <Layout settings={settings}>
+      <Layout settings={settings} navigationMenus={navigationMenus}>
          <SEO title="Plans" />
          <Main>
             <div id="select-plan-top-01">
@@ -89,9 +88,13 @@ const Header = styled.header`
       ${tw`bg-black opacity-25`}
    }
 `
-export const getStaticProps = async () => {
+export const getStaticProps = async ({ params }) => {
    const data = await graphQLClient.request(GET_FILES, {
       divId: ['select-plan-top-01', 'select-plan-bottom-01'],
+   })
+   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+      domain: params.brand,
+      route: '/our-plans',
    })
    // const domain =
    //    process.env.NODE_ENV === 'production'
@@ -99,13 +102,17 @@ export const getStaticProps = async () => {
    //       : 'test.dailykit.org'
    const domain = 'test.dailykit.org'
    const { seo, settings } = await getSettings(domain, '/our-plans')
-
-   console.log(settings)
+   //navigation menu
+   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+      navigationMenuId:
+         dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
+   })
+   const navigationMenus = navigationMenu.website_navigationMenuItem
 
    const parsedData = await fileParser(data.content_subscriptionDivIds)
 
    return {
-      props: { data: parsedData, seo, settings },
+      props: { data: parsedData, seo, settings, navigationMenus },
       revalidate: 60, // will be passed to the page component as props
    }
 }

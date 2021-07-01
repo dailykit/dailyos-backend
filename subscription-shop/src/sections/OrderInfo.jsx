@@ -5,7 +5,7 @@ import tw, { styled, css } from 'twin.macro'
 import { useToasts } from 'react-toast-notifications'
 
 import { useUser } from '../context'
-import { normalizeAddress } from '../utils'
+import { getRoute, normalizeAddress } from '../utils'
 import { Billing, CartProduct, Button } from '../components'
 
 const OrderInfo = ({ cart, showViewOrderButton = false }) => {
@@ -98,7 +98,9 @@ const OrderInfo = ({ cart, showViewOrderButton = false }) => {
                      tw="w-full bg-green-500"
                      onClick={() =>
                         router.push(
-                           `/account/orders?id=${cart?.subscriptionOccurenceId}`
+                           getRoute(
+                              `/account/orders?id=${cart?.subscriptionOccurenceId}`
+                           )
                         )
                      }
                   >
@@ -106,7 +108,9 @@ const OrderInfo = ({ cart, showViewOrderButton = false }) => {
                   </Button>
                ) : (
                   <SaveGhostButton
-                     onClick={() => router.push(`/checkout/?id=${cart?.id}`)}
+                     onClick={() =>
+                        router.push(getRoute(`/checkout/?id=${cart?.id}`))
+                     }
                   >
                      EARLY PAY
                   </SaveGhostButton>

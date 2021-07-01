@@ -4,13 +4,19 @@ import { useRouter } from 'next/router'
 import { useLazyQuery } from '@apollo/react-hooks'
 import { useToasts } from 'react-toast-notifications'
 
-import { isClient } from '../../../utils'
-import { INVENTORY_DETAILS } from '../../../graphql'
+import { getSettings, isClient } from '../../../utils'
+import {
+   INVENTORY_DETAILS,
+   NAVIGATION_MENU,
+   WEBSITE_PAGE,
+} from '../../../graphql'
 import { Loader, Layout, SEO } from '../../../components'
+import { graphQLClient } from '../../../lib'
 
-const Inventory = () => {
+const Inventory = props => {
    const router = useRouter()
    const { addToast } = useToasts()
+   const { settings, navigationMenus } = props
    const [inventory, setInventory] = React.useState(null)
 
    const [getInventory, { loading }] = useLazyQuery(INVENTORY_DETAILS, {
@@ -23,7 +29,6 @@ const Inventory = () => {
          })
       },
    })
-   console.log(inventory)
    React.useEffect(() => {
       let inventoryId = Number(router.query.id)
       let optionId = Number(router.query.option)
@@ -39,14 +44,14 @@ const Inventory = () => {
 
    if (loading)
       return (
-         <Layout>
+         <Layout settings={settings} navigationMenus={navigationMenus}>
             <SEO title="Loading" />
             <Loader inline />
          </Layout>
       )
    if (!inventory)
       return (
-         <Layout>
+         <Layout settings={settings} navigationMenus={navigationMenus}>
             <SEO title="Not found" />
             <h1 tw="py-4 text-2xl text-gray-600 text-center">
                No such inventory exists!
@@ -54,7 +59,7 @@ const Inventory = () => {
          </Layout>
       )
    return (
-      <Layout>
+      <Layout settings={settings} navigationMenus={navigationMenus}>
          <SEO
             title={inventory?.cartItem?.name}
             richresult={inventory.richresult}
@@ -82,6 +87,42 @@ const Inventory = () => {
    )
 }
 
+export async function getStaticProps(ctx) {
+   const params = ctx.params
+   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+      domain: params.brand,
+      route: '/inventory',
+   })
+   //navigation menu
+   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+      navigationMenuId:
+         dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
+   })
+
+   // const domain =
+   //    process.env.NODE_ENV === 'production'
+   //       ? params.domain
+   //       : 'test.dailykit.org'
+   const domain = 'test.dailykit.org'
+   const { seo, settings } = await getSettings(domain, '/inventory')
+   console.log(settings)
+   const navigationMenus = navigationMenu.website_navigationMenuItem
+   return {
+      props: {
+         seo,
+         settings,
+         navigationMenus,
+      },
+      revalidate: 1,
+   }
+}
+
+export async function getStaticPaths() {
+   return {
+      paths: [],
+      fallback: 'blocking', // true -> build page if missing, false -> serve 404
+   }
+}
 export default Inventory
 
 const InventoryContainer = styled.div`

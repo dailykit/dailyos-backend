@@ -11,7 +11,7 @@ import Fulfillment from './fulfillment'
 import PaymentCard from './PaymentCard'
 import { useConfig } from '../../../lib'
 import { useUser } from '../../../context'
-import { isClient } from '../../../utils'
+import { getRoute, isClient } from '../../../utils'
 import { Button } from '../../../components'
 import { CloseIcon } from '../../../assets/icons'
 import { UPDATE_BRAND_CUSTOMER } from '../../../graphql'
@@ -45,7 +45,9 @@ export const CartPanel = ({ noSkip, isCheckout }) => {
             }
          }
          router.push(
-            `/get-started/checkout/?id=${state.occurenceCustomer?.cart?.id}`
+            getRoute(
+               `/get-started/checkout/?id=${state.occurenceCustomer?.cart?.id}`
+            )
          )
       } catch (error) {
          console.log('SKIP CARTS -> ERROR -> ', error)

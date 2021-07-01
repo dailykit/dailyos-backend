@@ -8,8 +8,6 @@ import { fileParser, getSettings } from '../../utils'
 import ReactHtmlParser from 'react-html-parser'
 
 const Index = ({ params, seo, settings, navigationMenus, data }) => {
-   // console.log('this is params', params)
-   console.log('data', data)
    React.useEffect(() => {
       try {
          if (data.length && typeof document !== 'undefined') {
@@ -29,8 +27,6 @@ const Index = ({ params, seo, settings, navigationMenus, data }) => {
          console.log('Failed to render page: ', err)
       }
    }, [data])
-   // console.log('this is data from slug', data)
-   console.log('this is navigation menus', navigationMenus)
 
    return (
       <Layout settings={settings} navigationMenus={navigationMenus}>

@@ -6,7 +6,7 @@ import { useLazyQuery } from '@apollo/react-hooks'
 import { useToasts } from 'react-toast-notifications'
 
 import { useDelivery } from './state'
-import { formatCurrency, isClient } from '../../utils'
+import { formatCurrency, getRoute, isClient } from '../../utils'
 import { useUser } from '../../context'
 import { ITEM_COUNT } from '../../graphql'
 import { CheckIcon, TickIcon, CrossIcon } from '../../assets/icons'
@@ -78,7 +78,7 @@ export const DeliverySection = ({ planId }) => {
                No days are available for delivery on this address.
             </HelperBar.SubTitle>
             <HelperBar.Button
-               onClick={() => router.push('/get-started/select-plan')}
+               onClick={() => router.push(getRoute('/get-started/select-plan'))}
             >
                Select Plan
             </HelperBar.Button>

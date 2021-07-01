@@ -11,7 +11,7 @@ import { useMenu } from './state'
 import { useConfig } from '../../lib'
 import { useUser } from '../../context'
 import { HelperBar, Loader } from '../../components'
-import { formatCurrency } from '../../utils'
+import { formatCurrency, getRoute } from '../../utils'
 import { SkeletonProduct } from './skeletons'
 import { CheckIcon } from '../../assets/icons'
 import { OCCURENCE_PRODUCTS_BY_CATEGORIES } from '../../graphql'
@@ -101,7 +101,8 @@ const Product = ({ node, theme, isAdded, noProductImage, buildImageUrl }) => {
    const { addToast } = useToasts()
    const { state, methods } = useMenu()
 
-   const openRecipe = () => router.push(`/recipes/${node?.productOption?.id}`)
+   const openRecipe = () =>
+      router.push(getRoute(`/recipes/${node?.productOption?.id}`))
 
    const add = item => {
       if (state.occurenceCustomer?.betweenPause) {
@@ -148,8 +149,8 @@ const Product = ({ node, theme, isAdded, noProductImage, buildImageUrl }) => {
                   alt="Non-Veg Icon"
                   src={
                      product.type === 'Non-vegetarian'
-                        ? '/subscription/imgs/non-veg.png'
-                        : '/subscription/imgs/veg.png'
+                        ? '/imgs/non-veg.png'
+                        : '/imgs/veg.png'
                   }
                   title={product.type}
                   tw="h-6 w-6"
