@@ -116,7 +116,7 @@ app.get('/images/:url(*)', handleImage)
    ------------ DAILY OS ------------
 */
 
-// app.use('/apps', express.static('dailyos/build'))
+app.use('/apps', express.static('dailyos/build'))
 
 /*
    ------------ TEMPLATE SERVICE ------------
