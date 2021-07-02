@@ -1,133 +1,21 @@
 import React from 'react'
-import { isEmpty } from 'lodash'
 import { useRouter } from 'next/router'
-import jwtDecode from 'jwt-decode'
 import tw, { styled } from 'twin.macro'
 import { useToasts } from 'react-toast-notifications'
-import { useLazyQuery, useMutation } from '@apollo/react-hooks'
 
 import { useUser } from '../../context'
 import { useConfig, auth } from '../../lib'
 import { SEO, Layout } from '../../components'
-import { getRoute, isClient, processUser } from '../../utils'
-import {
-   BRAND,
-   CUSTOMER,
-   MUTATIONS,
-   NAVIGATION_MENU,
-   WEBSITE_PAGE,
-} from '../../graphql'
-import { GET_FILES } from '../../graphql'
+import { getRoute } from '../../utils'
+import { signIn, useSession } from 'next-auth/client'
+import { NAVIGATION_MENU, WEBSITE_PAGE } from '../../graphql'
 import { graphQLClient } from '../../lib'
 import 'regenerator-runtime'
-import { fileParser, getSettings } from '../../utils'
-import ReactHtmlParser from 'react-html-parser'
+import { getSettings } from '../../utils'
+
 const Login = props => {
    const { settings, navigationMenus } = props
-   const router = useRouter()
-   const { addToast } = useToasts()
-   const { user, dispatch } = useUser()
-   const { brand, organization } = useConfig()
    const [current, setCurrent] = React.useState('LOGIN')
-   const [create_brand_customer, { loading: creatingBrandCustomer }] =
-      useMutation(BRAND.CUSTOMER.CREATE, {
-         refetchQueries: ['customer'],
-         onCompleted: () => {
-            if (isClient) {
-               window.location.href =
-                  window.location.origin + '/get-started/select-plan'
-            }
-         },
-         onError: error => {
-            console.log(error)
-         },
-      })
-   const [create, { loading: creatingCustomer }] = useMutation(
-      MUTATIONS.CUSTOMER.CREATE,
-      {
-         refetchQueries: ['customer'],
-         onCompleted: () => {
-            dispatch({ type: 'SET_USER', payload: {} })
-            if (isClient) {
-               window.location.href =
-                  window.location.origin + '/get-started/select-plan'
-            }
-         },
-         onError: () =>
-            addToast('Something went wrong!', {
-               appearance: 'error',
-            }),
-      }
-   )
-   const [customer, { loading: loadingCustomerDetails }] = useLazyQuery(
-      CUSTOMER.DETAILS,
-      {
-         onCompleted: async ({ customer = {} }) => {
-            const token = localStorage.getItem('token')
-            const { email = '', sub: keycloakId = '' } = jwtDecode(token)
-            if (isEmpty(customer)) {
-               console.log('CUSTOMER DOESNT EXISTS')
-               create({
-                  variables: {
-                     object: {
-                        email,
-                        keycloakId,
-                        source: 'subscription',
-                        sourceBrandId: brand.id,
-                        clientId: isClient && window._env_.CLIENTID,
-                        brandCustomers: { data: { brandId: brand.id } },
-                     },
-                  },
-               })
-               return
-            }
-            console.log('CUSTOMER EXISTS')
-
-            const user = await processUser(
-               customer,
-               organization?.stripeAccountType
-            )
-            dispatch({ type: 'SET_USER', payload: user })
-
-            const { brandCustomers = {} } = customer
-            if (isEmpty(brandCustomers)) {
-               console.log('BRAND_CUSTOMER DOESNT EXISTS')
-               create_brand_customer({
-                  variables: {
-                     object: { keycloakId, brandId: brand.id },
-                  },
-               })
-            } else if (
-               customer.isSubscriber &&
-               brandCustomers[0].isSubscriber
-            ) {
-               console.log('BRAND_CUSTOMER EXISTS & CUSTOMER IS SUBSCRIBED')
-               isClient && localStorage.removeItem('plan')
-               const landedOn = isClient
-                  ? localStorage.getItem('landed_on')
-                  : null
-               if (isClient && landedOn) {
-                  localStorage.removeItem('landed_on')
-                  window.location.href = landedOn
-               } else {
-                  router.push(getRoute('/menu'))
-               }
-            } else {
-               console.log('CUSTOMER ISNT SUBSCRIBED')
-               if (isClient) {
-                  const landedOn = localStorage.getItem('landed_on')
-                  if (landedOn) {
-                     localStorage.removeItem('landed_on')
-                     window.location.href = landedOn
-                  } else {
-                     window.location.href =
-                        window.location.origin + '/get-started/select-plan'
-                  }
-               }
-            }
-         },
-      }
-   )
 
    return (
       <Layout settings={settings} navigationMenus={navigationMenus}>
@@ -141,16 +29,7 @@ const Login = props => {
                   Login
                </Tab>
             </TabList>
-            {current === 'LOGIN' && (
-               <LoginPanel
-                  customer={customer}
-                  loading={
-                     loadingCustomerDetails ||
-                     creatingCustomer ||
-                     creatingBrandCustomer
-                  }
-               />
-            )}
+            {current === 'LOGIN' && <LoginPanel />}
          </Main>
       </Layout>
    )
@@ -158,9 +37,9 @@ const Login = props => {
 
 export default Login
 
-const LoginPanel = ({ loading, customer }) => {
+const LoginPanel = () => {
+   const [session] = useSession()
    const router = useRouter()
-   const { brand } = useConfig()
    const [error, setError] = React.useState('')
    const [form, setForm] = React.useState({
       email: '',
@@ -180,24 +59,13 @@ const LoginPanel = ({ loading, customer }) => {
    const submit = async () => {
       try {
          setError('')
-         const token = await auth.login({
+         signIn('email_password', {
             email: form.email,
             password: form.password,
+            callbackUrl: getRoute('/login'),
          })
-         if (token?.sub) {
-            customer({
-               variables: {
-                  keycloakId: token?.sub,
-                  brandId: brand.id,
-               },
-            })
-         } else {
-            setError('Failed to login, please try again!')
-         }
       } catch (error) {
-         if (error?.code === 401) {
-            setError('Email or password is incorrect!')
-         }
+         console.error(error)
       }
    }
 
@@ -236,10 +104,10 @@ const LoginPanel = ({ loading, customer }) => {
             Register instead?
          </button>
          <Submit
-            className={!isValid || loading ? 'disabled' : ''}
+            className={!isValid ? 'disabled' : ''}
             onClick={() => isValid && submit()}
          >
-            {loading ? 'Logging In...' : 'Login'}
+            Login
          </Submit>
          {error && <span tw="self-start block text-red-500 mt-2">{error}</span>}
       </Panel>
@@ -312,7 +180,6 @@ export async function getStaticProps({ params }) {
          dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
    })
    const navigationMenus = navigationMenu.website_navigationMenuItem
-   console.log(settings)
 
    return {
       props: { seo, settings, navigationMenus },
