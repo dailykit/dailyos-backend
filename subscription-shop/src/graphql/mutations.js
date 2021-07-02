@@ -360,3 +360,30 @@ export const DELETE_STRIPE_PAYMENT_METHOD = gql`
       }
    }
 `
+
+export const INSERT_PLATFORM_CUSTOMER = gql`
+   mutation insertCustomer($object: platform_customer__insert_input!) {
+      insertCustomer: insert_platform_customer__one(object: $object) {
+         email
+         password
+      }
+   }
+`
+
+export const INSERT_OTP_TRANSACTION = gql`
+   mutation insertOtp($object: platform_otp_transaction_insert_input!) {
+      insertOtp: insert_platform_otp_transaction_one(object: $object) {
+         id
+         code
+      }
+   }
+`
+
+export const SEND_SMS = gql`
+   mutation sendSMS($phone: String!, $message: String!) {
+      sendSMS(phone: $phone, message: $message) {
+         success
+         message
+      }
+   }
+`

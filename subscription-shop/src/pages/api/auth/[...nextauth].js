@@ -136,7 +136,7 @@ export default async (req, res) => {
                customer.firstName = firstName
                customer.lastName = lastName
                customer.email = user.email
-               customer.image = user.image
+               customer.avatar = user.image
             }
 
             console.log(account.type, { customer })

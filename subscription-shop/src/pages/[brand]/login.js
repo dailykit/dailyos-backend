@@ -35,7 +35,6 @@ const Login = props => {
 export default Login
 
 const LoginPanel = () => {
-   const [session] = useSession()
    const router = useRouter()
    const [loading, setLoading] = React.useState(false)
    const [error, setError] = React.useState('')

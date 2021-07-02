@@ -6,13 +6,23 @@ import Link from 'next/link'
 import jwtDecode from 'jwt-decode'
 import tw, { styled } from 'twin.macro'
 import { useToasts } from 'react-toast-notifications'
-import { useLazyQuery, useMutation } from '@apollo/react-hooks'
+import { useLazyQuery, useMutation, useSubscription } from '@apollo/react-hooks'
+import { signIn, providers, getSession } from 'next-auth/client'
 
 import { useUser } from '../../../context'
 import { useConfig, auth } from '../../../lib'
 import { getRoute, getSettings, isClient, processUser } from '../../../utils'
 import { SEO, Layout, StepsNavbar } from '../../../components'
-import { BRAND, CUSTOMER, FORGOT_PASSWORD, MUTATIONS } from '../../../graphql'
+import {
+   BRAND,
+   CUSTOMER,
+   FORGOT_PASSWORD,
+   INSERT_OTP_TRANSACTION,
+   INSERT_PLATFORM_CUSTOMER,
+   MUTATIONS,
+   OTPS,
+   SEND_SMS,
+} from '../../../graphql'
 import {
    deleteStoredReferralCode,
    getStoredReferralCode,
@@ -20,12 +30,13 @@ import {
    setStoredReferralCode,
 } from '../../../utils/referrals'
 
-export default props => {
+const Register = props => {
    const router = useRouter()
    const { addToast } = useToasts()
    const { user, dispatch } = useUser()
    const { brand, organization } = useConfig()
    const [current, setCurrent] = React.useState('REGISTER')
+   const [isViaOtp, setIsViaOtp] = React.useState(true)
    const { settings } = props
    const [create_brand_customer] = useMutation(BRAND.CUSTOMER.CREATE, {
       refetchQueries: ['customer'],
@@ -181,27 +192,189 @@ export default props => {
                   Register
                </Tab>
             </TabList>
-            {current === 'LOGIN' && (
-               <LoginPanel
-                  customer={customer}
-                  loading={loadingCustomerDetails || creatingCustomer}
-               />
-            )}
+            {current === 'LOGIN' && <LoginPanel />}
             {current === 'REGISTER' && (
                <RegisterPanel
-                  customer={customer}
                   setCurrent={setCurrent}
-                  loading={loadingCustomerDetails || creatingCustomer}
+                  providers={props.providers}
                />
             )}
+            <div tw=" mx-auto" style={{ width: 360 }}>
+               {props.providers &&
+                  Object.values(props.providers).map(provider => {
+                     if (
+                        ['Email', 'Credentials', 'OTP'].includes(provider.name)
+                     ) {
+                        return
+                     }
+                     return (
+                        <div key={provider.name} tw="w-full">
+                           <button
+                              css={[
+                                 tw`w-full bg-gray-100 h-10 rounded`,
+                                 provider.name === 'Google' &&
+                                    tw`bg-blue-500 text-white`,
+                              ]}
+                              onClick={() => signIn(provider.id)}
+                           >
+                              Sign in with {provider.name}
+                           </button>
+                        </div>
+                     )
+                  })}
+               <button
+                  css={[tw`mt-3 w-full bg-green-500 text-white h-10 rounded`]}
+                  onClick={() => setIsViaOtp(true)}
+               >
+                  Sign in with Phone Number
+               </button>
+            </div>
+            {isViaOtp && <OTP />}
          </Main>
       </Layout>
    )
 }
+export default Register
 
-const LoginPanel = ({ loading, customer }) => {
-   const { brand } = useConfig()
+const OTP = () => {
    const [error, setError] = React.useState('')
+   const [loading, setLoading] = React.useState(false)
+   const [hasOtpSent, setHasOtpSent] = React.useState(false)
+   const [sendingOtp, setSendingOtp] = React.useState(false)
+   const [form, setForm] = React.useState({ phone: '', otp: '' })
+
+   const [sendSms] = useMutation(SEND_SMS, {
+      onCompleted: () => {
+         setHasOtpSent(true)
+         setSendingOtp(false)
+      },
+      onError: error => {
+         console.error(error)
+         setSendingOtp(false)
+         setError('Failed to send otp, please try again!')
+      },
+   })
+   const [insertOtpTransaction] = useMutation(INSERT_OTP_TRANSACTION, {
+      onCompleted: async ({ insertOtp = {} } = {}) => {
+         if (insertOtp?.code) {
+            await sendSms({
+               variables: {
+                  phone: form.phone,
+                  message: `Here's your OTP - ${insertOtp?.code}.`,
+               },
+            })
+         } else {
+            setSendingOtp(false)
+         }
+      },
+      onError: error => {
+         console.error(error)
+         setSendingOtp(false)
+         setError('Failed to send otp, please try again!')
+      },
+   })
+
+   const onChange = e => {
+      const { name, value } = e.target
+      setForm(form => ({
+         ...form,
+         [name]: value,
+      }))
+   }
+
+   const submit = async e => {
+      try {
+         e.preventDefault()
+         setLoading(true)
+         const response = await signIn('otp', form)
+         if (response?.status === 200) {
+            router.push(getRoute('/get-started/select-plan'))
+            setLoading(false)
+         } else {
+            setLoading(false)
+            setError('Failed to register, please try again!')
+         }
+      } catch (error) {
+         console.error(error)
+         setError('Failed to log in, please try again!')
+      }
+   }
+
+   const sendOTP = async () => {
+      try {
+         if (!form.phone) {
+            setError('Phone number is required!')
+            return
+         }
+         setSendingOtp(true)
+         await insertOtpTransaction({
+            variables: { object: { phoneNumber: form.phone } },
+         })
+      } catch (error) {
+         setSendingOtp(false)
+         setError('Failed to send otp, please try again!')
+      }
+   }
+
+   return (
+      <div
+         tw="inset-0 fixed flex justify-center pt-12"
+         style={{ zIndex: 1000, background: 'rgba(0,0,0,0.2)' }}
+      >
+         <div
+            tw="h-auto bg-white rounded self-start p-3"
+            style={{ width: 380 }}
+         >
+            <h3 tw="mb-3 text-gray-600 text-center text-xl font-medium">
+               Sign In via OTP
+            </h3>
+            {!hasOtpSent ? (
+               <>
+                  <FieldSet>
+                     <Label htmlFor="phone">Phone Number*</Label>
+                     <Input
+                        type="text"
+                        name="phone"
+                        value={form.phone}
+                        onChange={onChange}
+                        placeholder="Enter your phone number"
+                     />
+                  </FieldSet>
+                  <Submit
+                     className={sendingOtp ? 'disabled' : ''}
+                     onClick={sendOTP}
+                  >
+                     {sendingOtp ? 'Sending OTP...' : 'Send OTP'}
+                  </Submit>
+               </>
+            ) : (
+               <>
+                  <FieldSet>
+                     <Label htmlFor="otp">OTP*</Label>
+                     <Input
+                        name="otp"
+                        type="text"
+                        onChange={onChange}
+                        value={form.otp}
+                        placeholder="Enter the otp"
+                     />
+                  </FieldSet>
+                  <Submit onClick={submit} className={false ? 'disabled' : ''}>
+                     Submit
+                  </Submit>
+               </>
+            )}
+            {error && (
+               <span tw="self-start block text-red-500 mt-2">{error}</span>
+            )}
+         </div>
+      </div>
+   )
+}
+
+const LoginPanel = () => {
+   const [error, setError] = React.useState('')
+   const [loading, setLoading] = React.useState(false)
    const [form, setForm] = React.useState({
       email: '',
       password: '',
@@ -220,24 +393,26 @@ const LoginPanel = ({ loading, customer }) => {
    const submit = async () => {
       try {
          setError('')
-         const token = await auth.login({
+         setLoading(true)
+         const response = await signIn('email_password', {
+            redirect: false,
             email: form.email,
             password: form.password,
          })
-         if (token?.sub) {
-            customer({
-               variables: {
-                  keycloakId: token?.sub,
-                  brandId: brand.id,
-               },
-            })
-         } else {
-            setError('Failed to login, please try again!')
+         setLoading(false)
+         if (response?.status !== 200) {
+            setError('Email or password is incorrect!')
+         } else if (response?.status === 200) {
+            const landedOn = isClient && localStorage.getItem('landed_on')
+            if (isClient && landedOn) {
+               localStorage.removeItem('landed_on')
+               window.location.href = landedOn
+            } else {
+               router.push(getRoute('/menu'))
+            }
          }
       } catch (error) {
-         if (error?.code === 401) {
-            setError('Email or password is incorrect!')
-         }
+         console.error(error)
       }
    }
 
@@ -286,7 +461,7 @@ function validateEmail(email) {
    return re.test(email)
 }
 
-const RegisterPanel = ({ loading, customer, setCurrent }) => {
+const RegisterPanel = ({ setCurrent }) => {
    const { brand } = useConfig()
    const { addToast } = useToasts()
    const [emailExists, setEmailExists] = React.useState(false)
@@ -298,6 +473,7 @@ const RegisterPanel = ({ loading, customer, setCurrent }) => {
    const [passwordError, setPasswordError] = React.useState('')
    const [phoneError, setPhoneError] = React.useState('')
    const [forgotPasswordText, setForgotPasswordText] = React.useState('')
+   const [loading, setLoading] = React.useState(false)
    const [form, setForm] = React.useState({
       email: '',
       password: '',
@@ -383,6 +559,7 @@ const RegisterPanel = ({ loading, customer, setCurrent }) => {
    const submit = async () => {
       try {
          setError('')
+         setLoading(true)
          const isCodeValid = await isReferralCodeValid(
             brand.id,
             form.code,
@@ -395,30 +572,38 @@ const RegisterPanel = ({ loading, customer, setCurrent }) => {
          if (form.code) {
             setStoredReferralCode(form.code)
          }
-         const result = await auth.register({
-            email: form.email,
-            password: form.password,
-         })
-         if (result?.success) {
-            const token = await auth.login({
-               email: form.email,
-               password: form.password,
-            })
-            if (token?.sub) {
-               isClient && localStorage.setItem('phone', form.phone)
-               customer({
-                  variables: {
-                     keycloakId: token?.sub,
-                     brandId: brand.id,
+
+         const URL = `${window.location.origin}/api/hash`
+         const { data } = await axios.post(URL, { password: form.password })
+
+         if (data?.success && data?.hash) {
+            const { insertCustomer = {} } = await client.request(
+               INSERT_PLATFORM_CUSTOMER,
+               {
+                  object: {
+                     password: data?.hash,
+                     email: form.email,
+                     phoneNumber: form.phone,
                   },
+               }
+            )
+            if (insertCustomer?.email) {
+               const response = await signIn('credentials', {
+                  email: form.email,
+                  password: form.password,
                })
+               if (response?.status === 200) {
+                  router.push(getRoute('/get-started/select-plan'))
+               } else {
+                  setLoading(false)
+                  setError('Failed to register, please try again!')
+               }
             }
          }
+         setLoading(false)
       } catch (error) {
          console.log(error)
-         if (error.includes('exists')) {
-            return setError('Email is already in use!')
-         }
+         setLoading(false)
          setError('Failed to register, please try again!')
       }
    }
@@ -512,8 +697,8 @@ const RegisterPanel = ({ loading, customer, setCurrent }) => {
                   />
                   <label htmlFor="terms&conditions" tw="text-gray-600">
                      I accept{' '}
-                     <Link to={getRoute('/terms-and-conditions')}>
-                        <span tw="text-blue-500">terms and conditions.</span>
+                     <Link href={getRoute('/terms-and-conditions')}>
+                        <a tw="text-blue-500">terms and conditions.</a>
                      </Link>
                   </label>
                </section>
@@ -622,12 +807,33 @@ const Submit = styled.button`
       ${tw`cursor-not-allowed bg-gray-300 text-gray-700`}
    }
 `
-export const getStaticProps = async () => {
+export const getStaticProps = async context => {
    const domain = 'test.dailykit.org'
    const { seo, settings } = await getSettings(domain, '/get-started/register')
+
+   const { req, res } = context
+   const session = await getSession({ req })
+
+   if (session && res && session.accessToken) {
+      return {
+         props: {
+            session,
+            seo,
+            settings,
+            revalidate: 60,
+            providers: await providers(context),
+         },
+      }
+   }
+
    return {
-      props: { seo, settings },
-      revalidate: 60,
+      props: {
+         session: null,
+         seo,
+         settings,
+         revalidate: 60,
+         providers: await providers(context),
+      },
    }
 }
 
