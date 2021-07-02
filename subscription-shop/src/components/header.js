@@ -14,9 +14,6 @@ import NavigationBar from './navbar'
 export const Header = ({ settings, navigationMenus }) => {
    const router = useRouter()
    const { isAuthenticated, user, isLoading } = useUser()
-   // const [isAuthenticated, user, isLoading] = [false, {}, false]
-   // console.log('this is navigation menu', navigationMenus)
-   console.log('this is user', user)
    const logout = () => {
       isClient && localStorage.removeItem('token')
       if (isClient) {
@@ -31,8 +28,6 @@ export const Header = ({ settings, navigationMenus }) => {
    const [isMobileNavVisible, setIsMobileNavVisible] = React.useState(false)
 
    const newNavigationMenus = DataWithChildNodes(navigationMenus)
-   console.log('this is loading', isLoading)
-   console.log('this is authenticate', isAuthenticated)
    return (
       <>
          <Wrapper>

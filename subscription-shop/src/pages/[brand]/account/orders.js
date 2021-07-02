@@ -24,10 +24,8 @@ import { route } from 'next/dist/next-server/server/router'
 
 const Orders = props => {
    const router = useRouter()
-   console.log('this is router', router)
    const { isAuthenticated, isLoading } = useUser()
    const { seo, settings, navigationMenus } = props
-   console.log('this is in orders', isAuthenticated, isLoading)
    React.useEffect(() => {
       if (!isAuthenticated && !isLoading) {
          isClient && localStorage.setItem('landed_on', location.href)
@@ -72,7 +70,6 @@ const Listing = () => {
          }) => {
             if (orders.aggregate.count > 0) {
                const queryId = new URL(location.href).searchParams.get('id')
-               console.log('this is queryId', queryId)
                if (!queryId) {
                   const [node] = orders.nodes
                   router.push(

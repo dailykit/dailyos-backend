@@ -105,7 +105,6 @@ export async function getStaticProps(ctx) {
    //       : 'test.dailykit.org'
    const domain = 'test.dailykit.org'
    const { seo, settings } = await getSettings(domain, '/inventory')
-   console.log(settings)
    const navigationMenus = navigationMenu.website_navigationMenuItem
    return {
       props: {

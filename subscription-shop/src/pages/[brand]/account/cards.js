@@ -38,7 +38,6 @@ const ManageCards = props => {
    const router = useRouter()
    const { isAuthenticated, isLoading } = useUser()
    const { seo, settings, navigationMenus } = props
-   console.log('this is in cards', isAuthenticated, isLoading)
    React.useEffect(() => {
       if (!isAuthenticated && !isLoading) {
          isClient && localStorage.setItem('landed_on', location.href)
