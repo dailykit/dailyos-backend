@@ -1,12 +1,9 @@
 import React from 'react'
 import { useRouter } from 'next/router'
 import tw, { styled } from 'twin.macro'
-import { useToasts } from 'react-toast-notifications'
 
-import { useUser } from '../../context'
-import { useConfig, auth } from '../../lib'
 import { SEO, Layout } from '../../components'
-import { getRoute } from '../../utils'
+import { getRoute, isClient } from '../../utils'
 import { signIn, useSession } from 'next-auth/client'
 import { NAVIGATION_MENU, WEBSITE_PAGE } from '../../graphql'
 import { graphQLClient } from '../../lib'
@@ -40,6 +37,7 @@ export default Login
 const LoginPanel = () => {
    const [session] = useSession()
    const router = useRouter()
+   const [loading, setLoading] = React.useState(false)
    const [error, setError] = React.useState('')
    const [form, setForm] = React.useState({
       email: '',
@@ -59,11 +57,24 @@ const LoginPanel = () => {
    const submit = async () => {
       try {
          setError('')
-         signIn('email_password', {
+         setLoading(true)
+         const response = await signIn('email_password', {
+            redirect: false,
             email: form.email,
             password: form.password,
-            callbackUrl: getRoute('/login'),
          })
+         setLoading(false)
+         if (response?.status !== 200) {
+            setError('Email or password is incorrect!')
+         } else if (response?.status === 200) {
+            const landedOn = isClient && localStorage.getItem('landed_on')
+            if (isClient && landedOn) {
+               localStorage.removeItem('landed_on')
+               window.location.href = landedOn
+            } else {
+               router.push(getRoute('/menu'))
+            }
+         }
       } catch (error) {
          console.error(error)
       }
@@ -104,10 +115,10 @@ const LoginPanel = () => {
             Register instead?
          </button>
          <Submit
-            className={!isValid ? 'disabled' : ''}
+            className={!isValid || loading ? 'disabled' : ''}
             onClick={() => isValid && submit()}
          >
-            Login
+            {loading ? 'Logging in...' : 'Login'}
          </Submit>
          {error && <span tw="self-start block text-red-500 mt-2">{error}</span>}
       </Panel>
