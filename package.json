@@ -6,6 +6,7 @@
    "author": "Praveen Bisht <prvnbist@gmail.com>",
    "license": "MIT",
    "scripts": {
+      "im": "concurrently \"yarn\" \"cd subscription-shop && yarn\" \"cd dailyos && yarn\"",
       "dev": "concurrently \"nodemon -r esm index.js\" \"cd subscription-shop && yarn dev\" \"cd dailyos && yarn start\"",
       "build": "concurrently \"cd subscription-shop && yarn build\" \"cd dailyos && yarn build\"",
       "prod": "concurrently \"node -r esm index.js\" \"cd subscription-shop && yarn start\""
