@@ -8,6 +8,7 @@ import express from 'express'
 import morgan from 'morgan'
 import AWS from 'aws-sdk'
 import bluebird from 'bluebird'
+const { createProxyMiddleware } = require('http-proxy-middleware')
 import {
    MOFRouter,
    MenuRouter,
@@ -158,52 +159,81 @@ app.post('/template/download/:path(*)', handlers.download)
    ------------ SUBSCRIPTION SHOP ------------
 */
 
+app.use(
+   '/api/:path(*)',
+   createProxyMiddleware({
+      target: 'http://localhost:3000',
+      changeOrigin: true
+   })
+)
+
 app.use('/:path(*)', async (req, res, next) => {
    //     Subscription shop: Browser <-> Express <-> NextJS
-   const { path: routePath } = req.params
-   const { preview } = req.query
-   const { host } = req.headers
-   const brand = host.replace(':', '')
+   try {
+      const { path: routePath } = req.params
+      const { preview } = req.query
+      const { host } = req.headers
+      const brand = host.replace(':', '')
 
-   const isAllowed = !RESTRICTED_FILES.some(file => routePath.includes(file))
-   if (isAllowed) {
-      const filePath =
-         routePath === ''
-            ? path.join(
-                 __dirname,
-                 `./subscription-shop/.next/server/pages/${brand}.html`
-              )
-            : path.join(
-                 __dirname,
-                 `./subscription-shop/.next/server/pages/${brand}/${routePath}.html`
-              )
-      if (fs.existsSync(filePath) && preview !== 'true') {
-         res.sendFile(filePath)
-      } else {
+      if (process.env.NODE_ENV === 'development') {
          const url = RESTRICTED_FILES.some(file => routePath.includes(file))
             ? 'http://localhost:3000/' + routePath
             : 'http://localhost:3000/' + brand + '/' + routePath
          request(url, function (error, _, body) {
             if (error) {
-               console.log(error)
+               throw error
             } else {
                res.send(body)
             }
          })
-      }
-   } else {
-      if (routePath.includes('env-config.js')) {
-         res.sendFile(
-            path.join(__dirname, 'subscription-shop/public/env-config.js')
-         )
       } else {
-         res.sendFile(
-            path.join(
-               __dirname,
-               routePath.replace('_next', 'subscription-shop/.next')
-            )
+         const isAllowed = !RESTRICTED_FILES.some(file =>
+            routePath.includes(file)
          )
+         if (isAllowed) {
+            const filePath =
+               routePath === ''
+                  ? path.join(
+                       __dirname,
+                       `./subscription-shop/.next/server/pages/${brand}.html`
+                    )
+                  : path.join(
+                       __dirname,
+                       `./subscription-shop/.next/server/pages/${brand}/${routePath}.html`
+                    )
+            if (fs.existsSync(filePath) && preview !== 'true') {
+               res.sendFile(filePath)
+            } else {
+               const url = RESTRICTED_FILES.some(file =>
+                  routePath.includes(file)
+               )
+                  ? 'http://localhost:3000/' + routePath
+                  : 'http://localhost:3000/' + brand + '/' + routePath
+               request(url, function (error, _, body) {
+                  if (error) {
+                     console.log(error)
+                  } else {
+                     res.send(body)
+                  }
+               })
+            }
+         } else {
+            if (routePath.includes('env-config.js')) {
+               res.sendFile(
+                  path.join(__dirname, 'subscription-shop/public/env-config.js')
+               )
+            } else {
+               res.sendFile(
+                  path.join(
+                     __dirname,
+                     routePath.replace('_next', 'subscription-shop/.next')
+                  )
+               )
+            }
+         }
       }
+   } catch (error) {
+      res.status(404).json({ success: false, error: 'Page not found!' })
    }
 })
 
