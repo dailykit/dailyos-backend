@@ -263,11 +263,6 @@ export const INSERT_CART_ITEM = gql`
                validStatus
             }
          }
-         products(where: { level: { _eq: 1 } }) {
-            id
-            name: displayName
-            image: displayImage
-         }
       }
    }
 `
