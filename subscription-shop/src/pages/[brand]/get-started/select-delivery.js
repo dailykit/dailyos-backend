@@ -119,7 +119,6 @@ const DeliveryContent = () => {
       },
    })
    const [updateBrandCustomer] = useMutation(BRAND.CUSTOMER.UPDATE, {
-      refetchQueries: ['customer'],
       onCompleted: () => {
          addToast('Successfully saved delivery preferences.', {
             appearance: 'success',

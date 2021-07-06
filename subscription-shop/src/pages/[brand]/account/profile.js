@@ -143,7 +143,6 @@ const CurrentPlan = () => {
    })
 
    const [updateBrandCustomer] = useMutation(BRAND.CUSTOMER.UPDATE, {
-      refetchQueries: ['customer'],
       onCompleted: () => {
          addToast('Successfully updated subscription status.', {
             appearance: 'success',

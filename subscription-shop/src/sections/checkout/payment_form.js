@@ -22,10 +22,10 @@ export const PaymentForm = ({ intent }) => {
    const { dispatch } = usePayment()
    const { brand, organization } = useConfig()
    const [updateBrandCustomer] = useMutation(BRAND.CUSTOMER.UPDATE, {
-      refetchQueries: ['customer'],
+      onError: error => console.error(error),
    })
    const [createPaymentMethod] = useMutation(CREATE_STRIPE_PAYMENT_METHOD, {
-      refetchQueries: ['customer'],
+      onError: error => console.error(error),
    })
 
    const handleResult = async ({ setupIntent }) => {

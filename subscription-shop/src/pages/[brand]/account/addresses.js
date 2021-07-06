@@ -62,7 +62,6 @@ const Content = () => {
    const [selected, setSelected] = React.useState(null)
    const [tunnel, toggleTunnel] = React.useState(false)
    const [deleteCustomerAddress] = useMutation(DELETE_CUSTOMER_ADDRESS, {
-      refetchQueries: ['customer'],
       onCompleted: () => {
          addToast('Successfully deleted the address.', {
             appearance: 'success',
@@ -73,7 +72,6 @@ const Content = () => {
       },
    })
    const [updateBrandCustomer] = useMutation(BRAND.CUSTOMER.UPDATE, {
-      refetchQueries: ['customer'],
       onCompleted: () => {
          setSelected(null)
          addToast('Successfully changed default address.', {
@@ -226,7 +224,6 @@ export const AddressTunnel = ({ theme, tunnel, toggleTunnel }) => {
    const [formStatus, setFormStatus] = React.useState('PENDING')
    const [address, setAddress] = React.useState(null)
    const [createAddress] = useMutation(MUTATIONS.CUSTOMER.ADDRESS.CREATE, {
-      refetchQueries: () => ['customer'],
       onCompleted: () => {
          toggleTunnel(false)
          setFormStatus('SAVED')

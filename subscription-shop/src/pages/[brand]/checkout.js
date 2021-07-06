@@ -142,7 +142,6 @@ const PaymentContent = () => {
    const [updatePlatformCustomer] = useMutation(
       QUERIES.UPDATE_DAILYKEY_CUSTOMER,
       {
-         refetchQueries: ['customer'],
          onCompleted: () => {
             updateCart({
                variables: {

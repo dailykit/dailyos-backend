@@ -66,7 +66,6 @@ const Content = () => {
    const [deleteStripePaymentMethod] = useMutation(
       DELETE_STRIPE_PAYMENT_METHOD,
       {
-         refetchQueries: ['customer'],
          onCompleted: () => {
             addToast('Successfully deleted the payment method.', {
                appearance: 'success',
@@ -80,7 +79,6 @@ const Content = () => {
       }
    )
    const [updateBrandCustomer] = useMutation(BRAND.CUSTOMER.UPDATE, {
-      refetchQueries: ['customer'],
       onCompleted: () => {
          addToast('Successfully changed default payment method.', {
             appearance: 'success',
@@ -254,10 +252,14 @@ export const PaymentForm = ({ intent, toggleTunnel }) => {
    const { user } = useUser()
    const { brand, organization } = useConfig()
    const [updateBrandCustomer] = useMutation(BRAND.CUSTOMER.UPDATE, {
-      refetchQueries: ['customer'],
+      onError: error => {
+         console.error(error)
+      },
    })
    const [createPaymentMethod] = useMutation(CREATE_STRIPE_PAYMENT_METHOD, {
-      refetchQueries: ['customer'],
+      onError: error => {
+         console.error(error)
+      },
    })
 
    const handleResult = async ({ setupIntent }) => {

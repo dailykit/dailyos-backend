@@ -40,7 +40,6 @@ const ChangePlan = props => {
    }, [selectedPlanId])
 
    const [updateBrandCustomer] = useMutation(BRAND.CUSTOMER.UPDATE, {
-      refetchQueries: ['customer'],
       onCompleted: () => {
          addToast('Successfully changed plan.', {
             appearance: 'success',

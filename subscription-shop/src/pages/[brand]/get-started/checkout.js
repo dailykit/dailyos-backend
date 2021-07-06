@@ -151,7 +151,6 @@ const PaymentContent = () => {
    const [updateCustomerReferralRecord] = useMutation(
       QUERIES.MUTATIONS.CUSTOMER_REFERRAL.UPDATE,
       {
-         refetchQueries: ['customer'],
          onError: error => {
             console.log(error)
             addToast('Referral code not applied!', { appearance: 'error' })
@@ -237,7 +236,6 @@ const PaymentContent = () => {
    const [updatePlatformCustomer] = useMutation(
       QUERIES.UPDATE_DAILYKEY_CUSTOMER,
       {
-         refetchQueries: ['customer'],
          onCompleted: () => {
             updateCart({
                variables: {
