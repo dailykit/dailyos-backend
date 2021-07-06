@@ -26,9 +26,9 @@ export const MUTATIONS = {
       ADDRESS: {
          CREATE: gql`
             mutation createCustomerAddress(
-               $object: platform_customerAddress_insert_input!
+               $object: platform_customerAddress__insert_input!
             ) {
-               createCustomerAddress: platform_createCustomerAddress(
+               createCustomerAddress: insert_platform_customerAddress__one(
                   object: $object
                ) {
                   id
@@ -185,9 +185,9 @@ export const MUTATIONS = {
 export const UPDATE_DAILYKEY_CUSTOMER = gql`
    mutation updateCustomers(
       $keycloakId: String!
-      $_set: platform_customer_set_input!
+      $_set: platform_customer__set_input!
    ) {
-      platform_updateCustomer(
+      platform_updateCustomer: update_platform_customer__by_pk(
          pk_columns: { keycloakId: $keycloakId }
          _set: $_set
       ) {
@@ -197,8 +197,10 @@ export const UPDATE_DAILYKEY_CUSTOMER = gql`
 `
 
 export const CREATE_STRIPE_PAYMENT_METHOD = gql`
-   mutation paymentMethod($object: platform_stripePaymentMethod_insert_input!) {
-      paymentMethod: platform_createStripePaymentMethod(object: $object) {
+   mutation paymentMethod(
+      $object: platform_stripePaymentMethod__insert_input!
+   ) {
+      paymentMethod: insert_platform_stripePaymentMethod__one(object: $object) {
          keycloakId
          stripePaymentMethodId
       }
@@ -345,7 +347,7 @@ export const VERIFY_RESET_PASSWORD_TOKEN = gql`
 
 export const DELETE_CUSTOMER_ADDRESS = gql`
    mutation deleteAddress($id: uuid!) {
-      deleteAddress: platform_deleteCustomerAddress(id: $id) {
+      deleteAddress: delete_platform_customerAddress__by_pk(id: $id) {
          id
       }
    }
@@ -353,7 +355,7 @@ export const DELETE_CUSTOMER_ADDRESS = gql`
 
 export const DELETE_STRIPE_PAYMENT_METHOD = gql`
    mutation deletePaymentMethod($stripePaymentMethodId: String!) {
-      deletePaymentMethod: platform_deleteStripePaymentMethod(
+      deletePaymentMethod: delete_platform_stripePaymentMethod__by_pk(
          stripePaymentMethodId: $stripePaymentMethodId
       ) {
          stripePaymentMethodId

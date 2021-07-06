@@ -776,7 +776,7 @@ export const CUSTOMER = {
                   }
                }
             }
-            platform_customer_ {
+            platform_customer: platform_customer_ {
                email
                firstName
                lastName
@@ -944,7 +944,7 @@ export const REFERRER = gql`
       ) {
          id
          customer {
-            platform_customer {
+            platform_customer: platform_customer_ {
                firstName
                lastName
             }
@@ -1003,7 +1003,7 @@ export const CUSTOMERS_REFERRED = gql`
       ) {
          id
          customer {
-            platform_customer {
+            platform_customer: platform_customer_ {
                firstName
                lastName
             }
