@@ -8,10 +8,10 @@ import tw, { styled } from 'twin.macro'
 import Countdown from 'react-countdown'
 import { useToasts } from 'react-toast-notifications'
 import { useLazyQuery, useMutation, useSubscription } from '@apollo/react-hooks'
-import { signIn, providers, getSession, useSession } from 'next-auth/client'
+import { signIn, providers, getSession } from 'next-auth/client'
 
 import { useUser } from '../../../context'
-import { useConfig, auth } from '../../../lib'
+import { useConfig } from '../../../lib'
 import { getRoute, getSettings, isClient, processUser } from '../../../utils'
 import { SEO, Layout, StepsNavbar } from '../../../components'
 import {
@@ -567,6 +567,7 @@ function validateEmail(email) {
 }
 
 const RegisterPanel = ({ setCurrent }) => {
+   const router = useRouter()
    const { brand } = useConfig()
    const { addToast } = useToasts()
    const [emailExists, setEmailExists] = React.useState(false)
@@ -584,6 +585,29 @@ const RegisterPanel = ({ setCurrent }) => {
       password: '',
       phone: '',
       code: '',
+   })
+
+   const [insertPlatformCustomer] = useMutation(INSERT_PLATFORM_CUSTOMER, {
+      onCompleted: async ({ insertCustomer = {} } = {}) => {
+         if (insertCustomer?.email) {
+            const response = await signIn('email_password', {
+               email: form.email,
+               password: form.password,
+               redirect: false,
+            })
+            setLoading(false)
+            if (response?.status === 200) {
+               router.push(getRoute('/get-started/select-plan'))
+            } else {
+               setLoading(false)
+               setError('Failed to register, please try again!')
+            }
+         }
+      },
+      onError: error => {
+         setLoading(false)
+         console.error(error)
+      },
    })
 
    const [forgotPassword, { loading: forgotPasswordLoading }] = useMutation(
@@ -682,30 +706,16 @@ const RegisterPanel = ({ setCurrent }) => {
          const { data } = await axios.post(URL, { password: form.password })
 
          if (data?.success && data?.hash) {
-            const { insertCustomer = {} } = await client.request(
-               INSERT_PLATFORM_CUSTOMER,
-               {
+            await insertPlatformCustomer({
+               variables: {
                   object: {
                      password: data?.hash,
                      email: form.email,
                      phoneNumber: form.phone,
                   },
-               }
-            )
-            if (insertCustomer?.email) {
-               const response = await signIn('credentials', {
-                  email: form.email,
-                  password: form.password,
-               })
-               if (response?.status === 200) {
-                  router.push(getRoute('/get-started/select-plan'))
-               } else {
-                  setLoading(false)
-                  setError('Failed to register, please try again!')
-               }
-            }
+               },
+            })
          }
-         setLoading(false)
       } catch (error) {
          console.log(error)
          setLoading(false)
