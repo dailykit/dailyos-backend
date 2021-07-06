@@ -1,12 +1,17 @@
 import React from 'react'
 import { useRouter } from 'next/router'
 import tw, { styled } from 'twin.macro'
+import { useMutation } from '@apollo/react-hooks'
 
 import { SEO, Layout } from '../../components'
 import { getRoute, isClient } from '../../utils'
-import { signIn, useSession } from 'next-auth/client'
-import { NAVIGATION_MENU, WEBSITE_PAGE } from '../../graphql'
-import { graphQLClient } from '../../lib'
+import { getSession, signIn, useSession } from 'next-auth/client'
+import {
+   WEBSITE_PAGE,
+   NAVIGATION_MENU,
+   UPSERT_BRAND_CUSTOMER,
+} from '../../graphql'
+import { graphQLClient, useConfig } from '../../lib'
 import 'regenerator-runtime'
 import { getSettings } from '../../utils'
 
@@ -36,11 +41,26 @@ export default Login
 
 const LoginPanel = () => {
    const router = useRouter()
+   const { brand } = useConfig()
    const [loading, setLoading] = React.useState(false)
    const [error, setError] = React.useState('')
    const [form, setForm] = React.useState({
       email: '',
       password: '',
+   })
+   const [createBrandCustomer] = useMutation(UPSERT_BRAND_CUSTOMER, {
+      onCompleted: () => {
+         const landedOn = isClient && localStorage.getItem('landed_on')
+         if (isClient && landedOn) {
+            localStorage.removeItem('landed_on')
+            window.location.href = landedOn
+         } else {
+            router.push(getRoute('/menu'))
+         }
+      },
+      onError: error => {
+         console.error(error)
+      },
    })
 
    const isValid = form.email && form.password
@@ -66,12 +86,18 @@ const LoginPanel = () => {
          if (response?.status !== 200) {
             setError('Email or password is incorrect!')
          } else if (response?.status === 200) {
-            const landedOn = isClient && localStorage.getItem('landed_on')
-            if (isClient && landedOn) {
-               localStorage.removeItem('landed_on')
-               window.location.href = landedOn
-            } else {
-               router.push(getRoute('/menu'))
+            const session = await getSession()
+            const { id: keycloakId = null } = session?.user?.id
+            if (keycloakId) {
+               await createBrandCustomer({
+                  variables: {
+                     object: {
+                        keycloakId,
+                        brandId: brand.id,
+                        subscriptionOnboardStatus: 'SELECT_DELIVERY',
+                     },
+                  },
+               })
             }
          }
       } catch (error) {

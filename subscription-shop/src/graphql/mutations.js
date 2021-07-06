@@ -398,3 +398,17 @@ export const RESEND_OTP = gql`
       }
    }
 `
+
+export const UPSERT_BRAND_CUSTOMER = gql`
+   mutation createBrandCustomer($object: crm_brand_customer_insert_input = {}) {
+      createBrandCustomer(
+         object: $object
+         on_conflict: {
+            constraint: brand_customer_brandId_keycloakId_key
+            update_columns: []
+         }
+      ) {
+         id
+      }
+   }
+`
