@@ -3,16 +3,14 @@ import axios from 'axios'
 import { isEmpty } from 'lodash'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import jwtDecode from 'jwt-decode'
 import tw, { styled } from 'twin.macro'
 import Countdown from 'react-countdown'
 import { useToasts } from 'react-toast-notifications'
-import { useLazyQuery, useMutation, useSubscription } from '@apollo/react-hooks'
+import { useMutation, useSubscription } from '@apollo/react-hooks'
 import { signIn, providers, getSession } from 'next-auth/client'
 
-import { useUser } from '../../../context'
 import { useConfig } from '../../../lib'
-import { getRoute, getSettings, isClient, processUser } from '../../../utils'
+import { getRoute, getSettings, isClient } from '../../../utils'
 import { SEO, Layout, StepsNavbar } from '../../../components'
 import {
    BRAND,
@@ -34,147 +32,9 @@ import {
 import { CloseIcon } from '../../../assets/icons'
 
 const Register = props => {
-   const router = useRouter()
-   const { addToast } = useToasts()
-   const { user, dispatch } = useUser()
-   const { brand, organization } = useConfig()
    const [current, setCurrent] = React.useState('REGISTER')
    const [isViaOtp, setIsViaOtp] = React.useState(false)
    const { settings } = props
-   const [create_brand_customer] = useMutation(BRAND.CUSTOMER.CREATE, {
-      refetchQueries: ['customer'],
-      onCompleted: () => {
-         if (isClient) {
-            window.location.href =
-               window.location.origin + '/get-started/select-plan'
-         }
-      },
-      onError: error => {
-         console.log(error)
-      },
-   })
-   const [applyReferralCode] = useMutation(MUTATIONS.CUSTOMER_REFERRAL.UPDATE, {
-      onCompleted: () => {
-         addToast('Referral code applied!', { appearance: 'success' })
-         deleteStoredReferralCode()
-      },
-      onError: error => {
-         console.log(error)
-         addToast('Referral code not applied!', { appearance: 'error' })
-      },
-   })
-   const [create, { loading: creatingCustomer }] = useMutation(
-      MUTATIONS.CUSTOMER.CREATE,
-      {
-         refetchQueries: ['customer'],
-         onCompleted: async ({ createCustomer }) => {
-            if (!isEmpty(createCustomer)) {
-               const user = await processUser(
-                  createCustomer,
-                  organization?.stripeAccountType
-               )
-               const storedCode = getStoredReferralCode(null)
-               if (storedCode) {
-                  await applyReferralCode({
-                     variables: {
-                        brandId: brand.id,
-                        keycloakId: user.keycloakId,
-                        _set: {
-                           referredByCode: storedCode,
-                        },
-                     },
-                  })
-               }
-               dispatch({ type: 'SET_USER', payload: user })
-            }
-            if (isClient) {
-               window.location.href =
-                  window.location.origin + '/get-started/select-plan'
-            }
-         },
-         onError: () =>
-            addToast('Something went wrong!', {
-               appearance: 'error',
-            }),
-      }
-   )
-   const [customer, { loading: loadingCustomerDetails }] = useLazyQuery(
-      CUSTOMER.DETAILS,
-      {
-         onCompleted: async ({ customer = {} }) => {
-            const { email = '', sub: keycloakId = '' } = jwtDecode(
-               localStorage.getItem('token')
-            )
-            if (isEmpty(customer)) {
-               console.log('CUSTOMER DOESNT EXISTS')
-               create({
-                  variables: {
-                     object: {
-                        email,
-                        keycloakId,
-                        source: 'subscription',
-                        sourceBrandId: brand.id,
-                        clientId: isClient && window._env_.CLIENTID,
-                        brandCustomers: {
-                           data: {
-                              brandId: brand.id,
-                              subscriptionOnboardStatus: 'SELECT_DELIVERY',
-                           },
-                        },
-                     },
-                  },
-               })
-               return
-            }
-            console.log('CUSTOMER EXISTS')
-
-            const user = await processUser(
-               customer,
-               organization?.stripeAccountType
-            )
-            dispatch({ type: 'SET_USER', payload: user })
-
-            const { brandCustomers = {} } = customer
-            if (isEmpty(brandCustomers)) {
-               console.log('BRAND_CUSTOMER DOESNT EXISTS')
-               create_brand_customer({
-                  variables: {
-                     object: {
-                        keycloakId,
-                        brandId: brand.id,
-                        subscriptionOnboardStatus: 'SELECT_DELIVERY',
-                     },
-                  },
-               })
-            } else if (
-               customer.isSubscriber &&
-               brandCustomers[0].isSubscriber
-            ) {
-               console.log('BRAND_CUSTOMER EXISTS & CUSTOMER IS SUBSCRIBED')
-               isClient && localStorage.removeItem('plan')
-               const landedOn = localStorage.getItem('landed_on')
-               if (isClient && landedOn) {
-                  localStorage.removeItem('landed_on')
-                  window.location.href = landedOn
-               } else {
-                  router.push(getRoute('/menu'))
-               }
-            } else {
-               console.log('CUSTOMER ISNT SUBSCRIBED')
-               if (isClient) {
-                  const landedOn = localStorage.getItem('landed_on')
-                  if (landedOn) {
-                     localStorage.removeItem('landed_on')
-                     window.location.href = landedOn
-                  } else {
-                     window.location.href =
-                        window.location.origin + '/get-started/select-plan'
-                  }
-               }
-            }
-         },
-      }
-   )
 
    return (
       <Layout settings={settings}>
@@ -567,9 +427,9 @@ function validateEmail(email) {
 }
 
 const RegisterPanel = ({ setCurrent }) => {
-   const router = useRouter()
-   const { brand } = useConfig()
    const { addToast } = useToasts()
+   const { brand } = useConfig()
+
    const [emailExists, setEmailExists] = React.useState(false)
    const [hasAccepted, setHasAccepted] = React.useState(false)
    const [isReferralFieldVisible, setIsReferralFieldVisible] =
@@ -586,18 +446,69 @@ const RegisterPanel = ({ setCurrent }) => {
       phone: '',
       code: '',
    })
+   const [create] = useMutation(MUTATIONS.CUSTOMER.CREATE, {
+      onCompleted: async ({ createCustomer }) => {
+         if (!isEmpty(createCustomer)) {
+            if (createCustomer?.keycloakId) {
+               const storedCode = getStoredReferralCode(null)
+               if (storedCode) {
+                  await applyReferralCode({
+                     variables: {
+                        brandId: brand.id,
+                        keycloakId: createCustomer.keycloakId,
+                        _set: {
+                           referredByCode: storedCode,
+                        },
+                     },
+                  })
+               }
+            }
+         }
+      },
+      onError: () =>
+         addToast('Something went wrong!', {
+            appearance: 'error',
+         }),
+   })
 
    const [insertPlatformCustomer] = useMutation(INSERT_PLATFORM_CUSTOMER, {
       onCompleted: async ({ insertCustomer = {} } = {}) => {
          if (insertCustomer?.email) {
-            const response = await signIn('email_password', {
-               email: form.email,
-               password: form.password,
-               redirect: false,
-            })
-            setLoading(false)
-            if (response?.status === 200) {
-               router.push(getRoute('/get-started/select-plan'))
+            const session = await getSession()
+            if (session?.user?.id) {
+               await create({
+                  variables: {
+                     object: {
+                        ...(session?.user?.email && {
+                           email: session.user.email,
+                        }),
+                        keycloakId: session?.user?.id,
+                        source: 'subscription',
+                        sourceBrandId: brand.id,
+                        brandCustomers: {
+                           data: {
+                              brandId: brand.id,
+                              subscriptionOnboardStatus: 'SELECT_DELIVERY',
+                           },
+                        },
+                     },
+                  },
+               })
+               const response = await signIn('email_password', {
+                  email: form.email,
+                  password: form.password,
+                  redirect: false,
+               })
+
+               setLoading(false)
+               if (response?.status === 200) {
+                  window.location.href =
+                     window.location.origin +
+                     getRoute('/get-started/select-plan')
+               } else {
+                  setLoading(false)
+                  setError('Failed to register, please try again!')
+               }
             } else {
                setLoading(false)
                setError('Failed to register, please try again!')
@@ -633,6 +544,16 @@ const RegisterPanel = ({ setCurrent }) => {
          },
       }
    )
+   const [applyReferralCode] = useMutation(MUTATIONS.CUSTOMER_REFERRAL.UPDATE, {
+      onCompleted: () => {
+         addToast('Referral code applied!', { appearance: 'success' })
+         deleteStoredReferralCode()
+      },
+      onError: error => {
+         console.log(error)
+         addToast('Referral code not applied!', { appearance: 'error' })
+      },
+   })
 
    const isValid =
       validateEmail(form.email) &&
