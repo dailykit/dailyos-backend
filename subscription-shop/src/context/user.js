@@ -1,9 +1,8 @@
 import 'twin.macro'
 import React from 'react'
 import { isEmpty } from 'lodash'
-import jwtDecode from 'jwt-decode'
 import { useMutation, useQuery, useSubscription } from '@apollo/react-hooks'
-import { useRouter } from 'next/router'
+import { getSession } from 'next-auth/client'
 
 import { useConfig } from '../lib'
 import {
@@ -12,7 +11,6 @@ import {
    CUSTOMER_REFERRALS,
    LOYALTY_POINTS,
    UPDATE_BRAND_CUSTOMER,
-   UPDATE_DAILYKEY_CUSTOMER,
    WALLETS,
 } from '../graphql'
 import { PageLoader } from '../components'
@@ -46,13 +44,6 @@ export const UserProvider = ({ children }) => {
    const { brand, organization } = useConfig()
    const [isLoading, setIsLoading] = React.useState(true)
    const [keycloakId, setKeycloakId] = React.useState('')
-   const [updatePlatformCustomer] = useMutation(UPDATE_DAILYKEY_CUSTOMER, {
-      onCompleted: () => {
-         isClient && localStorage.removeItem('phone')
-      },
-      onError: error =>
-         console.log('updatePlatformCustomer => error => ', error),
-   })
    const [updateBrandCustomer] = useMutation(UPDATE_BRAND_CUSTOMER, {
       onError: error => console.log('updateBrandCustomer => error => ', error),
    })
@@ -80,7 +71,7 @@ export const UserProvider = ({ children }) => {
          })
       },
    })
-   const { loading, data: { customer = {} } = {} } = useQuery(
+   const { loading, data: { customer = {} } = {} } = useSubscription(
       CUSTOMER.DETAILS,
       {
          skip: !keycloakId || !brand.id,
@@ -147,62 +138,43 @@ export const UserProvider = ({ children }) => {
    })
 
    React.useEffect(() => {
-      if (isClient) {
-         const token = localStorage.getItem('token')
-         if (token) {
-            const user = jwtDecode(token)
-            setKeycloakId(user?.sub)
-            dispatch({ type: 'SET_USER', payload: { keycloakId: user?.sub } })
-         } else {
-            dispatch({ type: 'CLEAR_USER' })
+      ;(async () => {
+         if (isClient) {
+            const session = await getSession()
+            if (session?.user?.id) {
+               setKeycloakId(session?.user?.id)
+               dispatch({
+                  type: 'SET_USER',
+                  payload: { keycloakId: session?.user?.id },
+               })
+            } else {
+               dispatch({ type: 'CLEAR_USER' })
+            }
          }
-      }
+      })()
    }, [])
 
    React.useEffect(() => {
-      if (!loading) {
-         if (customer?.id && organization?.id) {
-            const user = processUser(customer, organization?.stripeAccountType)
+      if (!loading && customer?.id && organization?.id) {
+         const user = processUser(customer, organization?.stripeAccountType)
 
-            const hasPhone = Boolean(user?.platform_customer?.phoneNumber)
-            const phone = isClient && localStorage.getItem('phone')
-            if (user?.keycloakId && !hasPhone && phone && phone.length > 0) {
-               updatePlatformCustomer({
+         if (Array.isArray(user?.carts) && user?.carts?.length > 0) {
+            const index = user.carts.findIndex(
+               node => node.paymentStatus === 'SUCCEEDED'
+            )
+            if (index !== -1) {
+               updateBrandCustomer({
+                  skip: !user?.brandCustomerId,
                   variables: {
-                     keycloakId: user?.keycloakId,
-                     _set: { phoneNumber: phone },
+                     id: user?.brandCustomerId,
+                     _set: { subscriptionOnboardStatus: 'ONBOARDED' },
                   },
                })
             }
-
-            if (Array.isArray(user?.carts) && user?.carts?.length > 0) {
-               const index = user.carts.findIndex(
-                  node => node.paymentStatus === 'SUCCEEDED'
-               )
-               if (index !== -1) {
-                  updateBrandCustomer({
-                     skip: !user?.brandCustomerId,
-                     variables: {
-                        id: user?.brandCustomerId,
-                        _set: { subscriptionOnboardStatus: 'ONBOARDED' },
-                     },
-                  })
-               }
-            }
-
-            dispatch({ type: 'SET_USER', payload: user })
          }
-         if (state.isAuthenticated) {
-            if (customer?.id) {
-               setIsLoading(false)
-            } else {
-               setIsLoading(true)
-            }
-         } else {
-            setIsLoading(false)
-         }
-      } else {
-         setIsLoading(true)
+
+         dispatch({ type: 'SET_USER', payload: user })
+         setIsLoading(false)
       }
    }, [loading, customer, organization])
 
