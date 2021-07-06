@@ -365,6 +365,18 @@ export const CART_BY_WEEK = gql`
             fulfillmentInfo
             transactionId
             paymentMethodId
+            products: cartItems(where: { level: { _eq: 1 } }) {
+               id
+               name: displayName
+               image: displayImage
+               isAddOn
+               unitPrice
+               addOnLabel
+               addOnPrice
+               isAutoAdded
+               subscriptionOccurenceProductId
+               subscriptionOccurenceAddOnProductId
+            }
          }
       }
    }
