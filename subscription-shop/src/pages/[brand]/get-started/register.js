@@ -473,46 +473,51 @@ const RegisterPanel = ({ setCurrent }) => {
 
    const [insertPlatformCustomer] = useMutation(INSERT_PLATFORM_CUSTOMER, {
       onCompleted: async ({ insertCustomer = {} } = {}) => {
-         if (insertCustomer?.email) {
-            const session = await getSession()
-            if (session?.user?.id) {
-               await create({
-                  variables: {
-                     object: {
-                        ...(session?.user?.email && {
-                           email: session.user.email,
-                        }),
-                        keycloakId: session?.user?.id,
-                        source: 'subscription',
-                        sourceBrandId: brand.id,
-                        brandCustomers: {
-                           data: {
-                              brandId: brand.id,
-                              subscriptionOnboardStatus: 'SELECT_DELIVERY',
-                           },
-                        },
-                     },
-                  },
-               })
+         try {
+            if (insertCustomer?.email) {
                const response = await signIn('email_password', {
                   email: form.email,
                   password: form.password,
                   redirect: false,
                })
-
-               setLoading(false)
                if (response?.status === 200) {
-                  window.location.href =
-                     window.location.origin +
-                     getRoute('/get-started/select-plan')
+                  const session = await getSession()
+                  if (session?.user?.id) {
+                     await create({
+                        variables: {
+                           object: {
+                              ...(session?.user?.email && {
+                                 email: session.user.email,
+                              }),
+                              keycloakId: session?.user?.id,
+                              source: 'subscription',
+                              sourceBrandId: brand.id,
+                              brandCustomers: {
+                                 data: {
+                                    brandId: brand.id,
+                                    subscriptionOnboardStatus:
+                                       'SELECT_DELIVERY',
+                                 },
+                              },
+                           },
+                        },
+                     })
+                     window.location.href =
+                        window.location.origin +
+                        getRoute('/get-started/select-plan')
+
+                     setLoading(false)
+                  } else {
+                     setLoading(false)
+                     setError('Failed to register, please try again!')
+                  }
                } else {
                   setLoading(false)
                   setError('Failed to register, please try again!')
                }
-            } else {
-               setLoading(false)
-               setError('Failed to register, please try again!')
             }
+         } catch (error) {
+            console.error(error)
          }
       },
       onError: error => {

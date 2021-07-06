@@ -128,39 +128,45 @@ export default async (req, res) => {
       pages: { signIn: getRoute('/login') },
       callbacks: {
          async signIn(user, account, profile) {
-            console.log({ account })
-            let customer = {}
-            if (account.type === 'oauth') {
-               const name = user.name.split(' ')
-               const { 0: firstName = '', [name.length - 1]: lastName = '' } =
-                  name
-               customer.firstName = firstName
-               customer.lastName = lastName
-               customer.email = user.email
-               customer.avatar = user.image
-            }
+            try {
+               let customer = {}
+               if (account.type === 'oauth') {
+                  const name = user.name.split(' ')
+                  const {
+                     0: firstName = '',
+                     [name.length - 1]: lastName = '',
+                  } = name
+                  customer.firstName = firstName
+                  customer.lastName = lastName
+                  customer.email = user.email
+                  customer.avatar = user.image
+               }
 
-            await client.request(INSERT_PROVIDER_CUSTOMER, {
-               object: {
-                  providerType: account.type,
-                  providerAccountId: user.id || null,
-                  provider: account.provider || account.id || 'credentials',
-                  ...(account.type === 'credentials' && {
-                     customerId: user.id,
-                  }),
+               await client.request(INSERT_PROVIDER_CUSTOMER, {
+                  object: {
+                     providerType: account.type,
+                     providerAccountId: user.id || null,
+                     provider: account.provider || account.id || 'credentials',
+                     ...(account.type === 'credentials' && {
+                        customerId: user.id,
+                     }),
 
-                  ...(Object.keys(customer).length > 0 && {
-                     customer: {
-                        data: customer,
-                        on_conflict: {
-                           update_columns: [],
-                           constraint: 'customer__email_key',
+                     ...(Object.keys(customer).length > 0 && {
+                        customer: {
+                           data: customer,
+                           on_conflict: {
+                              update_columns: [],
+                              constraint: 'customer__email_key',
+                           },
                         },
-                     },
-                  }),
-               },
-            })
-            return true
+                     }),
+                  },
+               })
+               return true
+            } catch (error) {
+               console.error(error)
+               return false
+            }
          },
          async session(session, token) {
             session.user.id = token.sub
