@@ -128,6 +128,7 @@ export default async (req, res) => {
       pages: { signIn: getRoute('/login') },
       callbacks: {
          async signIn(user, account, profile) {
+            console.log({ account })
             let customer = {}
             if (account.type === 'oauth') {
                const name = user.name.split(' ')
@@ -143,7 +144,7 @@ export default async (req, res) => {
                object: {
                   providerType: account.type,
                   providerAccountId: user.id || null,
-                  provider: account.provider || 'credentials',
+                  provider: account.provider || account.id || 'credentials',
                   ...(account.type === 'credentials' && {
                      customerId: user.id,
                   }),
