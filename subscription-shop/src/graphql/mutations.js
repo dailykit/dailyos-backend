@@ -387,3 +387,14 @@ export const SEND_SMS = gql`
       }
    }
 `
+
+export const RESEND_OTP = gql`
+   mutation resend($id: uuid!) {
+      resend: update_platform_otp_transaction_by_pk(
+         pk_columns: { id: $id }
+         _inc: { resendAttempts: 1 }
+      ) {
+         id
+      }
+   }
+`

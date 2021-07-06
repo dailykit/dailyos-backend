@@ -1127,3 +1127,19 @@ export const WEBSITE_PAGE = gql`
 //       }
 //    }
 // }
+
+export const OTPS = gql`
+   subscription otps($where: platform_otp_transaction_bool_exp = {}) {
+      otps: platform_otp_transaction(
+         where: $where
+         order_by: { created_at: desc }
+      ) {
+         id
+         code
+         isValid
+         validTill
+         resendAttempts
+         isResendAllowed
+      }
+   }
+`

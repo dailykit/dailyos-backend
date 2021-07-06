@@ -5,9 +5,10 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import jwtDecode from 'jwt-decode'
 import tw, { styled } from 'twin.macro'
+import Countdown from 'react-countdown'
 import { useToasts } from 'react-toast-notifications'
 import { useLazyQuery, useMutation, useSubscription } from '@apollo/react-hooks'
-import { signIn, providers, getSession } from 'next-auth/client'
+import { signIn, providers, getSession, useSession } from 'next-auth/client'
 
 import { useUser } from '../../../context'
 import { useConfig, auth } from '../../../lib'
@@ -21,6 +22,7 @@ import {
    INSERT_PLATFORM_CUSTOMER,
    MUTATIONS,
    OTPS,
+   RESEND_OTP,
    SEND_SMS,
 } from '../../../graphql'
 import {
@@ -29,6 +31,7 @@ import {
    isReferralCodeValid,
    setStoredReferralCode,
 } from '../../../utils/referrals'
+import { CloseIcon } from '../../../assets/icons'
 
 const Register = props => {
    const router = useRouter()
@@ -36,7 +39,7 @@ const Register = props => {
    const { user, dispatch } = useUser()
    const { brand, organization } = useConfig()
    const [current, setCurrent] = React.useState('REGISTER')
-   const [isViaOtp, setIsViaOtp] = React.useState(true)
+   const [isViaOtp, setIsViaOtp] = React.useState(false)
    const { settings } = props
    const [create_brand_customer] = useMutation(BRAND.CUSTOMER.CREATE, {
       refetchQueries: ['customer'],
@@ -229,24 +232,69 @@ const Register = props => {
                   Sign in with Phone Number
                </button>
             </div>
-            {isViaOtp && <OTP />}
+            {isViaOtp && <OTP setIsViaOtp={setIsViaOtp} />}
          </Main>
       </Layout>
    )
 }
 export default Register
 
-const OTP = () => {
+const OTP = ({ setIsViaOtp }) => {
+   const router = useRouter()
    const [error, setError] = React.useState('')
    const [loading, setLoading] = React.useState(false)
    const [hasOtpSent, setHasOtpSent] = React.useState(false)
    const [sendingOtp, setSendingOtp] = React.useState(false)
    const [form, setForm] = React.useState({ phone: '', otp: '' })
+   const [otpId, setOtpId] = React.useState(null)
+   const [otp, setOtp] = React.useState(null)
+   const [resending, setResending] = React.useState(false)
+   const [time, setTime] = React.useState(null)
+
+   const [resendOTP] = useMutation(RESEND_OTP, {
+      onCompleted: () => {
+         setResending(false)
+         setTime(Date.now() + 120000)
+      },
+      onError: error => {
+         console.error(error)
+         setResending(false)
+      },
+   })
+
+   const { loading: otpsLoading, data: { otps = [] } = {} } = useSubscription(
+      OTPS,
+      {
+         skip: !otpId,
+         fetchPolicy: 'network-only',
+         variables: { where: { id: { _eq: otpId } } },
+      }
+   )
+
+   React.useEffect(() => {
+      if (otpId && !otpsLoading && otps.length > 0) {
+         const [otp] = otps
+         if (otp.isValid) {
+            setOtp(otp)
+         } else {
+            setOtp(null)
+            setHasOtpSent(false)
+            setForm({ phone: '', otp: '' })
+            setSendingOtp(false)
+            setError('')
+            setLoading(false)
+            setOtpId(null)
+            setResending(false)
+            setTime(null)
+         }
+      }
+   }, [otpId, otpsLoading, otps])
 
    const [sendSms] = useMutation(SEND_SMS, {
       onCompleted: () => {
          setHasOtpSent(true)
          setSendingOtp(false)
+         setTime(Date.now() + 120000)
       },
       onError: error => {
          console.error(error)
@@ -257,6 +305,7 @@ const OTP = () => {
    const [insertOtpTransaction] = useMutation(INSERT_OTP_TRANSACTION, {
       onCompleted: async ({ insertOtp = {} } = {}) => {
          if (insertOtp?.code) {
+            setOtpId(insertOtp?.id)
             await sendSms({
                variables: {
                   phone: form.phone,
@@ -286,13 +335,18 @@ const OTP = () => {
       try {
          e.preventDefault()
          setLoading(true)
-         const response = await signIn('otp', form)
+         if (!form.otp) {
+            setError('Please enter the OTP!')
+            return
+         }
+         setError('')
+         const response = await signIn('otp', { redirect: false, ...form })
          if (response?.status === 200) {
             router.push(getRoute('/get-started/select-plan'))
             setLoading(false)
          } else {
             setLoading(false)
-            setError('Failed to register, please try again!')
+            setError('Entered OTP is incorrect, please try again!')
          }
       } catch (error) {
          console.error(error)
@@ -307,6 +361,7 @@ const OTP = () => {
             return
          }
          setSendingOtp(true)
+         setError('')
          await insertOtpTransaction({
             variables: { object: { phoneNumber: form.phone } },
          })
@@ -314,6 +369,12 @@ const OTP = () => {
          setSendingOtp(false)
          setError('Failed to send otp, please try again!')
       }
+   }
+
+   const resend = async () => {
+      setResending(true)
+      setTime(null)
+      await resendOTP({ variables: { id: otp?.id } })
    }
 
    return (
@@ -325,9 +386,15 @@ const OTP = () => {
             tw="h-auto bg-white rounded self-start p-3"
             style={{ width: 380 }}
          >
-            <h3 tw="mb-3 text-gray-600 text-center text-xl font-medium">
-               Sign In via OTP
-            </h3>
+            <header tw="mb-3 flex items-center justify-between">
+               <h3 tw="text-gray-600 text-xl font-medium">Sign In via OTP</h3>
+               <button
+                  onClick={() => setIsViaOtp(false)}
+                  tw="p-2 hover:bg-gray-200 rounded"
+               >
+                  <CloseIcon size={18} tw="stroke-current" />
+               </button>
+            </header>
             {!hasOtpSent ? (
                <>
                   <FieldSet>
@@ -341,8 +408,9 @@ const OTP = () => {
                      />
                   </FieldSet>
                   <Submit
-                     className={sendingOtp ? 'disabled' : ''}
                      onClick={sendOTP}
+                     disabled={sendingOtp || !form.phone}
+                     className={sendingOtp || !form.phone ? 'disabled' : ''}
                   >
                      {sendingOtp ? 'Sending OTP...' : 'Send OTP'}
                   </Submit>
@@ -359,9 +427,46 @@ const OTP = () => {
                         placeholder="Enter the otp"
                      />
                   </FieldSet>
-                  <Submit onClick={submit} className={false ? 'disabled' : ''}>
+                  <Submit
+                     onClick={submit}
+                     disabled={resending || loading || !form.otp}
+                     className={
+                        resending || loading || !form.otp ? 'disabled' : ''
+                     }
+                  >
                      Submit
                   </Submit>
+                  {time && (
+                     <Countdown
+                        date={time}
+                        renderer={({ minutes, seconds, completed }) => {
+                           //otp?.id && otp?.isResendAllowed &&
+                           if (completed) {
+                              return (
+                                 <button
+                                    onClick={resend}
+                                    disabled={resending}
+                                    className={resending ? 'disabled' : ''}
+                                    css={[
+                                       tw`mt-2 text-gray-800 hover:bg-gray-200 rounded w-full h-10 uppercase tracking-wider`,
+                                       resending &&
+                                          tw`cursor-not-allowed hover:bg-white`,
+                                    ]}
+                                 >
+                                    Resend OTP
+                                 </button>
+                              )
+                           }
+                           return (
+                              <span tw="flex mt-2 text-center">
+                                 Resend OTP in 0{minutes}:
+                                 {seconds <= 9 ? '0' : ''}
+                                 {seconds}
+                              </span>
+                           )
+                        }}
+                     />
+                  )}
                </>
             )}
             {error && (
