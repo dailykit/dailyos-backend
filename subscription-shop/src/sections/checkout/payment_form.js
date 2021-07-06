@@ -14,7 +14,7 @@ import { usePayment } from './state'
 import { useConfig } from '../../lib'
 import { isClient } from '../../utils'
 import { useUser } from '../../context'
-import { Loader } from '../../components'
+import { HelperBar, Loader } from '../../components'
 import { BRAND, CREATE_STRIPE_PAYMENT_METHOD } from '../../graphql'
 
 export const PaymentForm = ({ intent }) => {
@@ -94,7 +94,16 @@ export const PaymentForm = ({ intent }) => {
          }),
    })
 
-   if (!intent) return <Loader inline />
+   if (!intent)
+      return (
+         <div>
+            <HelperBar type="warning">
+               <HelperBar.SubTitle>
+                  Your account is not linked with Stripe.
+               </HelperBar.SubTitle>
+            </HelperBar>
+         </div>
+      )
    return (
       <div>
          <Elements stripe={stripePromise}>
