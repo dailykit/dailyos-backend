@@ -45,7 +45,7 @@ const auth = {
          email: { label: 'Email', type: 'text' },
          password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials, req) {
+      async authorize(credentials) {
          try {
             const { customers = [] } = await client.request(CUSTOMERS, {
                where: { email: { _eq: credentials.email } },
@@ -139,8 +139,6 @@ export default async (req, res) => {
                customer.avatar = user.image
             }
 
-            console.log(account.type, { customer })
-
             await client.request(INSERT_PROVIDER_CUSTOMER, {
                object: {
                   providerType: account.type,
@@ -149,8 +147,15 @@ export default async (req, res) => {
                   ...(account.type === 'credentials' && {
                      customerId: user.id,
                   }),
+
                   ...(Object.keys(customer).length > 0 && {
-                     customer: { data: customer },
+                     customer: {
+                        data: customer,
+                        on_conflict: {
+                           update_columns: [],
+                           constraint: 'customer__email_key',
+                        },
+                     },
                   }),
                },
             })
