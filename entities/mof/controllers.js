@@ -15,8 +15,8 @@ export const updateMOF = async (req, res) => {
                   isLive
                   isPublished
                   ingredientSachet {
-                  id
-                  quantity
+                     id
+                     quantity
                   }
                }
             }
@@ -25,48 +25,41 @@ export const updateMOF = async (req, res) => {
       const data = await client.request(FULLFILLMENTS)
 
       const modes = data[req.body.table.name].modeOfFulfillments
-      let updatedModes = modes
+      const updatedModes = []
 
-      updatedModes.forEach(mode => {
-         // if new.avail != old.avail:
-         // modes.each => isLive = new.avail
-         if (
-            req.body.event.data.new.isAvailable !==
-            req.body.event.data.old.isAvailable
-         ) {
-            mode.isLive = req.body.event.data.new.isAvailable
-         }
-         // if quantity > new.onHand -> isLive = false
-         // else isLive = true
-         if (
-            req.body.event.data.new.onHand !== req.body.event.data.old.onHand
-         ) {
-            mode.isLive =
-               mode.ingredientSachet.quantity <= req.body.event.data.new.onHand
+      modes.forEach(mode => {
+         const prevIsLive = mode.isLive
+
+         // for mode to be live -> it should be available && ingredient sachet quantity should match
+         const nextIsLive =
+            req.body.event.data.new.isAvailable &&
+            mode.ingredientSachet.quantity <=
+               req.body.event.data.new.onHand -
+                  req.body.event.data.new.committed
+
+         if (prevIsLive !== nextIsLive) {
+            updatedModes.push({ ...mode, isLive: nextIsLive })
          }
       })
 
-      // const trulyUpdatedModes = []
+      await Promise.all(
+         updatedModes.map(mode =>
+            client.request(UPDATE_MODE, {
+               id: mode.id,
+               set: { isLive: mode.isLive }
+            })
+         )
+      )
 
-      // updatedModes.forEach((mode, i) => {
-      //   if (_.isEqual(updatedModes[i], modes[i])) {
-      //     console.log("TESSSSS")
-      //     trulyUpdatedModes.push(mode)
-      //   }
-      // })
-
-      updatedModes.forEach(async mode => {
-         await client.request(UPDATE_MODE, {
-            id: mode.id,
-            set: { isLive: mode.isLive }
-         })
+      return res.json({
+         success: true,
+         message: 'Updated isLive flags!'
       })
-
-      return res.send('OK')
    } catch (error) {
       console.log(error)
       return res.status(400).json({
-         message: 'error happened'
+         success: false,
+         message: error.message
       })
    }
 }
@@ -75,78 +68,31 @@ export const liveMOF = async (req, res) => {
    try {
       const mode = req.body.event.data
 
-      const response = await fetch(process.env.DATAHUB, {
-         method: 'POST',
-         headers: {
-            'Content-Type': 'application/json'
-         },
-         body: JSON.stringify({
-            query: INGREDIENT_SACHET,
-            variables: { id: mode.new.ingredientSachetId }
-         })
+      const { ingredientSachet } = await client.request(INGREDIENT_SACHET, {
+         id: mode.new.ingredientSachetId
       })
 
-      const { data = {} } = await response.json()
+      const currentLiveMOF = ingredientSachet.liveMOF
 
-      const currentLiveMOF = data.ingredientSachet.liveMOF
-      let newLiveMOF = null
-      let passingModes = []
+      let modes = [...ingredientSachet.modeOfFulfillments]
+      modes.sort((a, b) => b.position - a.position)
 
-      // check for isPublished
-      // filter out that have true
-      passingModes = data.ingredientSachet.modeOfFulfillments.filter(mode => {
-         if (mode.isPublished) return mode
-      })
-      // if array.length === 0 -> then liveMOF = null
-      if (!passingModes.length) newLiveMOF = null
-      // check for isLive
-      // filter out that have true
-      else {
-         passingModes = data.ingredientSachet.modeOfFulfillments.filter(
-            mode => {
-               if (mode.isLive) return mode
-            }
-         )
-         // if array.length === 0 -> then liveMOF = null
-         if (!passingModes.length) newLiveMOF = null
-         // else
-         // if array.length === 1 then liveMOF = array[0]
-         else if (passingModes.length === 1) newLiveMOF = passingModes[0]
-         // else sort array => liveMOF = array[0]
-         else {
-            passingModes.sort((a, b) => {
-               if (a.priority < b.priority) return 1
-               else if (a.priority > b.priority) return -1
-               else return 0
-            })
-            newLiveMOF = passingModes[0]
-         }
-      }
+      const newLiveMOF = modes.length ? modes[0].id : null
 
-      if (currentLiveMOF !== newLiveMOF.id) {
-         const response = await fetch(process.env.DATAHUB, {
-            method: 'POST',
-            headers: {
-               'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-               query: UPDATE_INGREDIENT_SACHET,
-               variables: {
-                  id: mode.new.ingredientSachetId,
-                  set: { liveMOF: newLiveMOF ? newLiveMOF.id : null }
-               }
-            })
+      if (currentLiveMOF !== newLiveMOF) {
+         await client.request(UPDATE_INGREDIENT_SACHET, {
+            id: mode.new.ingredientSachetId,
+            set: { liveMOF: newLiveMOF }
          })
-
-         const data = await response.json()
-         console.log(data)
+         return res.json({ success: true, message: 'Live MOF updated!' })
       }
 
-      return res.send('OK')
+      return res.json({ success: true, message: 'Live MOF is same as last!' })
    } catch (error) {
       console.log(error)
-      return res.status(400).json({
-         message: 'error happened'
+      return res.status(500).json({
+         success: false,
+         message: error.message
       })
    }
 }
