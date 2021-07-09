@@ -159,11 +159,21 @@ app.post('/template/download/:path(*)', handlers.download)
    ------------ SUBSCRIPTION SHOP ------------
 */
 
+const restream = function (proxyReq, req, res, options) {
+   if (req.body) {
+      let bodyData = JSON.stringify(req.body)
+      proxyReq.setHeader('Content-Type', 'application/json')
+      proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData))
+      proxyReq.write(bodyData)
+   }
+}
+
 app.use(
    '/api/:path(*)',
    createProxyMiddleware({
       target: 'http://localhost:3000',
-      changeOrigin: true
+      changeOrigin: true,
+      onProxyReq: restream
    })
 )
 
