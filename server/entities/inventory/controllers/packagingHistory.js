@@ -1,5 +1,3 @@
-import { StatusCodes } from 'http-status-codes'
-
 import { client } from '../../../lib/graphql'
 import { GET_PACKAGING } from '../graphql/queries'
 import { updatePackaging } from './utils'
@@ -21,7 +19,7 @@ export const handlePackagingHistory = async (req, res, next) => {
                committed: packaging.committed - Math.abs(quantity)
             }
             await updatePackaging(packagingId, set)
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'packaging updated'
             })
@@ -35,7 +33,7 @@ export const handlePackagingHistory = async (req, res, next) => {
             }
 
             await updatePackaging(packagingId, set)
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'packaging updated'
             })
@@ -52,7 +50,7 @@ export const handlePackagingHistory = async (req, res, next) => {
             }
 
             await updatePackaging(packagingId, set)
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'packaging updated'
             })
@@ -65,7 +63,7 @@ export const handlePackagingHistory = async (req, res, next) => {
             }
 
             await updatePackaging(packagingId, set)
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'packaging updated'
             })
@@ -81,7 +79,7 @@ export const handlePackagingHistory = async (req, res, next) => {
             }
 
             await updatePackaging(packagingId, set)
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'packaging updated'
             })
@@ -96,7 +94,7 @@ export const handlePackagingHistory = async (req, res, next) => {
             }
 
             await updatePackaging(packagingId, set)
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'packaging updated'
             })
@@ -111,7 +109,7 @@ export const handlePackagingHistory = async (req, res, next) => {
          }
 
          await updatePackaging(packagingId, set)
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'packaging updated'
          })
@@ -129,7 +127,7 @@ export const handlePackagingHistory = async (req, res, next) => {
          }
 
          await updatePackaging(packagingId, set)
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'packaging updated'
          })
@@ -143,7 +141,7 @@ export const handlePackagingHistory = async (req, res, next) => {
          }
 
          await updatePackaging(packagingId, set)
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'packaging updated'
          })
@@ -159,7 +157,7 @@ export const handlePackagingHistory = async (req, res, next) => {
          }
 
          await updatePackaging(packagingId, set)
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'packaging updated'
          })

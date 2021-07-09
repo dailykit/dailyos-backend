@@ -1,4 +1,3 @@
-import { StatusCodes } from 'http-status-codes'
 import { client } from '../../../lib/graphql'
 import {
    UPDATE_BULK_ITEM,
@@ -54,7 +53,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
                isResolved: false
             }
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'Failed to resolve units!'
          })
@@ -84,7 +83,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
                      Math.abs(calculatedQuantity)
                }
             })
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'bulk item updated'
             })
@@ -101,7 +100,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
                      Math.abs(calculatedQuantity)
                }
             })
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'bulk item updated'
             })
@@ -127,7 +126,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
                      Math.abs(calculatedQuantity)
                }
             })
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'bulk item updated'
             })
@@ -142,7 +141,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
                      bulkItemData.bulkItem.onHand - Math.abs(calculatedQuantity)
                }
             })
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'bulk item updated'
             })
@@ -167,7 +166,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
                      Math.abs(calculatedQuantity)
                }
             })
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'bulk item updated'
             })
@@ -189,7 +188,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
                      Math.abs(calculatedQuantity)
                }
             })
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'bulk item updated'
             })
@@ -206,7 +205,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
                   bulkItemData.bulkItem.committed + Math.abs(calculatedQuantity)
             }
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'bulk item updated'
          })
@@ -230,7 +229,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
                   bulkItemData.bulkItem.consumed + Math.abs(calculatedQuantity)
             }
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'bulk item updated'
          })
@@ -247,7 +246,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
                   bulkItemData.bulkItem.awaiting + Math.abs(calculatedQuantity)
             }
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'bulk item updated'
          })
@@ -267,7 +266,7 @@ export const handleBulkItemHistory = async (req, res, next) => {
                   bulkItemData.bulkItem.onHand + Math.abs(calculatedQuantity)
             }
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'bulk item updated'
          })

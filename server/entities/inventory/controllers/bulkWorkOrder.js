@@ -1,4 +1,3 @@
-import { StatusCodes } from 'http-status-codes'
 import { client } from '../../../lib/graphql'
 import {
    CREATE_BULK_ITEM_HISTORY_FOR_BULK_WORK_ORDER,
@@ -24,7 +23,7 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res, next) => {
       } = req.body.event.data.new
 
       if (status === 'UNPUBLISHED') {
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'work order not published yet.'
          })
@@ -53,7 +52,7 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res, next) => {
                set: { status }
             }
          )
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'histories updated'
          })
@@ -88,7 +87,7 @@ export const handleBulkWorkOrderCreateUpdate = async (req, res, next) => {
             status: 'PENDING',
             bulkWorkOrderId: bulkWorkOrderId
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'histories created'
          })

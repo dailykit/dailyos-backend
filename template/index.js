@@ -1,8 +1,10 @@
 import puppeteer from 'puppeteer'
-import request from 'request'
+import express from 'express'
 
 const checkExist = require('./utils/checkExist')
 const copyFolder = require('./utils/copyFolder')
+
+const router = express.Router()
 
 export const root = async (req, res) => {
    try {
@@ -63,3 +65,8 @@ export const download = async (req, res) => {
       console.log(err)
    }
 }
+
+router.get('/', root)
+router.post('/download/:path(*)', download)
+
+export default router
