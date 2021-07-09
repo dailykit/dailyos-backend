@@ -338,6 +338,7 @@ const OTP = ({ setIsViaOtp }) => {
 }
 
 const LoginPanel = () => {
+   const router = useRouter()
    const [error, setError] = React.useState('')
    const [loading, setLoading] = React.useState(false)
    const [form, setForm] = React.useState({
