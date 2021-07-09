@@ -149,6 +149,7 @@ export const UserProvider = ({ children }) => {
                })
             } else {
                dispatch({ type: 'CLEAR_USER' })
+               setIsLoading(false)
             }
          }
       })()

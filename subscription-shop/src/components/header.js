@@ -109,9 +109,7 @@ export const Header = ({ settings, navigationMenus }) => {
                      onClick={() => router.push(getRoute('/login'))}
                      bg={theme?.accent}
                   >
-                     <Link href={getRoute('/login')} as="/login">
-                        Log In
-                     </Link>
+                     Log In
                   </Login>
                )}
                <button
