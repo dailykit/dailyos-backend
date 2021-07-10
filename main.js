@@ -16,6 +16,7 @@ import {
    OrderRouter,
    sendMail,
    DeviceRouter,
+   NutritionInfoRouter,
    UploadRouter,
    RMKMenuRouter,
    initiatePayment,
@@ -94,6 +95,7 @@ app.use('/api/customer', CustomerRouter)
 
 app.use('/webhook/user', UserRouter)
 app.use('/webhook/devices', DeviceRouter)
+app.use('/api/actions', NutritionInfoRouter)
 app.use('/webhook/notification', NotificationRouter)
 app.use('/webhook/occurence', OccurenceRouter)
 app.post('/webhook/parse/email', emailParser)
