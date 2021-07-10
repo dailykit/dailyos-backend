@@ -1,4 +1,3 @@
-import { StatusCodes } from 'http-status-codes'
 import { client } from '../../../lib/graphql'
 import {
    CREATE_BULK_ITEM_HISTORY,
@@ -16,13 +15,8 @@ export const handleOrderSachetCreation = async (req, res, next) => {
    // req.body.event -> event details -> {op: 'INSERT' | 'UPDATE', data: {old: {}, new: {}}}
 
    try {
-      const {
-         sachetItemId,
-         bulkItemId,
-         quantity,
-         status,
-         id
-      } = req.body.event.data.new
+      const { sachetItemId, bulkItemId, quantity, status, id } =
+         req.body.event.data.new
 
       const oldStatus = req.body.event.data.old
 
@@ -32,7 +26,7 @@ export const handleOrderSachetCreation = async (req, res, next) => {
             where: { orderSachetId: { _eq: id } },
             set: { status }
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'history updated'
          })
@@ -44,7 +38,7 @@ export const handleOrderSachetCreation = async (req, res, next) => {
             bulkItemId,
             set: { status }
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'history updated'
          })
@@ -77,7 +71,7 @@ export const handleOrderSachetCreation = async (req, res, next) => {
                }
             ]
          })
-         res.status(StatusCodes.CREATED).json({
+         res.status(201).json({
             ok: true,
             message: 'history created'
          })
@@ -90,7 +84,7 @@ export const handleOrderSachetCreation = async (req, res, next) => {
             bulkItemId,
             set: { status }
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'history updated'
          })
@@ -103,7 +97,7 @@ export const handleOrderSachetCreation = async (req, res, next) => {
             where: { orderSachetId: { _eq: id } },
             set: { status }
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'history updated'
          })

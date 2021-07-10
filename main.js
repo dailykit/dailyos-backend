@@ -3,7 +3,6 @@ import cors from 'cors'
 import request from 'request'
 import fs from 'fs'
 import path from 'path'
-import { StatusCodes } from 'http-status-codes'
 import express from 'express'
 import morgan from 'morgan'
 import AWS from 'aws-sdk'
@@ -50,9 +49,13 @@ import {
 
 const app = express()
 const { ApolloServer } = require('apollo-server-express')
-const depthLimit = require('graphql-depth-limit')
+import depthLimit from 'graphql-depth-limit'
 
-const RESTRICTED_FILES = ['env-config.js', 'favicon', '.next', '_next']
+import ServerRouter from './server'
+import schema from './template/schema'
+import TemplateRouter from './template'
+
+const app = express()
 
 // Middlewares
 app.use(cors())
@@ -119,57 +122,30 @@ app.get('/images/:url(*)', handleImage)
    ------------ DAILY OS ------------
 */
 
+app.use('/server', ServerRouter)
 app.use('/apps', express.static('dailyos/build'))
+app.use('/template', TemplateRouter)
+app.use('/template/files', express.static('templates'))
 
-/*
-   ------------ TEMPLATE SERVICE ------------
-*/
-const flatten = require('./src/utils/flatten')
-const schema = require('./src/schema/schema')
-const functions = require('./src/functions')
-const handlers = require('./src/handlers')
 const isProd = process.env.NODE_ENV === 'production' ? true : false
 
-const apolloserver = new ApolloServer({
-   schema,
-   playground: {
-      endpoint: `${process.env.ENDPOINT}/template/graphql`
-   },
-   introspection: true,
-   validationRules: [depthLimit(11)],
-   formatError: err => {
-      console.log(err)
-      if (err.message.includes('ENOENT'))
-         return isProd ? new Error('No such folder or file exists!') : err
-      return isProd ? new Error(err) : err
-   },
-   debug: true,
-   context: {
-      root: process.env.FS_PATH,
-      media: process.env.MEDIA_PATH
+const proxy = createProxyMiddleware({
+   target: 'http://localhost:3000',
+   changeOrigin: true,
+   onProxyReq: (proxyReq, req) => {
+      if (req.body) {
+         let bodyData = JSON.stringify(req.body)
+         proxyReq.setHeader('Content-Type', 'application/json')
+         proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData))
+         proxyReq.write(bodyData)
+      }
    }
 })
 
-apolloserver.applyMiddleware({ app })
+app.use('/api/:path(*)', proxy)
 
-app.use(cors({ origin: '*' }))
-app.use('/template/files', express.static('templates'))
-app.get('/template', handlers.root)
-app.post('/template/download/:path(*)', handlers.download)
-
-/*
-   ------------ SUBSCRIPTION SHOP ------------
-*/
-
-app.use(
-   '/api/:path(*)',
-   createProxyMiddleware({
-      target: 'http://localhost:3000',
-      changeOrigin: true
-   })
-)
-
-app.use('/:path(*)', async (req, res, next) => {
+const RESTRICTED_FILES = ['env-config.js', 'favicon', '.next', '_next']
+const serveSubscription = async (req, res, next) => {
    //     Subscription shop: Browser <-> Express <-> NextJS
    try {
       const { path: routePath } = req.params
@@ -237,21 +213,31 @@ app.use('/:path(*)', async (req, res, next) => {
    } catch (error) {
       res.status(404).json({ success: false, error: 'Page not found!' })
    }
+}
+
+app.use('/:path(*)', serveSubscription)
+
+const apolloserver = new ApolloServer({
+   schema,
+   playground: {
+      endpoint: `${process.env.ENDPOINT}/template/graphql`
+   },
+   introspection: true,
+   validationRules: [depthLimit(11)],
+   formatError: err => {
+      console.log(err)
+      if (err.message.includes('ENOENT'))
+         return isProd ? new Error('No such folder or file exists!') : err
+      return isProd ? new Error(err) : err
+   },
+   debug: true,
+   context: {
+      root: process.env.FS_PATH,
+      media: process.env.MEDIA_PATH
+   }
 })
 
-app.use((_req, _res, next) => {
-   const error = new Error('Not found')
-   error.status = StatusCodes.NOT_FOUND
-   next(error)
-})
-
-app.use((error, _req, res, next) => {
-   res.status(error.status || StatusCodes.INTERNAL_SERVER_ERROR).json({
-      ok: false,
-      message: error.message,
-      stack: error.stack
-   })
-})
+apolloserver.applyMiddleware({ app })
 
 app.listen(PORT, () => {
    console.log(`Server started on ${PORT}`)

@@ -1,4 +1,3 @@
-import { StatusCodes } from 'http-status-codes'
 import { client } from '../../../lib/graphql'
 import {
    CREATE_BULK_ITEM_HISTORY,
@@ -14,17 +13,11 @@ import { updatePackagingHistoryStatus } from './utils'
 // test -> passes for bulk item. packaging pending...
 export const handlePurchaseOrderCreateUpdate = async (req, res, next) => {
    try {
-      const {
-         id,
-         bulkItemId,
-         orderQuantity,
-         status,
-         unit,
-         packagingId
-      } = req.body.event.data.new
+      const { id, bulkItemId, orderQuantity, status, unit, packagingId } =
+         req.body.event.data.new
 
       if (status === 'UNPUBLISHED') {
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'purchase order not published yet.'
          })
@@ -51,7 +44,7 @@ export const handlePurchaseOrderCreateUpdate = async (req, res, next) => {
             { id, set: { status } }
          )
 
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: `bulk item history marked ${status}`
          })
@@ -69,7 +62,7 @@ export const handlePurchaseOrderCreateUpdate = async (req, res, next) => {
                }
             ]
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'bulk item history created'
          })
@@ -83,9 +76,8 @@ export const handlePurchaseOrderCreateUpdate = async (req, res, next) => {
 async function handlePackagingPurchaseOrders(req, res) {
    const { id, orderQuantity, status, packagingId } = req.body.event.data.new
 
-   const {
-      inventory_packagingHistory: packagingHistories = []
-   } = await client.request(GET_PACKAGING_HISTORY, { id })
+   const { inventory_packagingHistory: packagingHistories = [] } =
+      await client.request(GET_PACKAGING_HISTORY, { id })
 
    if (!packagingHistories.length) {
       await client.request(CREATE_PACKAGING_HISTORY, {
@@ -103,7 +95,7 @@ async function handlePackagingPurchaseOrders(req, res) {
    } else {
       // update the packagingHistory's status
       await updatePackagingHistoryStatus(id, status)
-      res.status(StatusCodes.OK).json({
+      res.status(200).json({
          ok: true,
          message: `status updated to ${status}`
       })

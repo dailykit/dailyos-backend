@@ -31,3 +31,6 @@ yarn-error.log*
 .cache
 public
 schema.json
+
+env-config.js
+./public/env-config.js

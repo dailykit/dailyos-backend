@@ -7,13 +7,8 @@ import { logger } from '../../utils'
 import { fetch_html } from './functions'
 
 export const handleStatusChange = async (req, res) => {
-   const {
-      id,
-      source,
-      status,
-      brandId,
-      customerKeycloakId
-   } = req.body.event.data.new
+   const { id, source, status, brandId, customerKeycloakId } =
+      req.body.event.data.new
    try {
       if (!brandId) throw { message: 'Brand id is required!', code: 409 }
       if (!customerKeycloakId)
