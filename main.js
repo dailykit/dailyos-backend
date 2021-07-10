@@ -55,7 +55,6 @@ import ServerRouter from './server'
 import schema from './template/schema'
 import TemplateRouter from './template'
 
-const app = express()
 
 // Middlewares
 app.use(cors())
