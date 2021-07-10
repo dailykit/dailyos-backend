@@ -8,46 +8,6 @@ import morgan from 'morgan'
 import AWS from 'aws-sdk'
 import bluebird from 'bluebird'
 const { createProxyMiddleware } = require('http-proxy-middleware')
-import {
-   MOFRouter,
-   MenuRouter,
-   UserRouter,
-   OrderRouter,
-   sendMail,
-   DeviceRouter,
-   NutritionInfoRouter,
-   UploadRouter,
-   RMKMenuRouter,
-   initiatePayment,
-   OccurenceRouter,
-   WorkOrderRouter,
-   NotificationRouter,
-   RewardsRouter,
-   ModifierRouter,
-   emailParser,
-   ParseurRouter,
-   placeAutoComplete,
-   placeDetails,
-   StoreRouter,
-   getDistance,
-   authorizeRequest,
-   handleImage,
-   GetFullOccurenceRouter,
-   CustomerRouter
-} from './entities'
-import { PrintRouter } from './entities/print'
-import {
-   printKOT,
-   getKOTUrls,
-   printLabel,
-   handleThirdPartyOrder
-} from './entities/events'
-import {
-   handleCustomerSignup,
-   handleSubscriptionCancelled
-} from './entities/emails'
-
-const app = express()
 const { ApolloServer } = require('apollo-server-express')
 import depthLimit from 'graphql-depth-limit'
 
@@ -55,6 +15,7 @@ import ServerRouter from './server'
 import schema from './template/schema'
 import TemplateRouter from './template'
 
+const app = express()
 
 // Middlewares
 app.use(cors())
@@ -74,52 +35,6 @@ AWS.config.update({
 AWS.config.setPromisesDependency(bluebird)
 
 const PORT = process.env.PORT || 4000
-
-// Routes
-app.use('/api/mof', MOFRouter)
-app.use('/api/menu', MenuRouter)
-app.use('/api/order', OrderRouter)
-app.use('/api/assets', UploadRouter)
-app.use('/api/printer', PrintRouter)
-app.use('/api/rmk-menu', RMKMenuRouter)
-app.use('/api/inventory', WorkOrderRouter)
-app.post('/api/initiate-payment', initiatePayment)
-app.get('/api/place/autocomplete/json', placeAutoComplete)
-app.get('/api/place/details/json', placeDetails)
-app.post('/api/distance-matrix', getDistance)
-app.post('/api/sendmail', sendMail)
-app.use('/api/rewards', RewardsRouter)
-app.get('/api/kot-urls', getKOTUrls)
-app.use('/api/modifier', ModifierRouter)
-app.use('/api/parseur', ParseurRouter)
-app.use('/api/occurences', GetFullOccurenceRouter)
-app.use('/api/customer', CustomerRouter)
-
-app.use('/webhook/user', UserRouter)
-app.use('/webhook/devices', DeviceRouter)
-app.use('/api/actions', NutritionInfoRouter)
-app.use('/webhook/notification', NotificationRouter)
-app.use('/webhook/occurence', OccurenceRouter)
-app.post('/webhook/parse/email', emailParser)
-app.post('/webhook/authorize-request', authorizeRequest)
-
-app.post('/event/print-label', printLabel)
-app.post('/event/print-kot', printKOT)
-app.post('/event/order/third-party', handleThirdPartyOrder)
-
-app.post('/webhook/emails/handle-customer-signup', handleCustomerSignup)
-app.post(
-   '/webhook/emails/handle-subscription-cancelled',
-   handleSubscriptionCancelled
-)
-
-app.use('/api/store', StoreRouter)
-
-app.get('/images/:url(*)', handleImage)
-
-/*
-   ------------ DAILY OS ------------
-*/
 
 app.use('/server', ServerRouter)
 app.use('/apps', express.static('dailyos/build'))
