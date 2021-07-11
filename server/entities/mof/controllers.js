@@ -10,7 +10,7 @@ export const updateMOF = async (req, res) => {
       const FULLFILLMENTS = `
         query modeOfFulfillments {
             ${req.body.table.name}(id: ${req.body.event.data.new.id}) {
-               modeOfFulfillments {
+               modeOfFulfillments(where: { isArchived: { _eq : false } }) {
                   id
                   isLive
                   isPublished
@@ -74,10 +74,14 @@ export const liveMOF = async (req, res) => {
 
       const currentLiveMOF = ingredientSachet.liveMOF
 
-      let modes = [...ingredientSachet.modeOfFulfillments]
+      const modes = [...ingredientSachet.modeOfFulfillments]
       modes.sort((a, b) => b.position - a.position)
+      const filteredModes = modes.filter(mof => mof.isPublished && mof.isLive)
 
-      const newLiveMOF = modes.length ? modes[0].id : null
+      // if none is available, then choose first one
+      const newLiveMOF = filteredModes.length
+         ? filteredModes[0].id
+         : modes[0].id
 
       if (currentLiveMOF !== newLiveMOF) {
          await client.request(UPDATE_INGREDIENT_SACHET, {
