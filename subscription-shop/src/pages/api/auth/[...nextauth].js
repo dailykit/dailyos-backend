@@ -46,17 +46,26 @@ const auth = {
          password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+         console.log(process.env.DATA_HUB_HTTPS, process.env.ADMIN_SECRET)
+         console.log('INSIDE AUTHORIZE')
+         console.log({ credentials })
          try {
             const { customers = [] } = await client.request(CUSTOMERS, {
                where: { email: { _eq: credentials.email } },
             })
+            console.log('CUSTOMERS')
+            console.log({ customers })
 
             if (customers.length > 0) {
                const [customer] = customers
+               console.log('CUSTOMERS')
+               console.log({ customers })
                const matches = await bcrypt.compare(
                   credentials.password,
                   customer.password
                )
+               console.log('MATCHES')
+               console.log({ matches })
                if (matches) {
                   return customer
                }
@@ -128,39 +137,46 @@ export default async (req, res) => {
       pages: { signIn: getRoute('/login') },
       callbacks: {
          async signIn(user, account, profile) {
-            console.log({ account })
-            let customer = {}
-            if (account.type === 'oauth') {
-               const name = user.name.split(' ')
-               const { 0: firstName = '', [name.length - 1]: lastName = '' } =
-                  name
-               customer.firstName = firstName
-               customer.lastName = lastName
-               customer.email = user.email
-               customer.avatar = user.image
-            }
+            try {
+               console.log('INSIDE SIGNIN CALLBACK')
+               let customer = {}
+               if (account.type === 'oauth') {
+                  const name = user.name.split(' ')
+                  const {
+                     0: firstName = '',
+                     [name.length - 1]: lastName = '',
+                  } = name
+                  customer.firstName = firstName
+                  customer.lastName = lastName
+                  customer.email = user.email
+                  customer.avatar = user.image
+               }
 
-            await client.request(INSERT_PROVIDER_CUSTOMER, {
-               object: {
-                  providerType: account.type,
-                  providerAccountId: user.id || null,
-                  provider: account.provider || account.id || 'credentials',
-                  ...(account.type === 'credentials' && {
-                     customerId: user.id,
-                  }),
+               await client.request(INSERT_PROVIDER_CUSTOMER, {
+                  object: {
+                     providerType: account.type,
+                     providerAccountId: user.id || null,
+                     provider: account.provider || account.id || 'credentials',
+                     ...(account.type === 'credentials' && {
+                        customerId: user.id,
+                     }),
 
-                  ...(Object.keys(customer).length > 0 && {
-                     customer: {
-                        data: customer,
-                        on_conflict: {
-                           update_columns: [],
-                           constraint: 'customer__email_key',
+                     ...(Object.keys(customer).length > 0 && {
+                        customer: {
+                           data: customer,
+                           on_conflict: {
+                              update_columns: [],
+                              constraint: 'customer__email_key',
+                           },
                         },
-                     },
-                  }),
-               },
-            })
-            return true
+                     }),
+                  },
+               })
+               return true
+            } catch (error) {
+               console.error(error)
+               return false
+            }
          },
          async session(session, token) {
             session.user.id = token.sub

@@ -365,6 +365,18 @@ export const CART_BY_WEEK = gql`
             fulfillmentInfo
             transactionId
             paymentMethodId
+            products: cartItems(where: { level: { _eq: 1 } }) {
+               id
+               name: displayName
+               image: displayImage
+               isAddOn
+               unitPrice
+               addOnLabel
+               addOnPrice
+               isAutoAdded
+               subscriptionOccurenceProductId
+               subscriptionOccurenceAddOnProductId
+            }
          }
       }
    }
@@ -738,7 +750,7 @@ export const BRAND_CUSTOMER = gql`
 
 export const CUSTOMER = {
    DETAILS: gql`
-      query customer($keycloakId: String!, $brandId: Int!) {
+      subscription customer($keycloakId: String!, $brandId: Int!) {
          customer(keycloakId: $keycloakId) {
             id
             keycloakId
@@ -750,9 +762,6 @@ export const CUSTOMER = {
                subscriptionOccurence {
                   fulfillmentDate
                }
-            }
-            customerByClients: platform_customerByClients {
-               stripeCustomerId: organizationStripeCustomerId
             }
             brandCustomers(where: { brandId: { _eq: $brandId } }) {
                id
@@ -779,14 +788,14 @@ export const CUSTOMER = {
                   }
                }
             }
-            platform_customer {
+            platform_customer: platform_customer_ {
                email
                firstName
                lastName
                keycloakId
                phoneNumber
                stripeCustomerId
-               addresses: customerAddresses(order_by: { created_at: desc }) {
+               addresses: customerAddresses_(order_by: { created_at: desc }) {
                   id
                   lat
                   lng
@@ -799,7 +808,7 @@ export const CUSTOMER = {
                   label
                   notes
                }
-               paymentMethods: stripePaymentMethods {
+               paymentMethods: stripePaymentMethods_ {
                   brand
                   last4
                   country
@@ -947,7 +956,7 @@ export const REFERRER = gql`
       ) {
          id
          customer {
-            platform_customer {
+            platform_customer: platform_customer_ {
                firstName
                lastName
             }
@@ -1006,7 +1015,7 @@ export const CUSTOMERS_REFERRED = gql`
       ) {
          id
          customer {
-            platform_customer {
+            platform_customer: platform_customer_ {
                firstName
                lastName
             }

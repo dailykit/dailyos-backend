@@ -35,10 +35,5 @@ export const processUser = (customer, stripeAccountType = '') => {
          method => method.stripePaymentMethodId === subscriptionPaymentMethodId
       )
    }
-   if (stripeAccountType === 'standard' && !isEmpty(customerByClients)) {
-      const [customerbyClient] = customerByClients
-      rest.platform_customer.stripeCustomerId =
-         customerbyClient?.stripeCustomerId
-   }
    return { ...rest, ...sub }
 }

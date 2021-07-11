@@ -1,5 +1,3 @@
-import { StatusCodes } from 'http-status-codes'
-
 import { client } from '../../../lib/graphql'
 import { UPDATE_SACHET_ITEM } from '../graphql/mutations'
 import { GET_SACHET_ITEM } from '../graphql/queries'
@@ -30,7 +28,7 @@ export const handleSachetItemHistory = async (req, res, next) => {
                      sachetItemData.sachetItem.committed - Math.abs(quantity)
                }
             })
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'sachet item updated'
             })
@@ -46,7 +44,7 @@ export const handleSachetItemHistory = async (req, res, next) => {
                      sachetItemData.sachetItem.awaiting - Math.abs(quantity)
                }
             })
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'sachet item updated'
             })
@@ -69,7 +67,7 @@ export const handleSachetItemHistory = async (req, res, next) => {
                      sachetItemData.sachetItem.consumed - Math.abs(quantity)
                }
             })
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'sachet item updated'
             })
@@ -83,7 +81,7 @@ export const handleSachetItemHistory = async (req, res, next) => {
                   onHand: sachetItemData.sachetItem.onHand - Math.abs(quantity)
                }
             })
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'sachet item updated'
             })
@@ -105,7 +103,7 @@ export const handleSachetItemHistory = async (req, res, next) => {
                      sachetItemData.sachetItem.awaiting + Math.abs(quantity)
                }
             })
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'sachet item updated'
             })
@@ -123,7 +121,7 @@ export const handleSachetItemHistory = async (req, res, next) => {
                      sachetItemData.sachetItem.committed + Math.abs(quantity)
                }
             })
-            res.status(StatusCodes.OK).json({
+            res.status(200).json({
                ok: true,
                message: 'sachet item updated'
             })
@@ -140,7 +138,7 @@ export const handleSachetItemHistory = async (req, res, next) => {
                   sachetItemData.sachetItem.committed + Math.abs(quantity)
             }
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'sachet item updated'
          })
@@ -161,7 +159,7 @@ export const handleSachetItemHistory = async (req, res, next) => {
                consumed: sachetItemData.sachetItem.consumed + Math.abs(quantity)
             }
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'sachet item updated'
          })
@@ -177,7 +175,7 @@ export const handleSachetItemHistory = async (req, res, next) => {
                awaiting: sachetItemData.sachetItem.awaiting + Math.abs(quantity)
             }
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'sachet item updated'
          })
@@ -196,7 +194,7 @@ export const handleSachetItemHistory = async (req, res, next) => {
                onHand: sachetItemData.sachetItem.onHand + Math.abs(quantity)
             }
          })
-         res.status(StatusCodes.OK).json({
+         res.status(200).json({
             ok: true,
             message: 'sachet item updated'
          })

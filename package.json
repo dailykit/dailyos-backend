@@ -6,10 +6,11 @@
    "author": "Praveen Bisht <prvnbist@gmail.com>",
    "license": "MIT",
    "scripts": {
-      "im": "concurrently \"yarn\" \"cd subscription-shop && yarn\" \"cd dailyos && yarn\"",
+      "install:packages": "yarn && cd subscription-shop && yarn && cd ../dailyos && yarn",
       "dev": "concurrently \"nodemon -r esm index.js\" \"cd subscription-shop && yarn dev\" \"cd dailyos && yarn start\"",
-      "build": "concurrently \"cd subscription-shop && yarn build\" \"cd dailyos && yarn build\"",
-      "prod": "concurrently \"node -r esm index.js\" \"cd subscription-shop && yarn start\""
+      "build": "cd subscription-shop && yarn build && cd ../dailyos && yarn build",
+      "prod": "concurrently \"node -r esm index.js\" \"cd subscription-shop && yarn start\"",
+      "dev:server": "nodemon -r esm index.js"
    },
    "dependencies": {
       "apollo-server-express": "^2.25.2",
@@ -28,7 +29,6 @@
       "graphql-request": "^3.4.0",
       "graphql-tools": "^4.0.6",
       "http-proxy-middleware": "^2.0.0",
-      "http-status-codes": "^2.1.4",
       "isomorphic-git": "0.75.0",
       "lodash": "^4.17.20",
       "logger": "^0.0.1",

@@ -43,7 +43,6 @@ const ResetPassword = props => {
    const isValid = form.password && form.confirmPassword
 
    const [create_brand_customer] = useMutation(BRAND.CUSTOMER.CREATE, {
-      refetchQueries: ['customer'],
       onCompleted: () => {
          if (isClient) {
             window.location.href =
@@ -55,7 +54,6 @@ const ResetPassword = props => {
       },
    })
    const [create] = useMutation(MUTATIONS.CUSTOMER.CREATE, {
-      refetchQueries: ['customer'],
       onCompleted: () => {
          dispatch({ type: 'SET_USER', payload: {} })
          if (isClient) {
