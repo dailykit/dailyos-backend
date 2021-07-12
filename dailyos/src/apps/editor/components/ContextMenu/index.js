@@ -10,6 +10,7 @@ import {
    CopyIcon,
 } from '../../assets/Icons'
 import { useGlobalContext } from '../../context'
+import { get_env } from '../../../../shared/utils'
 
 const ContextMenu = ({ style, node }) => {
    const { setContextMenuInfo } = useGlobalContext()
@@ -35,7 +36,7 @@ const ContextMenu = ({ style, node }) => {
 
    const copyToClipboard = () => {
       const relativePath = node.path.replace(
-         window._env_.REACT_APP_ROOT_FOLDER,
+         get_env('REACT_APP_ROOT_FOLDER'),
          ''
       )
       const fileUrl = `https://test.dailykit.org/template/files${relativePath}`

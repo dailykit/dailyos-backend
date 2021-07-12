@@ -24,6 +24,7 @@ import {
 import { InlineLoader } from '../../../'
 import { useManual } from '../../state'
 import { logger } from '../../../../utils'
+import { get_env } from '../../../../../shared/utils'
 import { MUTATIONS, QUERIES } from '../../graphql'
 
 export const CustomerTunnel = () => {
@@ -296,7 +297,7 @@ const CreateCustomer = ({ closeCustomerTunnel }) => {
                withRegister: true,
                source: mode === 'SUBCRIPTION' ? 'subscription' : 'a-la-carte',
                clientId:
-                  window._env_.REACT_APP_KEYCLOAK_REALM +
+                  get_env('REACT_APP_KEYCLOAK_REALM') +
                   `${mode === 'SUBSCRIPTION' ? '-subscription' : ''}`,
                ...(form.firstName.trim() && { firstName: form.firstName }),
                ...(form.lastName.trim() && { lastName: form.lastName }),

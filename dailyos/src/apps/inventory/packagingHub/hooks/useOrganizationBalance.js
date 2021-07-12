@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
+import { get_env } from '../../../../shared/utils'
 
-const PAYMENTS_URL = window._env_.REACT_APP_DAILYKEY_URL
+const PAYMENTS_URL = get_env('REACT_APP_DAILYKEY_URL')
 
 export default function useOrganizationBalance(accountId) {
    const [data, setData] = useState()

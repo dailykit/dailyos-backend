@@ -25,6 +25,7 @@ import { normalizeAddress, formatDate } from '../../utils'
 import { ServiceInfo } from '../ServiceInfo'
 import { InfoIcon } from '../../../../shared/assets/icons'
 import { InlineLoader } from '../../../../shared/components'
+import { get_env } from '../../../../shared/utils'
 
 export const DeliveryConfig = ({ closeTunnel: closeParentTunnel }) => {
    const {
@@ -211,7 +212,7 @@ const DeliveryDetails = ({ details }) => {
                title={deliveryInfo.deliveryCompany.name || 'N/A'}
             />
          </StyledDeliveryBy>
-         <LoadScript googleMapsApiKey={window._env_.REACT_APP_MAPS_API_KEY}>
+         <LoadScript googleMapsApiKey={get_env('REACT_APP_MAPS_API_KEY')}>
             <GoogleMap
                zoom={15}
                onLoad={onLoad}

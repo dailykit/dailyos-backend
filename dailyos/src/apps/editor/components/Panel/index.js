@@ -38,6 +38,7 @@ import {
 } from './style'
 import { LinkCssTunnel, LinkJsTunnel } from './Tunnel'
 import { DragNDrop, InlineLoader } from '../../../../shared/components'
+import { get_env } from '../../../../shared/utils'
 import { useDnd } from '../../../../shared/components/DragNDrop/useDnd'
 import { toast } from 'react-toastify'
 
@@ -81,10 +82,7 @@ const Panel = () => {
 
    const { loading: linkLoading } = useSubscription(FILE_LINKS, {
       variables: {
-         path: tabInfo?.filePath.replace(
-            window._env_.REACT_APP_ROOT_FOLDER,
-            ''
-         ),
+         path: tabInfo?.filePath.replace(get_env('REACT_APP_ROOT_FOLDER'), ''),
       },
       onSubscriptionData: ({
          subscriptionData: { data: { editor_file = [] } = {} } = {},

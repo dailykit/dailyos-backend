@@ -10,6 +10,7 @@ import { WebSocketLink } from 'apollo-link-ws'
 import { getMainDefinition } from 'apollo-utilities'
 
 import { useAuth } from './auth'
+import { get_env } from '../utils'
 
 export const DataProvider = ({ children }) => {
    const { user } = useAuth()
@@ -25,7 +26,7 @@ export const DataProvider = ({ children }) => {
    })
 
    const wsLink = new WebSocketLink({
-      uri: window._env_.REACT_APP_DATA_HUB_SUBSCRIPTIONS_URI,
+      uri: get_env('REACT_APP_DATA_HUB_SUBSCRIPTIONS_URI'),
       options: {
          reconnect: true,
          connectionParams: {
@@ -38,7 +39,7 @@ export const DataProvider = ({ children }) => {
    })
 
    const httpLink = new HttpLink({
-      uri: window._env_.REACT_APP_DATA_HUB_URI,
+      uri: get_env('REACT_APP_DATA_HUB_URI'),
    })
 
    const link = split(

@@ -1,11 +1,12 @@
 import React from 'react'
 import styled from 'styled-components'
 import { TextButton } from '@dailykit/ui'
+import { get_env } from '../../utils'
 
 export const RedirectBanner = () => {
    const takeMe = () => {
       window.open(
-         new URL(window._env_.REACT_APP_DATA_HUB_URI).origin + '/desktop'
+         new URL(get_env('REACT_APP_DATA_HUB_URI')).origin + '/desktop'
       )
    }
    return (

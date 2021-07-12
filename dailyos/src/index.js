@@ -15,6 +15,7 @@ import Backend from 'i18next-http-backend'
 
 import App from './App'
 import { AuthProvider, TabProvider, DataProvider } from './shared/providers'
+import { get_env } from './shared/utils'
 
 import './global.css'
 
@@ -31,8 +32,8 @@ Sentry.init({
 })
 
 const keycloak = new Keycloak({
-   realm: window._env_.REACT_APP_KEYCLOAK_REALM,
-   url: window._env_.REACT_APP_KEYCLOAK_URL,
+   realm: get_env('REACT_APP_KEYCLOAK_REALM'),
+   url: get_env('REACT_APP_KEYCLOAK_URL'),
    clientId: 'apps',
    'ssl-required': 'none',
    'public-client': true,
@@ -65,7 +66,7 @@ i18n
       render(
          <AuthProvider keycloak={keycloak}>
             <DataProvider>
-               <Router basename={window._env_.PUBLIC_URL}>
+               <Router basename={get_env('PUBLIC_URL')}>
                   <TabProvider>
                      <ToastContainer
                         position="bottom-left"
