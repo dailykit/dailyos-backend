@@ -31,6 +31,7 @@ COPY --from=builder /usr/src/app/subscription-shop/public ./subscription-shop/pu
 COPY --from=builder /usr/src/app/subscription-shop/.next ./subscription-shop/.next
 COPY --from=builder /usr/src/app/subscription-shop/node_modules ./subscription-shop/node_modules
 COPY --from=builder /usr/src/app/subscription-shop/package.json ./subscription-shop/package.json
+COPY --from=builder /usr/src/app/subscription-shop/.env ./subscription-shop/.env
 
 RUN mkdir dailyos
 

@@ -68,7 +68,7 @@ const createSetupIntent = async (customer, organization = {}) => {
       ) {
          stripeAccountId = organization?.stripeAccountId
       }
-      const URL = `${window._env_.DAILYKEY_URL}/api/setup-intent`
+      const URL = `${get_env('DAILYKEY_URL')}/api/setup-intent`
       const { data } = await axios.post(URL, { customer, stripeAccountId })
       return data.data
    } catch (error) {

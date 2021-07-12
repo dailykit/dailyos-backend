@@ -325,10 +325,10 @@ export const populate_env = async (req, res) => {
             'module.exports = ' + JSON.stringify(server, null, 2)
          )
 
-         const subs = {}
+         const subscription_shop = {}
 
          get(grouped, 'subscription_shop', []).forEach(node => {
-            subs[node.title] = node.value
+            subscription_shop[node.title] = node.value
          })
 
          const PATH_TO_SUBS = path.join(
@@ -341,7 +341,7 @@ export const populate_env = async (req, res) => {
 
          fs.writeFileSync(
             PATH_TO_SUBS,
-            'window._env_ = ' + JSON.stringify(subs, null, 2)
+            'window._env_ = ' + JSON.stringify(subscription_shop, null, 2)
          )
 
          const dailyos = {}
@@ -378,7 +378,7 @@ export const populate_env = async (req, res) => {
 
          return res.status(200).json({
             success: true,
-            data: { server, subs, dailyos }
+            data: { server, subscription_shop, dailyos }
          })
       }
    } catch (error) {

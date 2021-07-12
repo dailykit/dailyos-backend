@@ -12,7 +12,7 @@ import {
 
 import { usePayment } from './state'
 import { useConfig } from '../../lib'
-import { isClient } from '../../utils'
+import { get_env, isClient } from '../../utils'
 import { useUser } from '../../context'
 import { HelperBar, Loader } from '../../components'
 import { BRAND, CREATE_STRIPE_PAYMENT_METHOD } from '../../graphql'
@@ -31,7 +31,7 @@ export const PaymentForm = ({ intent }) => {
    const handleResult = async ({ setupIntent }) => {
       try {
          if (setupIntent.status === 'succeeded') {
-            const ORIGIN = isClient ? window._env_.DAILYKEY_URL : ''
+            const ORIGIN = isClient ? get_env('DAILYKEY_URL') : ''
             let URL = `${ORIGIN}/api/payment-method/${setupIntent.payment_method}`
             if (
                organization.stripeAccountType === 'standard' &&
@@ -87,7 +87,7 @@ export const PaymentForm = ({ intent }) => {
       }
    }
 
-   const stripePromise = loadStripe(isClient ? window._env_.STRIPE_KEY : '', {
+   const stripePromise = loadStripe(isClient ? get_env('STRIPE_KEY') : '', {
       ...(organization.stripeAccountType === 'standard' &&
          organization.stripeAccountId && {
             stripeAccount: organization.stripeAccountId,

@@ -21,7 +21,7 @@ import {
    HelperBar,
    Loader,
 } from '../../../components'
-import { getRoute, getSettings, isClient } from '../../../utils'
+import { getRoute, getSettings, get_env, isClient } from '../../../utils'
 
 const SelectMenu = props => {
    const { settings } = props
@@ -97,9 +97,9 @@ const MenuContent = () => {
                   webRenderer({
                      type: 'file',
                      config: {
-                        uri: isClient && window._env_.DATA_HUB_HTTPS,
-                        adminSecret: isClient && window._env_.ADMIN_SECRET,
-                        expressUrl: isClient && window._env_.EXPRESS_URL,
+                        uri: isClient && get_env('DATA_HUB_HTTPS'),
+                        adminSecret: isClient && get_env('ADMIN_SECRET'),
+                        expressUrl: isClient && get_env('EXPRESS_URL'),
                      },
                      fileDetails: [
                         {

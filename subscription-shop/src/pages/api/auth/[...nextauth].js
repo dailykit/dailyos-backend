@@ -46,26 +46,17 @@ const auth = {
          password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-         console.log(process.env.DATA_HUB_HTTPS, process.env.ADMIN_SECRET)
-         console.log('INSIDE AUTHORIZE')
-         console.log({ credentials })
          try {
             const { customers = [] } = await client.request(CUSTOMERS, {
                where: { email: { _eq: credentials.email } },
             })
-            console.log('CUSTOMERS')
-            console.log({ customers })
 
             if (customers.length > 0) {
                const [customer] = customers
-               console.log('CUSTOMERS')
-               console.log({ customers })
                const matches = await bcrypt.compare(
                   credentials.password,
                   customer.password
                )
-               console.log('MATCHES')
-               console.log({ matches })
                if (matches) {
                   return customer
                }
@@ -138,7 +129,6 @@ export default async (req, res) => {
       callbacks: {
          async signIn(user, account, profile) {
             try {
-               console.log('INSIDE SIGNIN CALLBACK')
                let customer = {}
                if (account.type === 'oauth') {
                   const name = user.name.split(' ')

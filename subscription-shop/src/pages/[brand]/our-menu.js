@@ -218,50 +218,6 @@ const Content = ({ data }) => {
       })
    }
 
-   // const { loading: contentLoading } = useQuery(GET_FILEID, {
-   //    variables: {
-   //       divId: ['our-menu-bottom-01'],
-   //    },
-   //    onCompleted: ({ content_subscriptionDivIds: fileData }) => {
-   //       if (fileData.length) {
-   //          fileData.forEach(data => {
-   //             if (data?.fileId) {
-   //                const fileId = [data?.fileId]
-   //                const cssPath =
-   //                   data?.subscriptionDivFileId?.linkedCssFiles.map(file => {
-   //                      return file?.cssFile?.path
-   //                   })
-   //                const jsPath = data?.subscriptionDivFileId?.linkedJsFiles.map(
-   //                   file => {
-   //                      return file?.jsFile?.path
-   //                   }
-   //                )
-   //                webRenderer({
-   //                   type: 'file',
-   //                   config: {
-   //                      uri: isClient && window._env_.DATA_HUB_HTTPS,
-   //                      adminSecret: isClient && window._env_.ADMIN_SECRET,
-   //                      expressUrl: isClient && window._env_.EXPRESS_URL,
-   //                   },
-   //                   fileDetails: [
-   //                      {
-   //                         elementId: 'our-menu-bottom-01',
-   //                         fileId,
-   //                         cssPath: cssPath,
-   //                         jsPath: jsPath,
-   //                      },
-   //                   ],
-   //                })
-   //             }
-   //          })
-   //       }
-   //    },
-
-   //    onError: error => {
-   //       console.error(error)
-   //    },
-   // })
-
    const config = configOf('primary-labels')
    const theme = configOf('theme-color', 'Visual')
    const imageRatio = useConfig().configOf('image-aspect-ratio', 'Visual')
@@ -274,12 +230,6 @@ const Content = ({ data }) => {
       singular: config?.itemLabel?.singular || 'recipe',
       plural: config?.itemLabel?.singular || 'recipes',
    }
-   // if (loading)
-   //    return (
-   //       <Main>
-   //          <Loader inline />
-   //       </Main>
-   //    )
    if (isEmpty(titles))
       return (
          <Main>
