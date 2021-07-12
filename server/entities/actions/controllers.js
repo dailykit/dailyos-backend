@@ -3,11 +3,11 @@ import axios from 'axios'
 import { client } from '../../lib/graphql'
 
 const FETCH_NUTRITION_INFO = `
-   query fetchNutritionInfo($id: Int_comparison_exp!){
-      simpleRecipeYields(where: {id: $id}) {
+   query fetchNutritionInfo($ids: [Int!]!){
+      simpleRecipeYields(where: {id: {_in: $ids}}) {
          nutritionId
          nutritionalInfo
-      }
+       }
    } 
 `
 
@@ -26,49 +26,58 @@ export const nutritionInfo = async (req, res) => {
       const { simpleRecipeYields } = await client.request(
          FETCH_NUTRITION_INFO,
          {
-            id: {
-               _eq: req.body.input.simpleRecipeYieldIds[0]
+            ids: req.body.input.simpleRecipeYieldIds
+         }
+      )
+      //console.log(simpleRecipeYields)
+      
+      let filtered = {}
+      await simpleRecipeYields.map((item, index) => {
+         const nutritionalInfo = item.nutritionalInfo
+         //console.log(nutritionalInfo.excludes)
+         const allowed = [
+            'iron',
+            'sodium',
+            'sugars',
+            'calcium',
+            'protein',
+            'calories',
+            'totalFat',
+            'transFat',
+            'vitaminA',
+            'vitaminC',
+            'cholesterol',
+            'dietaryFibre',
+            'saturatedFat',
+            'totalCarbohydrates',
+            'excludes'
+         ]
+         if (nutritionalInfo !== null) {
+            if(nutritionalInfo.excludes===null){
+               nutritionalInfo.excludes = []
             }
+            filtered = Object.keys(nutritionalInfo)
+               .filter(key => allowed.includes(key))
+               .reduce((obj, key) => {
+                  obj[key] = nutritionalInfo[key]
+                  return obj
+               }, {})
          }
-      )
-      //console.log(simpleRecipeYields[0])
-      const nutritionalInfo = simpleRecipeYields[0].nutritionalInfo
-      console.log(nutritionalInfo)
-      const allowed = [
-         'iron',
-         'sodium',
-         'sugars',
-         'calcium',
-         'protein',
-         'calories',
-         'totalFat',
-         'transFat',
-         'vitaminA',
-         'vitaminC',
-         'cholesterol',
-         'dietaryFibre',
-         'saturatedFat',
-         'totalCarbohydrates',
-         'excludes'
-      ]
-
-      const filtered = Object.keys(nutritionalInfo)
-         .filter(key => allowed.includes(key))
-         .reduce((obj, key) => {
-            obj[key] = nutritionalInfo[key]
-            return obj
-         }, {})
-      //console.log(filtered)
-      //console.log(simpleRecipeYields[0].nutritionId)
-      const { update_products_nutritionInfo } = await client.request(
-         UPDATE_NUTRITION_INFO,
-         {
-            _eq: simpleRecipeYields[0].nutritionId,
-            _set: filtered
+         else {
+            filtered = {}
          }
-      )
-      //console.log(update_products_nutritionInfo)
 
+         //console.log(filtered)
+         //console.log(item.nutritionId)
+         const { update_products_nutritionInfo } = client.request(
+            UPDATE_NUTRITION_INFO,
+            {
+               _eq: item.nutritionId,
+               _set: filtered
+            }
+         )
+         //console.log(update_products_nutritionInfo)
+      })
       return res.json({
          success: true,
          message: 'Successfully generated nutrition info!'
