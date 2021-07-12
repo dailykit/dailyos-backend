@@ -10,7 +10,7 @@ import { useMutation, useSubscription } from '@apollo/react-hooks'
 import { signIn, providers, getSession } from 'next-auth/client'
 
 import { useConfig } from '../../../lib'
-import { getRoute, getSettings, isClient } from '../../../utils'
+import { getRoute, getSettings, get_env, isClient } from '../../../utils'
 import { SEO, Layout, StepsNavbar } from '../../../components'
 import {
    BRAND,
@@ -581,7 +581,7 @@ const RegisterPanel = ({ setCurrent }) => {
       if (validateEmail(value)) {
          setEmailError('')
          const url =
-            new URL(window._env_.DATA_HUB_HTTPS).origin +
+            new URL(get_env('DATA_HUB_HTTPS')).origin +
             '/server/api/customer/' +
             value
          const { status, data } = await axios.get(url)

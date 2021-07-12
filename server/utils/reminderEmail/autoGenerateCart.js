@@ -6,6 +6,7 @@ import {
    UPDATE_SUB_OCCURENCE
 } from '../../entities/occurence/graphql'
 import { statusLogger } from './'
+import get_env from '../../../get_env'
 
 export const autoGenerateCart = async ({
    keycloakId,
@@ -70,7 +71,7 @@ export const autoGenerateCart = async ({
       }
 
       const url = `${
-         new URL(process.env.DATA_HUB).origin
+         new URL(get_env('DATA_HUB')).origin
       }/webhook/occurence/auto-select`
       if (cartId) {
          await axios.post(url, {
@@ -243,7 +244,7 @@ const createCart = async data => {
          }
 
          const { organization } = await client.request(ORGANIZATION, {
-            id: process.env.ORGANIZATION_ID
+            id: get_env('ORGANIZATION_ID')
          })
 
          const { stripeAccountType = '' } = organization

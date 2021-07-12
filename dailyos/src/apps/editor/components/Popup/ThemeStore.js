@@ -5,7 +5,7 @@ import { Flex, Spacer, ComboButton } from '@dailykit/ui'
 import { EditIcon, CloseIcon } from '../../assets/Icons'
 import { Popup } from '../../../../shared/components'
 import { Cross, PhotoGrid } from './style'
-import { logger } from '../../../../shared/utils'
+import { logger, get_env } from '../../../../shared/utils'
 
 export default function ThemeStore({ show, closePopup, setCreateType }) {
    const [templates, setTemplates] = React.useState([])
@@ -33,13 +33,13 @@ export default function ThemeStore({ show, closePopup, setCreateType }) {
       const getTemplates = async () => {
          try {
             const { data } = await axios({
-               url: window._env_.REACT_APP_THEME_STORE_DATA_HUB_URI,
+               url: get_env('REACT_APP_THEME_STORE_DATA_HUB_URI'),
                method: 'POST',
                headers: {
                   'Content-Type': 'application/json',
-                  'x-hasura-admin-secret':
-                     window._env_
-                        .REACT_APP_THEME_STORE_HASURA_GRAPHQL_ADMIN_SECRET,
+                  'x-hasura-admin-secret': get_env(
+                     'REACT_APP_THEME_STORE_HASURA_GRAPHQL_ADMIN_SECRET'
+                  ),
                },
                data: {
                   query: `

@@ -16,7 +16,7 @@ import {
 
 import { QUERIES, MUTATIONS } from '../../graphql'
 import { ScaleIcon } from '../../assets/icons'
-import { logger } from '../../../../shared/utils'
+import { logger, get_env } from '../../../../shared/utils'
 import { useOrder, useConfig } from '../../context'
 import { StyledIconButton } from '../OrderSummary/styled'
 import {
@@ -119,11 +119,13 @@ export const ProcessSachet = ({ closeOrderSummaryTunnel }) => {
                id: sachet.id,
             })
          )
-         const url = `${window._env_.REACT_APP_TEMPLATE_URL}?template=${template}&data=${data}`
+         const url = `${get_env(
+            'REACT_APP_TEMPLATE_URL'
+         )}?template=${template}&data=${data}`
          setLabelPreview(url)
       } else {
          const url = `${
-            new URL(window._env_.REACT_APP_DATA_HUB_URI).origin
+            new URL(get_env('REACT_APP_DATA_HUB_URI')).origin
          }/datahub/v1/query`
 
          const data = { id: sachet.id, status: 'READY' }
@@ -139,8 +141,9 @@ export const ProcessSachet = ({ closeOrderSummaryTunnel }) => {
             {
                headers: {
                   'Content-Type': 'application/json; charset=utf-8',
-                  'x-hasura-admin-secret':
-                     window._env_.REACT_APP_HASURA_GRAPHQL_ADMIN_SECRET,
+                  'x-hasura-admin-secret': get_env(
+                     'REACT_APP_HASURA_GRAPHQL_ADMIN_SECRET'
+                  ),
                },
             }
          )

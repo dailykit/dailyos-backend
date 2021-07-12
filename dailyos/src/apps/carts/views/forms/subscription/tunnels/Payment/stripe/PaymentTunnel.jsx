@@ -17,6 +17,7 @@ import AddPaymentTunnel from './AddPaymentTunnel'
 import { QUERIES } from '../../../../../../graphql'
 import EmptyIllo from '../../../../../../assets/svgs/EmptyIllo'
 import { InlineLoader } from '../../../../../../../../shared/components'
+import { get_env } from '../../../../../../../../shared/utils'
 
 const PaymentTunnel = ({ setCard, closeTunnel }) => {
    const { customer } = useManual()
@@ -32,8 +33,8 @@ const PaymentTunnel = ({ setCard, closeTunnel }) => {
                customerByClient: {
                   clientId: {
                      _in: [
-                        window._env_.REACT_APP_KEYCLOAK_REALM,
-                        `${window._env_.REACT_APP_KEYCLOAK_REALM}-subscription`,
+                        get_env('REACT_APP_KEYCLOAK_REALM'),
+                        `${get_env('REACT_APP_KEYCLOAK_REALM')}-subscription`,
                      ],
                   },
                },

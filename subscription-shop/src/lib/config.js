@@ -2,7 +2,7 @@ import React from 'react'
 import { groupBy, has, isEmpty } from 'lodash'
 import { useQuery, useSubscription } from '@apollo/react-hooks'
 
-import { isClient } from '../utils'
+import { get_env, isClient } from '../utils'
 import { PageLoader } from '../components'
 import { ORGANIZATION, SETTINGS } from '../graphql/queries'
 
@@ -76,7 +76,7 @@ export const ConfigProvider = ({ children }) => {
 
    const buildImageUrl = React.useCallback((size, url) => {
       const server_url = `${
-         new URL(window._env_.DATA_HUB_HTTPS).origin
+         new URL(get_env('DATA_HUB_HTTPS')).origin
       }/server/images`
       let bucket = ''
       if (new URL(url).host.split('.').length > 0) {

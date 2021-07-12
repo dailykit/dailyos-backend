@@ -3,6 +3,7 @@ import { useQuery, useLazyQuery } from '@apollo/react-hooks'
 import { Loader } from '@dailykit/ui'
 import { useTabsInfo, useGlobalContext } from '../../context'
 import { useTabs } from '../../../../shared/providers'
+import { get_env } from '../../../../shared/utils'
 
 // Components
 import TreeView from '../TreeView'
@@ -55,11 +56,11 @@ const FileExplorer = () => {
             const payload = {
                name: fileRef.current.name,
                path: `/editor${fileRef.current.path.replace(
-                  window._env_.REACT_APP_ROOT_FOLDER,
+                  get_env('REACT_APP_ROOT_FOLDER'),
                   ''
                )}`,
                filePath: fileRef.current.path.replace(
-                  window._env_.REACT_APP_ROOT_FOLDER,
+                  get_env('REACT_APP_ROOT_FOLDER'),
                   ''
                ),
                id: data.editor_file[0].id,
@@ -91,7 +92,7 @@ const FileExplorer = () => {
          if (data.length && data[nodeIndex] && data[nodeIndex].isOpen) {
             onToggleInfo({
                name: node.name,
-               path: node.path.replace(window._env_.REACT_APP_ROOT_FOLDER, ''),
+               path: node.path.replace(get_env('REACT_APP_ROOT_FOLDER'), ''),
                type: node.type,
             })
          } else {
@@ -102,7 +103,7 @@ const FileExplorer = () => {
          fileRef.current = node
          getFileQuery({
             variables: {
-               path: node.path.replace(window._env_.REACT_APP_ROOT_FOLDER, ''),
+               path: node.path.replace(get_env('REACT_APP_ROOT_FOLDER'), ''),
             },
          })
       }

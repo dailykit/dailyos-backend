@@ -1,10 +1,14 @@
+import fs from 'fs'
 import axios from 'axios'
+import { get, groupBy, isEmpty } from 'lodash'
 import { client } from '../../lib/graphql'
 const fetch = require('node-fetch')
 const AWS = require('aws-sdk')
 const nodemailer = require('nodemailer')
 
 import { GET_SES_DOMAIN, UPDATE_CART } from './graphql'
+import path from 'path'
+import get_env from '../../../get_env'
 
 AWS.config.update({ region: 'us-east-2' })
 
@@ -64,7 +68,7 @@ export const initiatePayment = async (req, res) => {
       }
       if (cart.totalPrice > 0) {
          const body = {
-            organizationId: process.env.ORGANIZATION_ID,
+            organizationId: get_env('ORGANIZATION_ID'),
             statementDescriptor: cart.statementDescriptor || '',
             cart: {
                id: cart.id,
@@ -75,7 +79,7 @@ export const initiatePayment = async (req, res) => {
                stripeCustomerId: cart.stripeCustomerId
             }
          }
-         await fetch(`${process.env.PAYMENTS_API}/api/initiate-payment`, {
+         await fetch(`${get_env('PAYMENTS_API')}/api/initiate-payment`, {
             method: 'POST',
             headers: {
                'Content-Type': 'application/json'
@@ -286,6 +290,97 @@ export const authorizeRequest = async (req, res) => {
                'X-Hasura-Email-Id': staffEmail
             })
       })
+   } catch (error) {
+      return res.status(404).json({ success: false, error: error.message })
+   }
+}
+
+const ENVS = `
+   query envs {
+      envs: settings_env {
+         id
+         title
+         value
+         belongsTo
+      }
+   }
+`
+
+export const populate_env = async (req, res) => {
+   try {
+      const { envs } = await client.request(ENVS)
+      if (isEmpty(envs)) {
+         throw Error('No envs found!')
+      } else {
+         const grouped = groupBy(envs, 'belongsTo')
+
+         const server = {}
+
+         get(grouped, 'server', []).forEach(node => {
+            server[node.title] = node.value
+         })
+
+         fs.writeFileSync(
+            path.join(__dirname, '../../../', 'config.js'),
+            'module.exports = ' + JSON.stringify(server, null, 2)
+         )
+
+         const subscription_shop = {}
+
+         get(grouped, 'subscription_shop', []).forEach(node => {
+            subscription_shop[node.title] = node.value
+         })
+
+         const PATH_TO_SUBS = path.join(
+            __dirname,
+            '../../../',
+            'subscription-shop',
+            'public',
+            'env-config.js'
+         )
+
+         fs.writeFileSync(
+            PATH_TO_SUBS,
+            'window._env_ = ' + JSON.stringify(subscription_shop, null, 2)
+         )
+
+         const dailyos = {}
+
+         get(grouped, 'dailyos', []).forEach(node => {
+            dailyos[node.title] = node.value
+         })
+
+         if (process.env.NODE_ENV === 'development') {
+            const PATH_TO_DAILYOS = path.join(
+               __dirname,
+               '../../../',
+               'dailyos',
+               'public',
+               'env-config.js'
+            )
+            fs.writeFileSync(
+               PATH_TO_DAILYOS,
+               'window._env_ = ' + JSON.stringify(dailyos, null, 2)
+            )
+         } else {
+            const PATH_TO_DAILYOS = path.join(
+               __dirname,
+               '../../../',
+               'dailyos',
+               'build',
+               'env-config.js'
+            )
+            fs.writeFileSync(
+               PATH_TO_DAILYOS,
+               'window._env_ = ' + JSON.stringify(dailyos, null, 2)
+            )
+         }
+
+         return res.status(200).json({
+            success: true,
+            data: { server, subscription_shop, dailyos }
+         })
+      }
    } catch (error) {
       return res.status(404).json({ success: false, error: error.message })
    }

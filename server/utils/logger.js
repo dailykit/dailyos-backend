@@ -1,14 +1,15 @@
 import axios from 'axios'
+import get_env from '../../get_env'
 
 export const logger = async args => {
    try {
       await axios({
          method: 'POST',
-         url: `${process.env.PLATFORM_URL}/api/report/error`,
+         url: `${get_env('PLATFORM_URL')}/api/report/error`,
          data: {
             ...args,
             from: {
-               url: new URL(process.env.DATA_HUB).origin
+               url: new URL(get_env('DATA_HUB')).origin
             }
          }
       })

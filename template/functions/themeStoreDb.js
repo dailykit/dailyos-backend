@@ -1,10 +1,13 @@
 const { GraphQLClient, gql } = require('graphql-request')
+const { default: get_env } = require('../../get_env')
+
 const themeStoreGraphQLClient = new GraphQLClient(
-   process.env.THEME_STORE_DATAHUB,
+   get_env('THEME_STORE_DATAHUB'),
    {
       headers: {
-         'x-hasura-admin-secret':
-            process.env.THEME_STORE_HASURA_GRAPHQL_ADMIN_SECRET
+         'x-hasura-admin-secret': get_env(
+            'THEME_STORE_HASURA_GRAPHQL_ADMIN_SECRET'
+         )
       }
    }
 )

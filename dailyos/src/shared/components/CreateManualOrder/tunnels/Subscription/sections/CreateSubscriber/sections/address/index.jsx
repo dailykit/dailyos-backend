@@ -4,7 +4,7 @@ import { Spacer, Text, Filler, Flex, IconButton, useTunnel } from '@dailykit/ui'
 
 import { useSub } from '../../state'
 import { useManual } from '../../../../../../state'
-import { parseAddress } from '../../../../../../../../utils'
+import { get_env, parseAddress } from '../../../../../../../../utils'
 import * as Icon from '../../../../../../../../assets/icons'
 import { AddressTunnel } from '../../../../../../../Address'
 import EmptyIllo from '../../../../../../../../assets/illustrations/EmptyIllo'
@@ -48,7 +48,7 @@ export const SelectAddress = () => {
             tunnels={tunnels}
             closeTunnel={closeTunnel}
             keycloakId={customer.keycloakId}
-            clientId={window._env_.REACT_APP_KEYCLOAK_REALM + '-subscription'}
+            clientId={get_env('REACT_APP_KEYCLOAK_REALM') + '-subscription'}
             onSave={address =>
                dispatch({ type: 'SET_ADDRESS', payload: address })
             }

@@ -9,6 +9,7 @@ import pickUpIcon from '../../../assets/svgs/pickup.png'
 import deliveryIcon from '../../../assets/svgs/delivery.png'
 import { NewTabIcon, PrintIcon } from '../../../assets/icons'
 import { useTabs } from '../../../../../shared/providers'
+import { get_env } from '../../../../../shared/utils'
 
 const address = 'apps.order.components.orderlistitem.'
 
@@ -27,7 +28,9 @@ export const Header = ({ order }) => {
       )
       const data = encodeURIComponent(JSON.stringify({ id: order.id }))
       window.open(
-         `${window._env_.REACT_APP_TEMPLATE_URL}?template=${template}&data=${data}`,
+         `${get_env(
+            'REACT_APP_TEMPLATE_URL'
+         )}?template=${template}&data=${data}`,
          '_blank'
       )
    }

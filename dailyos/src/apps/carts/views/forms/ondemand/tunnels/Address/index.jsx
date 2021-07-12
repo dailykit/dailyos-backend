@@ -18,7 +18,11 @@ import {
 import { useManual } from '../../state'
 import { QUERIES, MUTATIONS } from '../../../../../graphql'
 import EmptyIllo from '../../../../../assets/svgs/EmptyIllo'
-import { logger, parseAddress } from '../../../../../../../shared/utils'
+import {
+   logger,
+   parseAddress,
+   get_env,
+} from '../../../../../../../shared/utils'
 import {
    InlineLoader,
    AddressTunnel as AddTunnel,
@@ -63,8 +67,8 @@ const Content = ({ panel }) => {
                keycloakId: { _eq: customer.keycloakId },
                clientId: {
                   _in: [
-                     window._env_.REACT_APP_KEYCLOAK_REALM,
-                     `${window._env_.REACT_APP_KEYCLOAK_REALM}-subscription`,
+                     get_env('REACT_APP_KEYCLOAK_REALM'),
+                     `${get_env('REACT_APP_KEYCLOAK_REALM')}-subscription`,
                   ],
                },
             },
@@ -131,7 +135,7 @@ const Content = ({ panel }) => {
             onSave={() => refetch()}
             closeTunnel={closeAddTunnel}
             keycloakId={customer?.keycloakId}
-            clientId={window._env_.REACT_APP_KEYCLOAK_REALM}
+            clientId={get_env('REACT_APP_KEYCLOAK_REALM')}
          />
       </>
    )

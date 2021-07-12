@@ -4,12 +4,13 @@ const axios = require('axios')
 const functions = require('../functions')
 const resolvers = require('../schema/resolvers')
 const checkExist = require('./checkExist')
+const get_env = require('../../get_env')
 
 const copyFile = async (filePath, dest) => {
    console.log(filePath, dest)
    try {
       const { data } = await axios.get(
-         `${process.env.THEME_STORE_EXPRESS_URL}${filePath}`
+         `${get_env('THEME_STORE_EXPRESS_URL')}${filePath}`
       )
 
       const { id } = await resolvers.mutations.Mutation.createFile(
@@ -18,13 +19,11 @@ const copyFile = async (filePath, dest) => {
             path: dest,
             content: data
          }),
-         { root: process.env.FS_PATH }
+         { root: get_env('FS_PATH') }
       )
 
-      const {
-         linkedCssFiles,
-         linkedJsFiles
-      } = await functions.themeStoreDb.getLinkedFiles(filePath)
+      const { linkedCssFiles, linkedJsFiles } =
+         await functions.themeStoreDb.getLinkedFiles(filePath)
       console.log({
          linkedCssFiles,
          linkedJsFiles

@@ -5,7 +5,7 @@ import { toast } from 'react-toastify'
 import { useParams } from 'react-router'
 import { useQuery, useSubscription } from '@apollo/react-hooks'
 
-import { logger } from '../../../../../../../../shared/utils'
+import { logger, get_env } from '../../../../../../../../shared/utils'
 import { InlineLoader } from '../../../../../../../../shared/components'
 
 const RAZORPAY_SCRIPT_URL =
@@ -66,9 +66,9 @@ export const RazorpayTunnel = ({ closeViaTunnel }) => {
          await window.payments.provider({
             currency: 'INR',
             cart: { ...cart, brand: brandObject },
-            datahub_url: window._env_.REACT_APP_DATA_HUB_URI,
+            datahub_url: get_env('REACT_APP_DATA_HUB_URI'),
             partnershipIds: [{ paymentPartnershipId: partnershipId }],
-            admin_secret: window._env_.REACT_APP_HASURA_GRAPHQL_ADMIN_SECRET,
+            admin_secret: get_env('REACT_APP_HASURA_GRAPHQL_ADMIN_SECRET'),
          })
       },
    })

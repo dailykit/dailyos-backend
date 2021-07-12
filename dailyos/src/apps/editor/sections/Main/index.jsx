@@ -12,7 +12,7 @@ import {
 } from '../../components/Popup'
 import { GET_NESTED_FOLDER } from '../../graphql'
 import { Home, Editor } from '../../views'
-import { logger } from '../../../../shared/utils'
+import { logger, get_env } from '../../../../shared/utils'
 import { MainWrapper } from './styles'
 
 const Main = () => {
@@ -112,7 +112,7 @@ const Main = () => {
       if (type === 'create') {
          if (nodeType === 'FILE') {
             const filePath = `${path.replace(
-               window._env_.REACT_APP_ROOT_FOLDER,
+               get_env('REACT_APP_ROOT_FOLDER'),
                ''
             )}/${name}.${fileTypeRef.current}`
             await createFile({
@@ -124,7 +124,7 @@ const Main = () => {
             fileTypeRef.current = ''
          } else {
             const folderPath = `${path.replace(
-               window._env_.REACT_APP_ROOT_FOLDER,
+               get_env('REACT_APP_ROOT_FOLDER'),
                ''
             )}/${name}`
             await createFolder({

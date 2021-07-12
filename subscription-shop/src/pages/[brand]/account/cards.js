@@ -23,7 +23,7 @@ import {
    ProfileSidebar,
 } from '../../../components'
 import { graphQLClient, useConfig } from '../../../lib'
-import { getRoute, getSettings, isClient } from '../../../utils'
+import { getRoute, getSettings, get_env, isClient } from '../../../utils'
 import { useUser } from '../../../context'
 import { CloseIcon, DeleteIcon } from '../../../assets/icons'
 import {
@@ -265,7 +265,7 @@ export const PaymentForm = ({ intent, toggleTunnel }) => {
    const handleResult = async ({ setupIntent }) => {
       try {
          if (setupIntent.status === 'succeeded') {
-            const ORIGIN = isClient ? window._env_.DAILYKEY_URL : ''
+            const ORIGIN = isClient ? get_env('DAILYKEY_URL') : ''
             let URL = `${ORIGIN}/api/payment-method/${setupIntent.payment_method}`
             if (
                organization.stripeAccountType === 'standard' &&
@@ -322,7 +322,7 @@ export const PaymentForm = ({ intent, toggleTunnel }) => {
       } catch (error) {}
    }
 
-   const stripePromise = loadStripe(isClient ? window._env_.STRIPE_KEY : '', {
+   const stripePromise = loadStripe(isClient ? get_env('STRIPE_KEY') : '', {
       ...(organization.stripeAccountType === 'standard' &&
          organization.stripeAccountId && {
             stripeAccount: organization.stripeAccountId,
@@ -443,7 +443,7 @@ const createSetupIntent = async (customer, organization = {}) => {
       ) {
          stripeAccountId = organization?.stripeAccountId
       }
-      const URL = `${window._env_.DAILYKEY_URL}/api/setup-intent`
+      const URL = `${get_env('DAILYKEY_URL')}/api/setup-intent`
       const { data } = await axios.post(URL, { customer, stripeAccountId })
       return data.data
    } catch (error) {

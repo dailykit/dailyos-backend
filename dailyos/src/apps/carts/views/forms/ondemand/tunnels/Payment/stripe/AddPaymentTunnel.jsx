@@ -14,6 +14,7 @@ import {
 import { useManual } from '../../../state'
 import { MUTATIONS } from '../../../../../../graphql'
 import { InlineLoader } from '../../../../../../../../shared/components'
+import { get_env } from '../../../../../../../../shared/utils'
 
 const AddPaymentTunnel = ({ tunnels, closeTunnel, onSave }) => {
    return (
@@ -69,7 +70,7 @@ const FormWrapper = ({ intent, onSave, closeTunnel }) => {
    const handleResult = async ({ setupIntent }) => {
       try {
          if (setupIntent.status === 'succeeded') {
-            const ORIGIN = window._env_.REACT_APP_DAILYKEY_URL
+            const ORIGIN = get_env('REACT_APP_DAILYKEY_URL')
             let URL = `${ORIGIN}/api/payment-method/${setupIntent.payment_method}`
             if (
                organization.stripeAccountType === 'standard' &&
@@ -144,7 +145,7 @@ const createSetupIntent = async (customer, organization = {}) => {
       ) {
          stripeAccountId = organization?.stripeAccountId
       }
-      const URL = `${window._env_.REACT_APP_DAILYKEY_URL}/api/setup-intent`
+      const URL = `${get_env('REACT_APP_DAILYKEY_URL')}/api/setup-intent`
       const { data } = await axios.post(URL, { customer, stripeAccountId })
       return data.data
    } catch (error) {

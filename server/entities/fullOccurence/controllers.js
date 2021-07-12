@@ -1,3 +1,4 @@
+import get_env from '../../../get_env'
 import { client } from '../../lib/graphql'
 const {
    FULL_OCCURENCE_REPORT,
@@ -31,7 +32,7 @@ export const fullOccurenceReport = async (req, res) => {
             })
          }
       })
-      await fetch(process.env.DATA_HUB, {
+      await fetch(get_env('DATA_HUB'), {
          method: 'POST',
          headers: {
             'Content-Type': 'application/json'

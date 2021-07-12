@@ -1,8 +1,9 @@
 import axios from 'axios'
+import { get_env } from './get_env'
 
 export const fetchReferrer = async (brandId, code) => {
    const res = await axios.post(
-      window._env_.DATA_HUB_HTTPS,
+      get_env('DATA_HUB_HTTPS'),
       {
          query: `
             query CustomerReferralAggregate($brandId: Int!, $code: String!) {
@@ -17,7 +18,7 @@ export const fetchReferrer = async (brandId, code) => {
       },
       {
          headers: {
-            'x-hasura-admin-secret': window._env_.ADMIN_SECRET,
+            'x-hasura-admin-secret': get_env('ADMIN_SECRET'),
             'Content-Type': 'application/json',
          },
       }

@@ -1,9 +1,10 @@
 const fs = require('fs')
+const get_env = require('../../get_env')
 let count = 0
 const copyName = async url => {
    try {
       const isExist = fs.existsSync(
-         `${process.env.FS_PATH}${process.env.MARKET_PLACE_PATH}${url}`
+         `${get_env('FS_PATH')}${get_env('MARKET_PLACE_PATH')}${url}`
       )
       if (isExist) {
          // let folderName = url.replace(/^\//g, '').split(/\//g)[0]
@@ -19,7 +20,7 @@ const copyName = async url => {
          //  const checkAgain = copyName()
       } else {
          count = 0
-         return `${process.env.MARKET_PLACE_PATH}${url}`
+         return `${get_env('MARKET_PLACE_PATH')}${url}`
       }
    } catch (err) {
       return new Error(err)

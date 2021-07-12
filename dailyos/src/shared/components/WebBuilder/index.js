@@ -5,7 +5,7 @@ import grapesjs from 'grapesjs'
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import { InlineLoader } from '../InlineLoader'
-import { logger } from '../../utils'
+import { logger, get_env } from '../../utils'
 import { config } from './config'
 import { StyledDiv } from './style'
 
@@ -20,7 +20,7 @@ const Builder = React.forwardRef(
       },
       ref
    ) => {
-      const url = `${window._env_.REACT_APP_DAILYOS_SERVER_URI}/api/assets`
+      const url = `${get_env('REACT_APP_DAILYOS_SERVER_URI')}/api/assets`
       const editorRef = useRef()
       const linkedCssArray = linkedCss.map(file => {
          let fileUrl = `https://test.dailykit.org/template/files${file.cssFile.path}`
@@ -43,11 +43,12 @@ const Builder = React.forwardRef(
       // mutation for saving the template
       const updateCode = (updatedCode, filePath) => {
          axios({
-            url: window._env_.REACT_APP_DATA_HUB_URI,
+            url: get_env('REACT_APP_DATA_HUB_URI'),
             method: 'POST',
             headers: {
-               'x-hasura-admin-secret':
-                  window._env_.REACT_APP_HASURA_GRAPHQL_ADMIN_SECRET,
+               'x-hasura-admin-secret': get_env(
+                  'REACT_APP_HASURA_GRAPHQL_ADMIN_SECRET'
+               ),
             },
             data: {
                query: `
@@ -101,7 +102,7 @@ const Builder = React.forwardRef(
          const getBlocks = async () => {
             try {
                const { data } = await axios({
-                  url: window._env_.REACT_APP_THEME_STORE_DATA_HUB_URI,
+                  url: get_env('REACT_APP_THEME_STORE_DATA_HUB_URI'),
                   method: 'POST',
                   headers: {
                      'Content-Type': 'application/json',

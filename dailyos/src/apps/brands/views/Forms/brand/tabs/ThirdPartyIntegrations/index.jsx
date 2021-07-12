@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { useParams } from 'react-router-dom'
 import { Flex, Text, TextButton, Spacer } from '@dailykit/ui'
 
-import { logger } from '../../../../../../../shared/utils'
+import { logger, get_env } from '../../../../../../../shared/utils'
 import { InlineLoader, Tooltip } from '../../../../../../../shared/components'
 
 export const ThirdPartyIntegrations = ({ brand = {} }) => {
@@ -25,7 +25,7 @@ const Parseur = ({ id = '' }) => {
          ;(async () => {
             try {
                const response = await axios(
-                  `${window._env_.REACT_APP_DAILYOS_SERVER_URI}/api/parseur/${id}`
+                  `${get_env('REACT_APP_DAILYOS_SERVER_URI')}/api/parseur/${id}`
                )
                if (response.status === 200 && response.statusText === 'OK') {
                   if (response.data.success) {
@@ -53,7 +53,7 @@ const Parseur = ({ id = '' }) => {
          try {
             const response = await axios({
                method: 'POST',
-               url: `${window._env_.REACT_APP_DAILYOS_SERVER_URI}/api/parseur`,
+               url: `${get_env('REACT_APP_DAILYOS_SERVER_URI')}/api/parseur`,
                data: { brand: { id: params.id } },
             })
             if (response.status === 200 && response.statusText === 'OK') {
@@ -73,7 +73,7 @@ const Parseur = ({ id = '' }) => {
          try {
             const response = await axios({
                method: 'DELETE',
-               url: `${window._env_.REACT_APP_DAILYOS_SERVER_URI}/api/parseur`,
+               url: `${get_env('REACT_APP_DAILYOS_SERVER_URI')}/api/parseur`,
                data: {
                   brand: { id: params.id },
                   mailbox: { id },

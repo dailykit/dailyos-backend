@@ -35,7 +35,7 @@ export const getHtml = async (template, data) => {
       const parsed = JSON.parse(
          template_compiler(JSON.stringify(template), data)
       )
-      const { origin } = new URL(process.env.DATA_HUB)
+      const { origin } = new URL(get_env('DATA_HUB'))
       const template_data = encodeURI(JSON.stringify(parsed.data))
       const template_options = encodeURI(JSON.stringify(parsed.template))
 

@@ -6,7 +6,7 @@ import tw, { styled, css } from 'twin.macro'
 import { useToasts } from 'react-toast-notifications'
 
 import { SEO, Layout, Loader } from '../../components'
-import { getRoute, getSettings, isClient } from '../../utils'
+import { getRoute, getSettings, get_env, isClient } from '../../utils'
 import { useMutation, useLazyQuery } from '@apollo/react-hooks'
 import {
    NAVIGATION_MENU,
@@ -78,7 +78,7 @@ const ResetPassword = props => {
                      keycloakId,
                      source: 'subscription',
                      sourceBrandId: brand.id,
-                     clientId: isClient && window._env_.CLIENTID,
+                     clientId: isClient && get_env('CLIENTID'),
                      brandCustomers: { data: { brandId: brand.id } },
                   },
                },

@@ -25,7 +25,8 @@ import {
    handleImage,
    GetFullOccurenceRouter,
    CustomerRouter,
-   NutritionInfoRouter
+   NutritionInfoRouter,
+   populate_env
 } from './entities'
 import { PrintRouter } from './entities/print'
 import {
@@ -83,6 +84,7 @@ router.post(
 )
 
 router.use('/api/store', StoreRouter)
+router.post('/api/envs', populate_env)
 
 router.get('/images/:url(*)', handleImage)
 

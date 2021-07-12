@@ -6,19 +6,6 @@ COPY . .
 
 RUN yarn install:packages && yarn build
 
-WORKDIR /usr/src/app/dailyos/build
-COPY ./dailyos/env.sh ./
-COPY ./dailyos/.env ./
-RUN chmod +x ./env.sh
-RUN bash ./env.sh
-
-WORKDIR /usr/src/app/subscription-shop
-COPY ./subscription-shop/script.sh ./
-COPY ./subscription-shop/.env ./
-RUN chmod +x ./script.sh
-RUN bash ./script.sh
-RUN cp ./env-config.js ./public/env-config.js
-
 FROM node:16-alpine
 
 #RUN apt-get update \
@@ -44,12 +31,11 @@ COPY --from=builder /usr/src/app/subscription-shop/public ./subscription-shop/pu
 COPY --from=builder /usr/src/app/subscription-shop/.next ./subscription-shop/.next
 COPY --from=builder /usr/src/app/subscription-shop/node_modules ./subscription-shop/node_modules
 COPY --from=builder /usr/src/app/subscription-shop/package.json ./subscription-shop/package.json
-COPY --from=builder /usr/src/app/subscription-shop/script.sh ./subscription-shop/script.sh
 COPY --from=builder /usr/src/app/subscription-shop/.env ./subscription-shop/.env
 
-#RUN mkdir dailyos
+RUN mkdir dailyos
 
-#COPY --from=builder /usr/src/app/dailyos/build ./dailyos/build
+COPY --from=builder /usr/src/app/dailyos/build ./dailyos/build
 
 COPY --from=builder /usr/src/app/entities ./entities
 COPY --from=builder /usr/src/app/lib ./lib
@@ -60,6 +46,7 @@ COPY --from=builder /usr/src/app/index.js ./index.js
 COPY --from=builder /usr/src/app/main.js ./main.js
 COPY --from=builder /usr/src/app/package.json ./package.json
 COPY --from=builder /usr/src/app/node_modules ./node_modules
+COPY --from=builder /usr/src/app/get_env.js ./get_env.js
 
 #RUN yarn add puppeteer
 
