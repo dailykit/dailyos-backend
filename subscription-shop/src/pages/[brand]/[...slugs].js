@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { Layout, SEO } from '../../components'
 import { NAVIGATION_MENU, WEBSITE_PAGE } from '../../graphql'
 import { graphQLClient } from '../../lib'
-import { fileParser, getSettings } from '../../utils'
+import { fetchProducts, fileParser, getSettings } from '../../utils'
 import ReactHtmlParser from 'react-html-parser'
 
 const Index = ({ params, seo, settings, navigationMenus, data }) => {
@@ -32,12 +32,8 @@ const Index = ({ params, seo, settings, navigationMenus, data }) => {
       <Layout settings={settings} navigationMenus={navigationMenus}>
          <SEO title={params.slugs[0]} />
          <Main>
-            <h1>hello - {params.brand}</h1>
-            {data.length == 0 && <p>I'm Zero</p>}
-            <div>
-               {Boolean(data.length) &&
-                  data.map(fold => ReactHtmlParser(fold?.content))}
-            </div>
+            {Boolean(data.length) &&
+               data.map(fold => ReactHtmlParser(fold?.content))}
          </Main>
       </Layout>
    )
@@ -48,6 +44,14 @@ export default Index
 export async function getStaticProps(ctx) {
    const params = ctx.params
    const domain = 'test.dailykit.org'
+
+   const isProductsPage = ctx.params.slugs[0] === 'cart'
+   let products
+
+   if (isProductsPage) {
+      products = await fetchProducts(domain)
+   }
+
    // const domain =
    //    process.env.NODE_ENV === 'production'
    //       ? params.domain
@@ -66,7 +70,8 @@ export async function getStaticProps(ctx) {
    if (data.website_websitePage.length > 0) {
       //parsed data of page
       const parsedData = await fileParser(
-         data.website_websitePage[0]['websitePageModules']
+         data.website_websitePage[0]['websitePageModules'],
+         { products }
       )
       //navigation menu for page
 
