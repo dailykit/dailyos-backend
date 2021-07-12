@@ -2,9 +2,9 @@ export const INGREDIENT_SACHET = `
    query IngredientSachet($id: Int!) {
       ingredientSachet(id: $id) {
          liveMOF
-         modeOfFulfillments {
+         modeOfFulfillments(where: { isArchived: { _eq: false } }) {
             id
-            priority
+            position
             isLive
             isPublished
          }

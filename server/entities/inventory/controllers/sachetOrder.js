@@ -14,95 +14,73 @@ export const handleOrderSachetCreation = async (req, res, next) => {
    // req.body.trigger.name -> hook name
    // req.body.event -> event details -> {op: 'INSERT' | 'UPDATE', data: {old: {}, new: {}}}
 
+   /*
+      Three states for status:
+      1. PENDING -> initial state
+      2. READY -> packed after weighing but not labelled
+      3. PACKED -> labelled
+   */
+
    try {
-      const { sachetItemId, bulkItemId, quantity, status, id } =
+      const { sachetItemId, bulkItemId, displayUnitQuantity, status, id } =
          req.body.event.data.new
 
-      const oldStatus = req.body.event.data.old
+      // const oldStatus = req.body.event.data.old
 
-      if (sachetItemId && status === 'CANCELLED' && oldStatus === 'PENDING') {
-         // update sachetItemHistory
-         await client.request(UPDATE_SACHET_ITEM_HISTORY, {
-            where: { orderSachetId: { _eq: id } },
-            set: { status }
-         })
-         res.status(200).json({
+      if (status === 'PENDING') {
+         if (sachetItemId) {
+            await client.request(CREATE_SACHET_ITEM_HISTORY, {
+               objects: [
+                  {
+                     sachetItemId,
+                     quantity: 1,
+                     status: 'PENDING',
+                     orderSachetId: id
+                  }
+               ]
+            })
+         }
+         if (bulkItemId) {
+            await client.request(CREATE_BULK_ITEM_HISTORY, {
+               objects: [
+                  {
+                     bulkItemId,
+                     quantity: displayUnitQuantity,
+                     status: 'PENDING',
+                     orderSachetId: id
+                  }
+               ]
+            })
+         }
+         return res.status(StatusCodes.OK).json({
             ok: true,
-            message: 'history updated'
+            message: 'History marked -> PENDING'
          })
       }
 
-      if (bulkItemId && status === 'CANCELLED' && oldStatus === 'PENDING') {
-         // update BulkItemHistory
-         await client.request(UPDATE_BULK_ITEM_HISTORY, {
-            bulkItemId,
-            set: { status }
-         })
-         res.status(200).json({
+      if (status === 'READY') {
+         if (sachetItemId) {
+            await client.request(UPDATE_SACHET_ITEM_HISTORY, {
+               where: { orderSachetId: { _eq: id } },
+               set: { status: 'COMPLETED' }
+            })
+         }
+         if (bulkItemId) {
+            await client.request(UPDATE_BULK_ITEM_HISTORY, {
+               where: { orderSachetId: { _eq: id } },
+               set: { status: 'COMPLETED' }
+            })
+         }
+         return res.status(StatusCodes.OK).json({
             ok: true,
-            message: 'history updated'
-         })
-         return
-      }
-
-      if (sachetItemId && status === 'PENDING') {
-         // create sachetItemHistory
-         await client.request(CREATE_SACHET_ITEM_HISTORY, {
-            objects: [
-               {
-                  sachetItemId,
-                  quantity: -1,
-                  status: 'PENDING',
-                  orderSachetId: id
-               }
-            ]
+            message: 'History marked -> COMPLETED'
          })
       }
 
-      if (bulkItemId && status === 'PENDING') {
-         // create bulkItemHistory
-         await client.request(CREATE_BULK_ITEM_HISTORY, {
-            objects: [
-               {
-                  bulkItemId,
-                  quantity,
-                  status: 'PENDING',
-                  orderSachetId: id
-               }
-            ]
-         })
-         res.status(201).json({
-            ok: true,
-            message: 'history created'
-         })
-         return
-      }
-
-      if (bulkItemId && status === 'COMPLETED') {
-         // update BulkItemHistory
-         await client.request(UPDATE_BULK_ITEM_HISTORY, {
-            bulkItemId,
-            set: { status }
-         })
-         res.status(200).json({
-            ok: true,
-            message: 'history updated'
-         })
-      }
-
-      if (sachetItemId && status === 'COMPELETED') {
-         // update sachetItemHistory
-
-         await client.request(UPDATE_SACHET_ITEM_HISTORY, {
-            where: { orderSachetId: { _eq: id } },
-            set: { status }
-         })
-         res.status(200).json({
-            ok: true,
-            message: 'history updated'
-         })
-         return
-      }
+      return res.status(StatusCodes.OK).json({
+         ok: false,
+         message: 'Status not PENDING or READY, no change in history!'
+      })
    } catch (error) {
       next(error)
    }
