@@ -1,3 +1,4 @@
+import get_env from '../../../get_env'
 import { client } from '../../lib/graphql'
 
 export const handleThirdPartyOrder = async (req, res) => {
@@ -190,7 +191,7 @@ const deliveryInfo = {
          }
       },
       pickupInfo: {
-         organizationId: process.env.ORGANIZATION_ID,
+         organizationId: get_env('ORGANIZATION_ID'),
          organizationName: '',
          organizationPhone: '',
          organizationEmail: '',
@@ -284,7 +285,7 @@ const deliveryInfo = {
          }
       },
       returnInfo: {
-         organizationId: process.env.ORGANIZATION_ID,
+         organizationId: get_env('ORGANIZATION_ID'),
          organizationName: '',
          organizationPhone: '',
          organizationEmail: '',

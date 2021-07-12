@@ -1,5 +1,6 @@
 const axios = require('axios')
 
+import get_env from '../../../get_env'
 import { client } from '../../lib/graphql'
 import { template_compiler } from '../../utils'
 import {
@@ -54,7 +55,7 @@ export const manage = async (req, res) => {
                   )
                )
 
-               const { origin } = new URL(process.env.DATA_HUB)
+               const { origin } = new URL(get_env('DATA_HUB'))
                const data = JSON.stringify(parsed.template.data)
                const template = JSON.stringify(parsed.template.template)
 
@@ -162,14 +163,14 @@ export const trigger = async (req, res) => {
 }
 
 const hasuraTrigger = async payloadData => {
-   const url = new URL(process.env.DATA_HUB).origin + '/datahub/v1/query'
+   const url = new URL(get_env('DATA_HUB')).origin + '/datahub/v1/query'
    await axios({
       url,
       method: 'POST',
       headers: {
          'Content-Type': 'application/json',
          'x-hasura-role': 'admin',
-         'x-hasura-admin-secret': process.env.HASURA_GRAPHQL_ADMIN_SECRET
+         'x-hasura-admin-secret': get_env('HASURA_GRAPHQL_ADMIN_SECRET')
       },
       data: payloadData
    })
@@ -181,7 +182,7 @@ const getHtml = async (template, data) => {
          template_compiler(JSON.stringify(template), data)
       )
 
-      const { origin } = new URL(process.env.DATA_HUB)
+      const { origin } = new URL(get_env('DATA_HUB'))
       const template_data = encodeURI(JSON.stringify(parsed.template.data))
       const template_options = encodeURI(
          JSON.stringify(parsed.template.template)

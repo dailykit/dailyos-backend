@@ -2,6 +2,7 @@ import axios from 'axios'
 import { get } from 'lodash'
 
 import { client } from '../../lib/graphql'
+import get_env from '../../../get_env'
 
 const SECURE_DOMAIN = 'https://secure.dailykit.org/auth'
 const SECURE_TOKEN_URL =
@@ -178,8 +179,8 @@ const getUserKeycloakDetails = async email => {
          url: SECURE_TOKEN_URL,
          data: 'grant_type=client_credentials',
          auth: {
-            username: process.env.KEYCLOAK_SECURE_USER,
-            password: process.env.KEYCLOAK_SECURE_KEY
+            username: get_env('KEYCLOAK_SECURE_USER'),
+            password: get_env('KEYCLOAK_SECURE_KEY')
          }
       })
       if (token_response.status === 200) {

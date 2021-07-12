@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { client } from '../../lib/graphql'
+import gen_env from '../../../get_env'
 
 const parseur = {
    one: async (req, res) => {
@@ -10,9 +11,9 @@ const parseur = {
 
          const { data = {} } = await axios({
             method: 'GET',
-            url: `${process.env.PARSEUR_API_URL}/parser/${id}`,
+            url: `${get_env('PARSEUR_API_URL')}/parser/${id}`,
             headers: {
-               Authorization: `Token ${process.env.PARSEUR_API_KEY}`
+               Authorization: `Token ${get_env('PARSEUR_API_KEY')}`
             }
          })
          res.status(200).json({ success: true, data })
@@ -33,8 +34,8 @@ const parseur = {
 
          const { status, data = {} } = await axios({
             method: 'POST',
-            url: `${process.env.PLATFORM_URL}/api/parseur`,
-            data: { brand, organization: { id: process.env.ORGANIZATION_ID } }
+            url: `${get_env('PLATFORM_URL')}/api/parseur`,
+            data: { brand, organization: { id: get_env('ORGANIZATION_ID') } }
          })
          if (status === 200 && 'success' in data && data.success) {
             if ('data' in data && Object.keys(data.data).length > 0) {
@@ -72,7 +73,7 @@ const parseur = {
 
          const { status, data = {} } = await axios({
             method: 'DELETE',
-            url: `${process.env.PLATFORM_URL}/api/parseur/${mailbox.id}`
+            url: `${get_env('PLATFORM_URL')}/api/parseur/${mailbox.id}`
          })
          if (status === 200) {
             try {

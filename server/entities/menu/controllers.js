@@ -1,9 +1,10 @@
 import moment from 'moment-timezone'
 import { client } from '../../lib/graphql'
 import { RRule } from 'rrule'
+import get_env from '../../../get_env'
 const { MENU_COLLECTIONS } = require('./graphql')
 
-const toTimezone = time => moment(time).tz(process.env.TIMEZONE)
+const toTimezone = time => moment(time).tz(get_env('TIMEZONE'))
 
 export const getMenu = async (req, res) => {
    try {
@@ -20,11 +21,11 @@ export const getMenu = async (req, res) => {
          let times = new RRule({
             ...RRule.parseString(col.availability.rule),
             count: 10,
-            tzid: process.env.TIMEZONE
+            tzid: get_env('TIMEZONE')
          }).all()
          let index = times.findIndex(
             time =>
-               moment(time).tz(process.env.TIMEZONE).date() === current.date()
+               moment(time).tz(get_env('TIMEZONE')).date() === current.date()
          )
          if (index >= 0) {
             matches.push(col)

@@ -4,6 +4,7 @@ import { get, isArray, isEmpty } from 'lodash'
 
 import { client } from '../../../lib/graphql'
 import { GET_REMINDER_SETTINGS } from '../graphql'
+import get_env from '../../../../get_env'
 
 export const createScheduledEvent = async (req, res) => {
    try {
@@ -42,10 +43,10 @@ export const createScheduledEvent = async (req, res) => {
                }
 
                const url =
-                  new URL(process.env.DATA_HUB).origin + '/datahub/v1/query'
+                  new URL(get_env('DATA_HUB')).origin + '/datahub/v1/query'
 
                const timezone = moment()
-                  .tz(process.env.TIMEZONE)
+                  .tz(get_env('TIMEZONE'))
                   .toString()
                   .slice(-5)
 
@@ -55,14 +56,15 @@ export const createScheduledEvent = async (req, res) => {
                   headers: {
                      'Content-Type': 'application/json',
                      'x-hasura-role': 'admin',
-                     'x-hasura-admin-secret':
-                        process.env.HASURA_GRAPHQL_ADMIN_SECRET
+                     'x-hasura-admin-secret': get_env(
+                        'HASURA_GRAPHQL_ADMIN_SECRET'
+                     )
                   },
                   data: {
                      type: 'create_scheduled_event',
                      args: {
                         webhook:
-                           new URL(process.env.DATA_HUB).origin +
+                           new URL(get_env('DATA_HUB')).origin +
                            '/server/webhook/occurence/manage',
                         schedule_at: occurence.cutoffTimeStamp + timezone,
                         payload: {
@@ -88,14 +90,15 @@ export const createScheduledEvent = async (req, res) => {
                         headers: {
                            'Content-Type': 'application/json',
                            'x-hasura-role': 'admin',
-                           'x-hasura-admin-secret':
-                              process.env.HASURA_GRAPHQL_ADMIN_SECRET
+                           'x-hasura-admin-secret': get_env(
+                              'HASURA_GRAPHQL_ADMIN_SECRET'
+                           )
                         },
                         data: {
                            type: 'create_scheduled_event',
                            args: {
                               webhook:
-                                 new URL(process.env.DATA_HUB).origin +
+                                 new URL(get_env('DATA_HUB')).origin +
                                  '/server/webhook/occurence/reminder',
                               schedule_at: item + timezone,
                               payload: {

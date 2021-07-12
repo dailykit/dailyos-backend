@@ -1,3 +1,5 @@
+import get_env from '../../../get_env'
+
 const AWS = require('aws-sdk')
 const fs = require('fs')
 const fileType = require('file-type')
@@ -79,13 +81,13 @@ const extractName = key =>
 export const list = async (req, res) => {
    try {
       const { type } = req.query
-      const { Contents } = await listS3Files(process.env.S3_BUCKET, type)
+      const { Contents } = await listS3Files(get_env('S3_BUCKET'), type)
       const formatAssets = await Promise.all(
          Contents.map(async item => {
             try {
                const result = await s3
                   .headObject({
-                     Bucket: process.env.S3_BUCKET,
+                     Bucket: get_env('S3_BUCKET'),
                      Key: item.Key
                   })
                   .promise()
@@ -116,7 +118,7 @@ export const remove = async (req, res) => {
    try {
       const { key } = req.query
       const data = await s3
-         .deleteObject({ Bucket: process.env.S3_BUCKET, Key: key })
+         .deleteObject({ Bucket: get_env('S3_BUCKET'), Key: key })
          .promise()
       if (data.constructor === Object) {
          return res

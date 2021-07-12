@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { uniq, uniqBy } from 'lodash'
+import get_env from '../../../get_env'
 import { client } from '../../lib/graphql'
 
 export const printKOT = async (req, res) => {
@@ -28,7 +29,7 @@ export const printKOT = async (req, res) => {
       ) {
          const { data: { data = {}, success } = {} } = await axios.get(
             `${
-               new URL(process.env.DATA_HUB).origin
+               new URL(get_env('DATA_HUB')).origin
             }/server/api/kot-urls?id=${id}`
          )
 
@@ -92,7 +93,7 @@ export const getKOTUrls = async (req, res) => {
       const { cartItems = [] } = await client.request(CART_ITEMS)
 
       const data = { order: { id } }
-      const { origin } = new URL(process.env.DATA_HUB)
+      const { origin } = new URL(get_env('DATA_HUB'))
 
       const productStations = uniqBy(
          cartItems

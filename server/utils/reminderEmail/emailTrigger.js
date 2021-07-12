@@ -2,6 +2,7 @@ import axios from 'axios'
 import { client } from '../../lib/graphql'
 import { template_compiler } from '..'
 import { SEND_MAIL } from '../../entities/occurence/graphql'
+import get_env from '../../../get_env'
 
 export const emailTrigger = async ({ title, variables = {}, to }) => {
    try {
@@ -72,7 +73,7 @@ const getHtml = async (
    subjectLineTemplate
 ) => {
    try {
-      const { origin } = new URL(process.env.DATA_HUB)
+      const { origin } = new URL(get_env('DATA_HUB'))
       const template_variables = encodeURI(JSON.stringify(variables))
       if (subjectLineTemplate) {
          const template_options = encodeURI(

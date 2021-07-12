@@ -4,6 +4,7 @@ const rimraf = require('rimraf')
 const database = require('./database')
 const git = require('isomorphic-git')
 const getFolderSize = require('../utils/getFolderSize')
+import get_env from '../../get_env'
 import * as files from './file'
 git.plugins.set('fs', fs)
 
@@ -46,10 +47,7 @@ const getFolderWithFiles = async url => {
             node.createdAt = stats.birthtime
             if (stats.isFile()) {
                const fileData = await files.getFile(`${url}/${item}`)
-               const filePath = `${url}/${item}`.replace(
-                  process.env.FS_PATH,
-                  ''
-               )
+               const filePath = `${url}/${item}`.replace(get_env('FS_PATH'), '')
                const id = await database
                   .getFileId(filePath)
                   .catch(err => console.error(err))

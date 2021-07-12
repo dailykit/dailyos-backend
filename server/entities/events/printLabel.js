@@ -1,3 +1,4 @@
+import get_env from '../../../get_env'
 import { client } from '../../lib/graphql'
 
 export const printLabel = async (req, res) => {
@@ -62,7 +63,7 @@ export const printLabel = async (req, res) => {
                station.defaultLabelPrinterId ||
                station.attachedLabelPrinters[0].printNodeId
 
-            const url = new URL(process.env.DATA_HUB).origin + '/template/'
+            const url = new URL(get_env('DATA_HUB')).origin + '/template/'
             const template = `{"name":"${labelTemplate.name}","type":"label","format":"pdf"}`
 
             await client.request(PRINT_JOB, {

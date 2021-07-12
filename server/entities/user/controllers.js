@@ -1,4 +1,5 @@
 import axios from 'axios'
+import get_env from '../../../get_env'
 import { client } from '../../lib/graphql'
 import { UPDATE_USER } from './graphql/mutations'
 
@@ -35,21 +36,25 @@ const user = {
          if (!user.tempPassword) throw Error('Temporary password is required!')
 
          let response = await axios({
-            url: `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/token`,
+            url: `${get_env('KEYCLOAK_URL')}/realms/${get_env(
+               'KEYCLOAK_REALM'
+            )}/protocol/openid-connect/token`,
             method: 'POST',
             headers: {
                'Content-Type': 'application/x-www-form-urlencoded'
             },
             auth: {
-               username: process.env.KEYCLOAK_MANAGER,
-               password: process.env.KEYCLOAK_MANAGER_KEY
+               username: get_env('KEYCLOAK_MANAGER'),
+               password: get_env('KEYCLOAK_MANAGER_KEY')
             },
             data: 'grant_type=client_credentials'
          })
          const { access_token } = await response.data
 
          await axios({
-            url: `${process.env.KEYCLOAK_URL}/admin/realms/${process.env.KEYCLOAK_REALM}/users`,
+            url: `${get_env('KEYCLOAK_URL')}/admin/realms/${get_env(
+               'KEYCLOAK_REALM'
+            )}/users`,
             method: 'POST',
             headers: {
                'Content-Type': 'application/json',
@@ -70,7 +75,9 @@ const user = {
          })
 
          const { data } = await axios.get(
-            `${process.env.KEYCLOAK_URL}/admin/realms/${process.env.KEYCLOAK_REALM}/users?email=${user.email}`,
+            `${get_env('KEYCLOAK_URL')}/admin/realms/${get_env(
+               'KEYCLOAK_REALM'
+            )}/users?email=${user.email}`,
             {
                headers: {
                   'Content-Type': 'application/json',
@@ -97,7 +104,9 @@ const user = {
          if (!user.keycloakId) throw Error('Keycloak ID is required!')
          await axios({
             method: 'DELETE',
-            url: `${process.env.KEYCLOAK_URL}/admin/realm/${process.env.KEYCLOAK_REALM}/users/${user.keycloakId}`
+            url: `${get_env('KEYCLOAK_URL')}/admin/realm/${get_env(
+               'KEYCLOAK_REALM'
+            )}/users/${user.keycloakId}`
          })
          return res
             .status(200)
