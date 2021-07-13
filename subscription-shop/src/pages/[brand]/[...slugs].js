@@ -58,7 +58,8 @@ export async function getStaticProps(ctx) {
    const { seo, settings } = await getSettings(domain, `/${params.slugs[0]}`)
 
    //page folds data
-   const data = await graphQLClient.request(WEBSITE_PAGE, {
+   const client = await graphQLClient()
+   const data = await client.request(WEBSITE_PAGE, {
       domain: params.brand,
       route: '/' + params.slugs.join('/'),
    })
@@ -70,7 +71,7 @@ export async function getStaticProps(ctx) {
       )
       //navigation menu for page
 
-      const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+      const navigationMenu = await client.request(NAVIGATION_MENU, {
          navigationMenuId:
             data.website_websitePage[0]['linkedNavigationMenuId'],
       })

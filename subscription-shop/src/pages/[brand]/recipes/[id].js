@@ -209,7 +209,8 @@ const Recipe = props => {
 export default Recipe
 
 export async function getStaticProps({ params }) {
-   const data = await graphQLClient.request(RECIPE_DETAILS, {
+   const client = await graphQLClient()
+   const data = await client.request(RECIPE_DETAILS, {
       optionId: parseInt(params.id),
    })
    const domain = 'test.dailykit.org'

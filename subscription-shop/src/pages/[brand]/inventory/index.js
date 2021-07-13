@@ -89,12 +89,13 @@ const Inventory = props => {
 
 export async function getStaticProps(ctx) {
    const params = ctx.params
-   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+   const client = await graphQLClient()
+   const dataByRoute = await client.request(WEBSITE_PAGE, {
       domain: params.brand,
       route: '/inventory',
    })
    //navigation menu
-   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+   const navigationMenu = await client.request(NAVIGATION_MENU, {
       navigationMenuId:
          dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
    })

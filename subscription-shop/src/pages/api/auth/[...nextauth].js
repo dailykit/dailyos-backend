@@ -1,14 +1,27 @@
+import fs from 'fs'
 import NextAuth from 'next-auth'
 import { GraphQLClient } from 'graphql-request'
 import Providers from 'next-auth/providers'
 import bcrypt from 'bcrypt'
 import { getRoute, get_env } from '../../../utils'
 
-const client = new GraphQLClient(get_env('DATA_HUB_HTTPS'), {
-   headers: {
-      'x-hasura-admin-secret': get_env('ADMIN_SECRET'),
-   },
-})
+const client = async () => {
+   try {
+      const content = await fs.readFileSync(
+         process.cwd() + '/public/env-config.js',
+         'utf-8'
+      )
+      const config = JSON.parse(content.replace('window._env_ = ', ''))
+
+      return new GraphQLClient(config['DATA_HUB_HTTPS'], {
+         headers: {
+            'x-hasura-admin-secret': config['ADMIN_SECRET'],
+         },
+      })
+   } catch (error) {
+      console.error('error', error)
+   }
+}
 
 const PROVIDERS = `
    query providers {
@@ -112,7 +125,8 @@ export default async (req, res) => {
       providers.push(Providers.Credentials(auth.credentials))
       providers.push(Providers.Credentials(auth.otp))
 
-      const data = await client.request(PROVIDERS)
+      const _client = await client()
+      const data = await _client.request(PROVIDERS)
 
       if (data.providers.length > 0) {
          data.providers.forEach(provider => {
@@ -142,7 +156,9 @@ export default async (req, res) => {
                   customer.avatar = user.image
                }
 
-               await client.request(INSERT_PROVIDER_CUSTOMER, {
+               const _client = await client()
+
+               await _client.request(INSERT_PROVIDER_CUSTOMER, {
                   object: {
                      providerType: account.type,
                      providerAccountId: user.id || null,

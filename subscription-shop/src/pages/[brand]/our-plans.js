@@ -89,10 +89,11 @@ const Header = styled.header`
    }
 `
 export const getStaticProps = async ({ params }) => {
-   const data = await graphQLClient.request(GET_FILES, {
+   const client = await graphQLClient()
+   const data = await client.request(GET_FILES, {
       divId: ['select-plan-top-01', 'select-plan-bottom-01'],
    })
-   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+   const dataByRoute = await client.request(WEBSITE_PAGE, {
       domain: params.brand,
       route: '/our-plans',
    })
@@ -103,7 +104,7 @@ export const getStaticProps = async ({ params }) => {
    const domain = 'test.dailykit.org'
    const { seo, settings } = await getSettings(domain, '/our-plans')
    //navigation menu
-   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+   const navigationMenu = await client.request(NAVIGATION_MENU, {
       navigationMenuId:
          dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
    })

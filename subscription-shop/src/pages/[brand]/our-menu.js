@@ -676,10 +676,11 @@ const Label = styled.span`
    `}
 `
 export async function getStaticProps({ params }) {
-   const data = await graphQLClient.request(GET_FILES, {
+   const client = await graphQLClient()
+   const data = await client.request(GET_FILES, {
       divId: ['our-menu-bottom-01'],
    })
-   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+   const dataByRoute = await client.request(WEBSITE_PAGE, {
       domain: params.brand,
       route: '/our-menu',
    })
@@ -691,7 +692,7 @@ export async function getStaticProps({ params }) {
    const { seo, settings } = await getSettings(domain, '/')
 
    //navigation menu
-   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+   const navigationMenu = await client.request(NAVIGATION_MENU, {
       navigationMenuId:
          dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
    })

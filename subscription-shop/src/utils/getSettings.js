@@ -2,7 +2,8 @@ import { SETTINGS_QUERY } from '../graphql'
 import { graphQLClient } from '../lib'
 
 export const getSettings = async (domain, path = '/') => {
-   const data = await graphQLClient.request(SETTINGS_QUERY, {
+   const client = await graphQLClient()
+   const data = await client.request(SETTINGS_QUERY, {
       domain,
    })
 

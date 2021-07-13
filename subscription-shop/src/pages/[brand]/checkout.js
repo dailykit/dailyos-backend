@@ -321,7 +321,8 @@ const PaymentContent = () => {
 }
 
 export const getStaticProps = async ({ params }) => {
-   const dataByRoute = await graphQLClient.request(WEBSITE_PAGE, {
+   const client = await graphQLClient()
+   const dataByRoute = await client.request(WEBSITE_PAGE, {
       domain: params.brand,
       route: '/checkout',
    })
@@ -332,7 +333,7 @@ export const getStaticProps = async ({ params }) => {
    const domain = 'test.dailykit.org'
    const { settings, seo } = await getSettings(domain, '/checkout')
    //navigation menu
-   const navigationMenu = await graphQLClient.request(NAVIGATION_MENU, {
+   const navigationMenu = await client.request(NAVIGATION_MENU, {
       navigationMenuId:
          dataByRoute.website_websitePage[0]['website']['navigationMenuId'],
    })

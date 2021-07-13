@@ -51,7 +51,8 @@ const HowItWorks = props => {
 export default HowItWorks
 
 export async function getStaticProps({ params }) {
-   const data = await graphQLClient.request(GET_FILES, {
+   const client = await graphQLClient()
+   const data = await client.request(GET_FILES, {
       divId: ['how-it-works'],
    })
 

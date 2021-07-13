@@ -1,32 +1,42 @@
+import fs from 'fs'
 import { get_env } from './get_env'
 
 const axios = require('axios')
 
 const fetchFile = fold => {
    return new Promise(async (resolve, reject) => {
-      const { path, linkedCssFiles, linkedJsFiles } = fold.subscriptionDivFileId
+      try {
+         const { path, linkedCssFiles, linkedJsFiles } =
+            fold.subscriptionDivFileId
 
-      const { data } = await axios.get(
-         `${get_env('EXPRESS_URL')}/template/files${path}`
-      )
+         const content = await fs.readFileSync(
+            process.cwd() + '/public/env-config.js',
+            'utf-8'
+         )
+         const config = JSON.parse(content.replace('window._env_ = ', ''))
 
-      // add css links + html
-      const parsedData =
-         linkedCssFiles.map(
-            ({ cssFile }) =>
-               `<link rel="stylesheet" type="text/css" href="${get_env(
-                  'EXPRESS_URL'
-               )}/template/files${cssFile.path}" media="screen"/>`
-         ).join`` + data
+         const { data } = await axios.get(
+            `${config['EXPRESS_URL']}/template/files${path}`
+         )
 
-      // script urls
-      const scripts = linkedJsFiles.map(
-         ({ jsFile }) =>
-            `${get_env('EXPRESS_URL')}/template/files${jsFile.path}`
-      )
+         // add css links + html
+         const parsedData =
+            linkedCssFiles.map(
+               ({ cssFile }) =>
+                  `<link rel="stylesheet" type="text/css" href="${config['EXPRESS_URL']}/template/files${cssFile.path}" media="screen"/>`
+            ).join`` + data
 
-      if (data) resolve({ id: fold.id, content: parsedData, scripts })
-      else reject('Failed to load file')
+         // script urls
+         const scripts = linkedJsFiles.map(
+            ({ jsFile }) =>
+               `${config['EXPRESS_URL']}/template/files${jsFile.path}`
+         )
+
+         if (data) resolve({ id: fold.id, content: parsedData, scripts })
+         else reject('Failed to load file')
+      } catch (error) {
+         console.log('fetchFile', error)
+      }
    })
 }
 
