@@ -60,7 +60,8 @@ const auth = {
       },
       async authorize(credentials) {
          try {
-            const { customers = [] } = await client.request(CUSTOMERS, {
+            const _client = await client()
+            const { customers = [] } = await _client.request(CUSTOMERS, {
                where: { email: { _eq: credentials.email } },
             })
 
@@ -99,7 +100,8 @@ const auth = {
             if (otps.length > 0) {
                const [otp] = otps
                if (Number(credentials.otp) === otp.code) {
-                  const { insertCustomer = {} } = await client.request(
+                  const _client = await client()
+                  const { insertCustomer = {} } = await _client.request(
                      INSERT_CUSTOMER,
                      { object: { phoneNumber: credentials.phone } }
                   )
