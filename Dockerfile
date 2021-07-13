@@ -37,16 +37,15 @@ RUN mkdir dailyos
 
 COPY --from=builder /usr/src/app/dailyos/build ./dailyos/build
 
-COPY --from=builder /usr/src/app/entities ./entities
-COPY --from=builder /usr/src/app/lib ./lib
-COPY --from=builder /usr/src/app/src ./src
-COPY --from=builder /usr/src/app/options ./options
-COPY --from=builder /usr/src/app/utils ./utils
+COPY --from=builder /usr/src/app/server ./server
+COPY --from=builder /usr/src/app/template ./template
+
 COPY --from=builder /usr/src/app/index.js ./index.js
 COPY --from=builder /usr/src/app/main.js ./main.js
 COPY --from=builder /usr/src/app/package.json ./package.json
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/get_env.js ./get_env.js
+COPY --from=builder /usr/src/app/.env ./.env
 
 #RUN yarn add puppeteer
 
