@@ -2,11 +2,11 @@ import NextAuth from 'next-auth'
 import { GraphQLClient } from 'graphql-request'
 import Providers from 'next-auth/providers'
 import bcrypt from 'bcrypt'
-import { getRoute } from '../../../utils'
+import { getRoute, get_env } from '../../../utils'
 
-const client = new GraphQLClient(process.env.DATA_HUB_HTTPS, {
+const client = new GraphQLClient(get_env('DATA_HUB_HTTPS'), {
    headers: {
-      'x-hasura-admin-secret': process.env.ADMIN_SECRET,
+      'x-hasura-admin-secret': get_env('ADMIN_SECRET'),
    },
 })
 

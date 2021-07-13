@@ -1,3 +1,5 @@
+import { get_env } from './get_env'
+
 const axios = require('axios')
 
 const fetchFile = fold => {
@@ -5,20 +7,22 @@ const fetchFile = fold => {
       const { path, linkedCssFiles, linkedJsFiles } = fold.subscriptionDivFileId
 
       const { data } = await axios.get(
-         `${process.env.EXPRESS_URL}/template/files${path}`
+         `${get_env('EXPRESS_URL')}/template/files${path}`
       )
 
       // add css links + html
       const parsedData =
          linkedCssFiles.map(
             ({ cssFile }) =>
-               `<link rel="stylesheet" type="text/css" href="${process.env.EXPRESS_URL}/template/files${cssFile.path}" media="screen"/>`
+               `<link rel="stylesheet" type="text/css" href="${get_env(
+                  'EXPRESS_URL'
+               )}/template/files${cssFile.path}" media="screen"/>`
          ).join`` + data
 
       // script urls
       const scripts = linkedJsFiles.map(
          ({ jsFile }) =>
-            `${process.env.EXPRESS_URL}/template/files${jsFile.path}`
+            `${get_env('EXPRESS_URL')}/template/files${jsFile.path}`
       )
 
       if (data) resolve({ id: fold.id, content: parsedData, scripts })
