@@ -1,3 +1,5 @@
+# Dockerfile is used to build image which then can be used to build any number of containers.
+
 FROM node:alpine AS builder
 RUN apk add --no-cache bash
 RUN apk add --no-cache libc6-compat
@@ -30,17 +32,19 @@ CMD ["google-chrome-unstable"]
 
 RUN mkdir subscription-shop
 
+# copy subscription shop files in to docker image
 COPY --from=builder /usr/src/app/subscription-shop/next.config.js ./subscription-shop
 COPY --from=builder /usr/src/app/subscription-shop/public ./subscription-shop/public
 COPY --from=builder /usr/src/app/subscription-shop/.next ./subscription-shop/.next
 COPY --from=builder /usr/src/app/subscription-shop/node_modules ./subscription-shop/node_modules
 COPY --from=builder /usr/src/app/subscription-shop/package.json ./subscription-shop/package.json
-COPY --from=builder /usr/src/app/subscription-shop/.env ./subscription-shop/.env
 
 RUN mkdir dailyos
 
+# copy dailyos/build files in to docker image
 COPY --from=builder /usr/src/app/dailyos/build ./dailyos/build
 
+# copy express server files in to docker image
 COPY --from=builder /usr/src/app/server ./server
 COPY --from=builder /usr/src/app/template ./template
 
@@ -49,12 +53,14 @@ COPY --from=builder /usr/src/app/main.js ./main.js
 COPY --from=builder /usr/src/app/package.json ./package.json
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/get_env.js ./get_env.js
-COPY --from=builder /usr/src/app/.env ./.env
 
 RUN yarn add puppeteer
 
+# used to expose container level
 EXPOSE 4000
 EXPOSE 3000
 
 ENTRYPOINT ["dumb-init", "--"]
+
+# used to run express and subscription shop server
 CMD [ "yarn", "prod" ]

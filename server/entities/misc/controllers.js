@@ -306,6 +306,9 @@ const ENVS = `
    }
 `
 
+/*
+used to create env config files and populate with relevant envs
+*/
 export const populate_env = async (req, res) => {
    try {
       const { envs } = await client.request(ENVS)

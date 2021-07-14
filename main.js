@@ -11,6 +11,8 @@ const { createProxyMiddleware } = require('http-proxy-middleware')
 const { ApolloServer } = require('apollo-server-express')
 import depthLimit from 'graphql-depth-limit'
 
+import get_env from './get_env'
+
 import ServerRouter from './server'
 import schema from './template/schema'
 import TemplateRouter from './template'
@@ -27,18 +29,26 @@ app.use(
 )
 
 AWS.config.update({
-   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+   accessKeyId: get_env('AWS_ACCESS_KEY_ID'),
+   secretAccessKey: get_env('AWS_SECRET_ACCESS_KEY')
 })
 
 AWS.config.setPromisesDependency(bluebird)
 
 const PORT = process.env.PORT || 4000
 
+// serves dailyos-backend endpoints for ex. hasura event triggers, upload, parseur etc.
 app.use('/server', ServerRouter)
+/*
+serves build folder of dailyos
+*/
 app.use('/apps', express.static('dailyos/build'))
+/*
+handles template endpoints for ex. serving labels, sachets, emails in pdf or html format
+
+/template/?template={"name":"bill1","type":"bill","format":"pdf"}&data={"id":"1181"}
+*/
 app.use('/template', TemplateRouter)
-app.use('/template/files', express.static('templates'))
 
 const isProd = process.env.NODE_ENV === 'production' ? true : false
 
@@ -55,9 +65,18 @@ const proxy = createProxyMiddleware({
    }
 })
 
+/*
+request on test.dailykit.org forwards to http://localhost:3000
+*/
 app.use('/api/:path(*)', proxy)
 
 const RESTRICTED_FILES = ['env-config.js', 'favicon', '.next', '_next']
+
+/*
+catches routes of subscription shop
+
+test.dailykit.org/menu
+*/
 const serveSubscription = async (req, res, next) => {
    //     Subscription shop: Browser <-> Express <-> NextJS
    try {
@@ -66,6 +85,17 @@ const serveSubscription = async (req, res, next) => {
       const { host } = req.headers
       const brand = host.replace(':', '')
 
+      /*
+      -> user requests test.dailykit.org/menu
+      -> extracts brand i.e test.dailykit.org
+      -> test.dailykit.org/test.dailykit.org/menu
+      -> network request to above url and returns response back to browser
+
+      during development
+         -> serves via running next dev
+      during production
+         -> serves via running next build && next start
+      */
       if (process.env.NODE_ENV === 'development') {
          const url = RESTRICTED_FILES.some(file => routePath.includes(file))
             ? 'http://localhost:3000/' + routePath
@@ -92,6 +122,14 @@ const serveSubscription = async (req, res, next) => {
                        __dirname,
                        `./subscription-shop/.next/server/pages/${brand}/${routePath}.html`
                     )
+
+            /*
+               SSR: Server Side Rendering
+               ISR: Incremental Server Regeneration
+               SSG: Server Side Generation
+
+               with preview requests are served via .next
+            */
             if (fs.existsSync(filePath) && preview !== 'true') {
                res.sendFile(filePath)
             } else {
@@ -130,10 +168,13 @@ const serveSubscription = async (req, res, next) => {
 
 app.use('/:path(*)', serveSubscription)
 
+/*
+manages files in templates folder
+*/
 const apolloserver = new ApolloServer({
    schema,
    playground: {
-      endpoint: `${process.env.ENDPOINT}/template/graphql`
+      endpoint: `${get_env('ENDPOINT')}/template/graphql`
    },
    introspection: true,
    validationRules: [depthLimit(11)],
@@ -145,8 +186,8 @@ const apolloserver = new ApolloServer({
    },
    debug: true,
    context: {
-      root: process.env.FS_PATH,
-      media: process.env.MEDIA_PATH
+      root: get_env('FS_PATH'),
+      media: get_env('MEDIA_PATH')
    }
 })
 
