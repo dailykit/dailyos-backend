@@ -1,7 +1,7 @@
 const { GraphQLClient, gql } = require('graphql-request')
 const nodePath = require('path')
 
-const get_env = require('../../get_env')
+const { default: get_env } = require('../../get_env')
 
 const graphQLClient = new GraphQLClient(get_env('DATA_HUB'), {
    headers: {

@@ -1,10 +1,23 @@
 import puppeteer from 'puppeteer'
 import express from 'express'
+import path from 'path'
+import fs from 'fs'
+import { GraphQLClient } from 'graphql-request'
+
+import get_env from '../get_env'
 
 const checkExist = require('./utils/checkExist')
 const copyFolder = require('./utils/copyFolder')
 
 const router = express.Router()
+
+const format_currency = async (amount = 0) => {
+   const currency = await get_env('CURRENCY')
+   return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency
+   }).format(amount)
+}
 
 export const root = async (req, res) => {
    try {
@@ -23,12 +36,30 @@ export const root = async (req, res) => {
       const template = await JSON.parse(req.query.template)
       const data = await JSON.parse(req.query.data)
       let method
+
       if (template.path) {
-         method = require(`./templates/${template.path}`)
+         method = require(`${path.join(__dirname, '..', 'templates')}/${
+            template.path
+         }`)
       } else {
-         method = require(`./templates/${template.type}/${template.name}/index`)
+         method = require(`${path.join(__dirname, '..', 'templates')}/${
+            template.type
+         }/${template.name}/index`)
       }
-      let result = await method.default(data, template)
+
+      const url = await get_env('DATA_HUB')
+      const secret = await get_env('HASURA_GRAPHQL_ADMIN_SECRET')
+      const client = new GraphQLClient(url, {
+         headers: { 'x-hasura-admin-secret': secret }
+      })
+
+      const timezone = await get_env('TIMEZONE')
+
+      let result = await method.default({
+         data,
+         template,
+         meta: { client, format_currency, timezone }
+      })
 
       switch (template.format) {
          case 'html':
@@ -68,5 +99,6 @@ export const download = async (req, res) => {
 
 router.get('/', root)
 router.post('/download/:path(*)', download)
+router.use('/files', express.static(__dirname + '../..' + '/templates'))
 
 export default router
