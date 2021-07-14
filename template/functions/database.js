@@ -1,8 +1,11 @@
 const { GraphQLClient, gql } = require('graphql-request')
 const nodePath = require('path')
-const graphQLClient = new GraphQLClient(process.env.DATAHUB, {
+
+const get_env = require('../../get_env')
+
+const graphQLClient = new GraphQLClient(get_env('DATA_HUB'), {
    headers: {
-      'x-hasura-admin-secret': process.env.HASURA_GRAPHQL_ADMIN_SECRET
+      'x-hasura-admin-secret': get_env('HASURA_GRAPHQL_ADMIN_SECRET')
    }
 })
 

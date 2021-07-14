@@ -8,11 +8,11 @@ const get_env = async title => {
          const config = require('./config.js')
          return get(config, title, '')
       } else {
-         const URL =
+         const url =
             (process.env.NODE_ENV === 'development'
                ? 'http://localhost:4000'
                : new URL(process.env.DATA_HUB).origin) + '/server/api/envs'
-         const { data } = await axios.post(URL)
+         const { data } = await axios.post(url)
 
          return get(data, 'data.server.' + title, '')
       }
